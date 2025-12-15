@@ -52,7 +52,7 @@ Runner 配置命令执行无误（Token 文件存在、权限正常、网络连�
 ```
   
 **执行清单（AI Agent 按序执行）**  
-* 1. **诊断阶段** cd /root/actions-runner  
+* 1. **诊断阶段**cd /root/actions-runner  
 *   
 * # 查看 Runner 主日志  
 * tail -50 .runner  
@@ -83,7 +83,7 @@ Runner 配置命令执行无误（Token 文件存在、权限正常、网络连�
 * nano /root/MT5/.secrets/gh_runner_token  # 粘贴新 Token  
 * chmod 600 /root/MT5/.secrets/gh_runner_token  
 *   
-* 3. **清理并重新注册 Runner** cd /root/actions-runner  
+* 3. **清理并重新注册 Runner**cd /root/actions-runner  
 * sudo ./svc.sh stop 2>/dev/null || true  
 * sudo ./svc.sh uninstall 2>/dev/null || true  
 * ./config.remove.sh 2>/dev/null || true  
@@ -98,11 +98,11 @@ Runner 配置命令执行无误（Token 文件存在、权限正常、网络连�
 *   
 * ./run.sh --check  
 *   
-* 4. **验证阶段** ./run.sh --check  
+* 4. **验证阶段**./run.sh --check  
 * curl -I https://github.com/luzhengheng/MT5/settings/actions/runners  # 检查页面是否加载  
 * echo "$(date): Runner 注册成功，状态 Online" >> docs/reports/runner_diagnostic_log.md  
 *   
-* 5. **收尾** git add docs/reports/runner_diagnostic_log.md  
+* 5. **收尾**git add docs/reports/runner_diagnostic_log.md  
 * git commit -m "fix: 修复 GitHub Actions Runner 注册失败问题"  
 * git push  
 *   
@@ -120,7 +120,7 @@ Runner 配置命令执行无误（Token 文件存在、权限正常、网络连�
 * ++写作规范++  
   
 ```
-AI Agent 可直接解析并执行 请严格按以上结构输出 .md 文件至 docs/issues/auto_runner_fix_20251214.md
+AI Agent 可直接解析并执行请严格按以上结构输出 .md 文件至 docs/issues/auto_runner_fix_20251214.md
 **AI-EXEC-READY**：所有步骤已生成，可触发 GitHub Actions `ai-agent-exec.yml`
 
 工单已输出完毕（已添加防火墙检查），请让云端 AI 代理执行诊断与修复。

@@ -66,11 +66,11 @@ docker run mql5-env | grep "Sharpe"
 ```
   
 ## 执行清单（AI Agent 按序执行）  
-* 1. **创建 docker/Dockerfile** cd /root/MT5  
+* 1. **创建 docker/Dockerfile**cd /root/MT5  
 * cat > docker/Dockerfile <  
-* 2. **创建 python/requirements.txt** mkdir -p python  
+* 2. **创建 python/requirements.txt**mkdir -p python  
 * cat > python/requirements.txt <  
-* 3. **创建 python/vectorbt_backtester.py（dry-run 模板）** cat > python/vectorbt_backtester.py <<'EOF'  
+* 3. **创建 python/vectorbt_backtester.py（dry-run 模板）**cat > python/vectorbt_backtester.py <<'EOF'  
 * import vectorbt as vbt  
 * import pandas as pd  
 * import numpy as np  
@@ -90,15 +90,15 @@ docker run mql5-env | grep "Sharpe"
 *     print(f"Sharpe Ratio: {pf.sharpe_ratio():.2f}")  
 * EOF  
 *   
-* 4. **构建镜像** docker build -t mql5-env -f docker/Dockerfile .  
+* 4. **构建镜像**docker build -t mql5-env -f docker/Dockerfile .  
 *   
-* 5. **验证 dry-run** docker run mql5-env | tee docs/reports/vectorbt_deployment_log.md  
+* 5. **验证 dry-run**docker run mql5-env | tee docs/reports/vectorbt_deployment_log.md  
 * grep "Sharpe" docs/reports/vectorbt_deployment_log.md  
 *   
-* 6. **更新知识库指南** cat > docs/knowledge/backtest/vectorbt_guide.md <0.9  
+* 6. **更新知识库指南**cat > docs/knowledge/backtest/vectorbt_guide.md <0.9  
 * EOF  
 *   
-* 7. **收尾** echo "$(date): 中枢 Docker + VectorBT 回测环境完善完成" >> docs/reports/vectorbt_deployment_log.md  
+* 7. **收尾**echo "$(date): 中枢 Docker + VectorBT 回测环境完善完成" >> docs/reports/vectorbt_deployment_log.md  
 * git add docker python docs  
 * git commit -m "feat: 完善中枢 Docker + VectorBT 回测环境"  
 * git push  
@@ -123,7 +123,7 @@ docker run mql5-env | grep "Sharpe"
 * ++写作规范++  
 ```
 
-AI Agent 可直接解析并执行 请严格按以上结构输出 .md 文件至 docs/issues/auto_docker_vectorbt_20251214.md
+AI Agent 可直接解析并执行请严格按以上结构输出 .md 文件至 docs/issues/auto_docker_vectorbt_20251214.md
 **AI-EXEC-READY**：所有步骤已生成，可触发 GitHub Actions `ai-agent-exec.yml`
 
 请确认以上提示词是否符合您的需求（重点完善中枢 Docker + VectorBT 回测环境，创建 Dockerfile、requirements.txt、backtester.py，构建镜像，验证 dry-run），回复“确认”或提出修改，我将立即输出完整工单内容，让云端 AI 代理执行。

@@ -4,7 +4,7 @@ contactPoints:
   - name: dingtalk-mt5-alerts
     type: dingding
     settings:
-      url: https://oapi.dingtalk.com/robot/send?access_token=YOUR_DINGTALK_ACCESS_TOKEN
+      url: https://oapi.dingtalk.com/robot/send?access_token=3df74b9dd5f916bed39020e318f415cc5617f59041ba26aa50a8e823cd54a1fb
       msgType: link
 
 templates:
@@ -14,7 +14,7 @@ templates:
 
   - name: dingtalk.text
     template: |
-      {{ range .Alerts }}
+      [告警] {{ range .Alerts }}
       **{{ .Annotations.summary }}**
 
       {{ .Annotations.description }}

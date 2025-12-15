@@ -1,0 +1,45 @@
+servers:
+  hub:
+    ip: "47.84.1.161"
+    role: "development_and_monitoring"
+    services: ["cursor", "runner", "grafana", "prometheus", "docker"]
+    os: "Alibaba Cloud Linux 3.2104 LTS"
+    region: "Singapore"
+    status: "active"
+    priority: "high"
+  training:
+    ip: "8.138.100.136"
+    role: "gpu_training"
+    services: ["gpu_driver", "torch", "vectorbt", "training_scripts"]
+    os: "Linux GPU A10"
+    region: "Domestic"
+    status: "pending_setup"
+    priority: "medium"
+  inference:
+    ip: "47.84.111.158"
+    role: "low_latency_inference"
+    services: ["fastapi", "onnx_runtime", "health_check"]
+    os: "Linux Low-Lat A10"
+    region: "Singapore"
+    status: "pending_setup"
+    priority: "medium"
+
+network:
+  hub_to_training:
+    protocol: "ssh"
+    purpose: "model_training_trigger"
+    automation: "cursor_tool_call"
+  hub_to_inference:
+    protocol: "ssh"
+    purpose: "model_deployment"
+    automation: "health_check_monitoring"
+  training_to_inference:
+    protocol: "scp"
+    purpose: "model_transfer"
+    automation: "post_training_hook"
+
+monitoring:
+  alert_channels: ["dingtalk", "slack"]
+  health_check_interval: "5m"
+  uptime_target: "99.9%"
+  response_time_target: "<50ms"

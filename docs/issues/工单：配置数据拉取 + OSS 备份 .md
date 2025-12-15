@@ -67,7 +67,7 @@ gh workflow list | grep oss_sync_alicloud
 ```
   
 ## 执行清单（AI Agent 按序执行）  
-* 1. **创建数据目录与脚本** cd /root/MT5  
+* 1. **创建数据目录与脚本**cd /root/MT5  
 * mkdir -p data/mt5/datasets /var/log  
 *   
 * cat > scripts/deploy/pull_eodhd_daily.sh <<'EOF'  
@@ -78,7 +78,7 @@ gh workflow list | grep oss_sync_alicloud
 * EOF  
 * chmod +x scripts/deploy/pull_eodhd_daily.sh  
 *   
-* 2. **配置 cron 每日 2AM 执行** (crontab -l 2>/dev/null; echo "0 2 * * * /root/MT5/scripts/deploy/pull_eodhd_daily.sh >> /var/log/eodhd_cron.log 2>&1") | crontab -  
+* 2. **配置 cron 每日 2AM 执行**(crontab -l 2>/dev/null; echo "0 2 * * * /root/MT5/scripts/deploy/pull_eodhd_daily.sh >> /var/log/eodhd_cron.log 2>&1") | crontab -  
 *   
 * 3. **创建 OSS Bucket（手动控制台操作，1分钟）**  
     * 阿里云控制台 → OSS → 创建 Bucket  
@@ -86,7 +86,7 @@ gh workflow list | grep oss_sync_alicloud
     * 地域：新加坡（ap-southeast-1）  
     * 存储类型：标准存储  
     * 读写权限：私有  
-* 4. **配置 OIDC OSS 同步工作流** mkdir -p .github/workflows  
+* 4. **配置 OIDC OSS 同步工作流**mkdir -p .github/workflows  
 * cat > .github/workflows/oss_sync_alicloud.yml <  # 从 .secrets/oss_role_arn  
 *           bucket: mt5-hub-data  
 *       - name: Sync to OSS  
@@ -94,7 +94,7 @@ gh workflow list | grep oss_sync_alicloud
 *           ossutil cp -r data/mt5 oss://mt5-hub-data/  
 * EOF  
 *   
-* 5. **验证阶段** # 手动执行一次脚本测试  
+* 5. **验证阶段**# 手动执行一次脚本测试  
 * scripts/deploy/pull_eodhd_daily.sh  
 *   
 * # 检查数据  
@@ -103,7 +103,7 @@ gh workflow list | grep oss_sync_alicloud
 * # 检查日志  
 * tail /var/log/eodhd.log  
 *   
-* 6. **收尾** echo "$(date): 数据拉取 + OSS 备份配置完成" >> docs/reports/data_oss_deployment_log.md  
+* 6. **收尾**echo "$(date): 数据拉取 + OSS 备份配置完成" >> docs/reports/data_oss_deployment_log.md  
 * git add scripts/deploy .github/workflows docs/reports  
 * git commit -m "feat: 配置数据拉取 + OSS 备份"  
 * git push  
@@ -122,7 +122,7 @@ gh workflow list | grep oss_sync_alicloud
 * ++写作规范++  
   
 ```
-AI Agent 可直接解析并执行 请严格按以上结构输出 .md 文件至 docs/issues/auto_data_oss_20251214.md
+AI Agent 可直接解析并执行请严格按以上结构输出 .md 文件至 docs/issues/auto_data_oss_20251214.md
 **AI-EXEC-READY**：所有步骤已生成，可触发 GitHub Actions `ai-agent-exec.yml`
 
 请确认以上提示词是否符合您的需求（重点配置 EODHD 数据拉取 cron + OSS OIDC 备份，确保数据新鲜 + 安全），回复“确认”或提出修改，我将立即输出完整工单内容，让云端 AI 代理执行。

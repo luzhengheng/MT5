@@ -1,5 +1,5 @@
 # [AI-EXEC] 升级版：配置数据拉取 + OSS 备份（支持 EODHD 完整套餐 + 文件夹架构完善 + 多因子模型训练准备）  
-**协议版本**：工作区上下文协议 V1.5.0（2025-11-29） **执行入口**：云端中枢服务器（Alibaba Cloud Linux 3.2104 LTS 容器优化版） + Cursor Desktop **安全要求**：密钥从 .secrets/ 读取，禁止明文；OSS 使用 OIDC 零密钥同步 **路径规范**：全部使用相对路径 + 正斜杠；数据分类存储到 /data/mt5/datasets/ 子目录 **目标**：实现 EODHD **完整套餐**多维度数据每日自动拉取 + OSS 自动备份；完善数据文件夹架构；生成多因子预处理模板脚本，为后续多因子模型训练（价格+技术+基本面+事件+新闻情感融合）奠定基础  
+**协议版本**：工作区上下文协议 V1.5.0（2025-11-29）**执行入口**：云端中枢服务器（Alibaba Cloud Linux 3.2104 LTS 容器优化版） + Cursor Desktop**安全要求**：密钥从 .secrets/ 读取，禁止明文；OSS 使用 OIDC 零密钥同步**路径规范**：全部使用相对路径 + 正斜杠；数据分类存储到 /data/mt5/datasets/ 子目录**目标**：实现 EODHD **完整套餐**多维度数据每日自动拉取 + OSS 自动备份；完善数据文件夹架构；生成多因子预处理模板脚本，为后续多因子模型训练（价格+技术+基本面+事件+新闻情感融合）奠定基础  
   
 ## 背景（Why）  
 上一版工单已落地基础数据拉取。迭代升级后：  
@@ -47,11 +47,11 @@
 ```
   
 ## 执行清单（AI Agent 按序执行）  
-* 1. **完善数据目录架构** cd /root/MT5  
+* 1. **完善数据目录架构**cd /root/MT5  
 * mkdir -p data/mt5/datasets/{eod,intraday,technical,fundamental,events,news}  
 * mkdir -p data/mt5/factors  
 *   
-* 2. **创建升级版拉取脚本（支持完整套餐）** cat > scripts/deploy/pull_eodhd_full.sh <<'EOF'  
+* 2. **创建升级版拉取脚本（支持完整套餐）**cat > scripts/deploy/pull_eodhd_full.sh <<'EOF'  
 * #!/bin/bash  
 * cd /root/MT5  
 * API_KEY=$(cat .secrets/eodhd_api_key 2>/dev/null)  
@@ -80,7 +80,7 @@
 * EOF  
 * chmod +x scripts/deploy/pull_eodhd_full.sh  
 *   
-* 3. **生成多因子预处理模板脚本** cat > python/feature_engineering.py <<'EOF'  
+* 3. **生成多因子预处理模板脚本**cat > python/feature_engineering.py <<'EOF'  
 * # 多因子预处理模板（可扩展）  
 * import pandas as pd  
 * import numpy as np  
@@ -101,15 +101,15 @@
 * print("多因子预处理完成（模板，待扩展）")  
 * EOF  
 *   
-* 4. **配置 cron 每日 2AM 执行** (crontab -l 2>/dev/null; echo "0 2 * * * /root/MT5/scripts/deploy/pull_eodhd_full.sh >> /var/log/eodhd_cron.log 2>&1") | crontab -  
+* 4. **配置 cron 每日 2AM 执行**(crontab -l 2>/dev/null; echo "0 2 * * * /root/MT5/scripts/deploy/pull_eodhd_full.sh >> /var/log/eodhd_cron.log 2>&1") | crontab -  
 *   
-* 5. **升级 OIDC OSS 同步工作流** cat > .github/workflows/oss_sync_alicloud.yml <  
-* 6. **验证阶段** scripts/deploy/pull_eodhd_full.sh  
+* 5. **升级 OIDC OSS 同步工作流**cat > .github/workflows/oss_sync_alicloud.yml <  
+* 6. **验证阶段**scripts/deploy/pull_eodhd_full.sh  
 * ls -lh data/mt5/datasets/*/ | head -20  
 * ls -lh data/mt5/factors/  
 * tail -30 /var/log/eodhd.log  
 *   
-* 7. **更新知识库指南** cat > docs/knowledge/deployment/eodhd_full_data_guide.md <1.5  
+* 7. **更新知识库指南**cat > docs/knowledge/deployment/eodhd_full_data_guide.md <1.5  
 *   
 * ## 拉取与备份  
 * - 脚本: scripts/deploy/pull_eodhd_full.sh  
@@ -117,7 +117,7 @@
 * - OSS: mt5-hub-data (OIDC 同步)  
 * EOF  
 *   
-* 8. **收尾** echo "$(date): 升级版数据拉取 + OSS 备份 + 多因子准备配置完成" >> docs/reports/data_full_oss_deployment_log.md  
+* 8. **收尾**echo "$(date): 升级版数据拉取 + OSS 备份 + 多因子准备配置完成" >> docs/reports/data_full_oss_deployment_log.md  
 * git add scripts/deploy python .github/workflows docs data/mt5  
 * git commit -m "feat: 升级数据拉取 + OSS 备份（完整套餐 + 多因子训练准备）"  
 * git push  
@@ -144,7 +144,7 @@
 AI Agent 可直接解析并执行
 ```
 ```
- 请严格按以上结构输出 .md 文件至 docs/issues/auto_data_full_oss_multi_factor_20251214.md
+请严格按以上结构输出 .md 文件至 docs/issues/auto_data_full_oss_multi_factor_20251214.md
 
 ```
 ```

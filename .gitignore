@@ -1,0 +1,26 @@
+# Secrets and sensitive files
+.secrets/
+
+# Temporary files
+*.tmp
+*.temp
+*.log
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.vscode/
+.idea/
+
+# Data files (optional - comment out if needed)
+# data/
+
+# Docker volumes
+docker/volumes/
