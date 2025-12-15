@@ -282,3 +282,61 @@ sudo journalctl -u actions-runner --no-pager -n 5
 - Grafana 默认访问: http://47.84.1.161:3000 (admin/MT5Hub@2025!Secure)
 
 
+
+
+## Prometheus/Node Exporter 部署完成 ✅
+
+**部署时间**: 2025年 12月 15日 星期一 09:34:19 CST
+**状态**: 完全成功
+
+### 部署详情
+- Node Exporter v1.8.2: ✅ 端口 9100，状态 active
+- Prometheus v2.53.2: ✅ 端口 9090，状态 active
+
+### 服务状态验证
+- grafana: up (监控中)
+- node: up (系统指标正常)
+- prometheus: up (自监控正常)
+- mt5-service: down (服务未启动，正常)
+
+### Grafana 数据源
+配置的3个数据源现在都有数据：
+- Prometheus: http://localhost:9090 ✅
+- Node Exporter: http://localhost:9100 ✅  
+- MT5 Metrics: http://localhost:9090 ✅
+
+### 自动化脚本
+创建了部署脚本: `scripts/deploy/setup_monitoring.sh`
+一键部署监控服务，支持服务管理和配置。
+
+
+
+
+## Slack 告警配置准备完成 ✅
+
+**配置时间**: 2025年 12月 15日 星期一 09:40:06 CST
+**状态**: 模板和脚本已就绪，等待 webhook URL 配置
+
+### 配置内容
+- Slack 通知器配置: `configs/grafana/provisioning/notifiers/slack.yml` ✅
+- 告警规则模板: `configs/grafana/provisioning/alerting/rules.yml` ✅
+- 配置脚本: `scripts/deploy/setup_slack_alerts.sh` ✅
+- 配置指南: `docs/knowledge/deployment/slack_alert_setup_guide.md` ✅
+
+### 告警规则预设 (5个)
+1. 高CPU使用率 (>80%, 5分钟)
+2. 高内存使用率 (>85%, 5分钟)  
+3. 低磁盘空间 (<10%, 10分钟)
+4. Grafana服务宕机 (1分钟)
+5. MT5服务宕机 (5分钟)
+
+### 使用方法
+运行配置脚本配置 Slack webhook:
+```bash
+./scripts/deploy/setup_slack_alerts.sh "YOUR_SLACK_WEBHOOK_URL"
+```
+
+### 等待用户操作
+需要用户提供 Slack webhook URL 完成最终配置。
+
+
