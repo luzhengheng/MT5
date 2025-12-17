@@ -7,7 +7,7 @@
 - EODHD完整套餐数据拉取与多因子处理
 - VectorBT回测框架 + GPU加速训练
 - ONNX实时推理服务（毫秒级响应）
-- 企业级监控告警（Grafana + Prometheus + 多渠道告警）
+- 企业级监控告警（Grafana + Prometheus + 钉钉告警）
 
 当前开发阶段：阶段1 - 中枢服务平台完善（数据拉取、监控告警、Runner部署进行中）
 

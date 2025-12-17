@@ -59,7 +59,7 @@
 ### 系统架构
 - **服务器分工**: 中枢（新加坡）+ 训练（GPU）+ 推理（低延迟）
 - **技术栈**: MT5 + Python 3.11 + VectorBT + ONNX
-- **监控**: Grafana + Prometheus + 钉钉/Slack
+- **监控**: Grafana + Prometheus + 钉钉告警
 - **备份**: OSS OIDC 零密钥同步
 
 ### AI 协同机制 ⭐ 最新完善
