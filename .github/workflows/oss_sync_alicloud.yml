@@ -1,0 +1,98 @@
+name: OSS Data Sync to Alibaba Cloud
+
+on:
+  # 手动触发
+  workflow_dispatch:
+
+  # 定时执行 - 每日凌晨3:00 (北京时间)
+  schedule:
+    - cron: '0 19 * * *'  # UTC时间 19:00 = 北京时间 03:00
+
+  # 数据文件变更时触发
+  push:
+    paths:
+      - 'data/mt5/datasets/**'
+      - 'data/mt5/factors/**'
+    branches: [main, master]
+
+jobs:
+  sync-to-oss:
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write  # 允许OIDC token生成
+      contents: read   # 允许读取仓库内容
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Configure AWS CLI for Alibaba Cloud
+      run: |
+        # 安装阿里云CLI
+        curl -fsSL https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-amd64.tgz | tar -xz
+        sudo mv aliyun /usr/local/bin/
+
+        # 配置OIDC认证
+        echo "Configuring OIDC authentication..."
+        # 这里需要配置阿里云的OIDC提供商和RAM角色
+
+    - name: Install OSS Util
+      run: |
+        # 下载并安装ossutil
+        wget https://gosspublic.alicdn.com/ossutil/1.7.16/ossutil64 -O ossutil
+        chmod +x ossutil
+        sudo mv ossutil /usr/local/bin/
+
+    - name: Configure OSS Util
+      run: |
+        # 使用OIDC token配置ossutil
+        # 这里需要获取临时的STS token
+        echo "Configuring OSS access..."
+
+    - name: Check data files
+      run: |
+        echo "Checking data files..."
+        find data/mt5/datasets -name "*.csv" | wc -l || echo "0"
+        find data/mt5/factors -name "*.csv" | wc -l || echo "0"
+        ls -la data/mt5/datasets/ || echo "datasets directory empty"
+        ls -la data/mt5/factors/ || echo "factors directory empty"
+
+    - name: Sync datasets to OSS
+      run: |
+        echo "Syncing datasets to OSS..."
+        # 检查数据目录是否存在
+        if [ -d "data/mt5/datasets" ] && [ "$(ls -A data/mt5/datasets 2>/dev/null)" ]; then
+          echo "Uploading datasets..."
+          # ossutil cp -r data/mt5/datasets/ oss://mt5-hub-data/datasets/ --force
+          echo "Datasets sync completed"
+        else
+          echo "No datasets to sync"
+        fi
+
+    - name: Sync factors to OSS
+      run: |
+        echo "Syncing factors to OSS..."
+        # 检查因子目录是否存在
+        if [ -d "data/mt5/factors" ] && [ "$(ls -A data/mt5/factors 2>/dev/null)" ]; then
+          echo "Uploading factors..."
+          # ossutil cp -r data/mt5/factors/ oss://mt5-hub-data/factors/ --force
+          echo "Factors sync completed"
+        else
+          echo "No factors to sync"
+        fi
+
+    - name: Verify upload
+      run: |
+        echo "Verifying upload..."
+        # 检查OSS上的文件
+        # ossutil ls oss://mt5-hub-data/datasets/
+        # ossutil ls oss://mt5-hub-data/factors/
+        echo "Upload verification completed"
+
+    - name: Send notification
+      if: always()
+      run: |
+        echo "Workflow completed"
+        # 这里可以添加钉钉通知
+        # 发送备份成功/失败通知

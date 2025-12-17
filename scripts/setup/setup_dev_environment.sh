@@ -5,7 +5,7 @@
 
 set -e
 
-cd /root/MT5-CRS
+cd "$(dirname "$(dirname "$(dirname "$0")")")"
 
 echo "🚀 开始优化开发环境..."
 
@@ -76,10 +76,10 @@ alias venv-activate="source /root/MT5-CRS/venv/bin/activate"
 alias venv-deactivate="deactivate"
 
 # MT5项目快捷命令
-alias mt5-status="cd /root/MT5-CRS && ./scripts/monitor/server_status.sh"
-alias mt5-health="cd /root/MT5-CRS && ./scripts/monitor/health_check_all_servers.sh"
-alias mt5-connectivity="cd /root/MT5-CRS && ./scripts/monitor/test_server_connectivity.sh"
-alias mt5-logs="cd /root/MT5-CRS && tail -f logs/*.log"
+alias mt5-status="cd "$(dirname "$(dirname "$(dirname "$0")")")" && ./scripts/monitor/server_status.sh"
+alias mt5-health="cd "$(dirname "$(dirname "$(dirname "$0")")")" && ./scripts/monitor/health_check_all_servers.sh"
+alias mt5-connectivity="cd "$(dirname "$(dirname "$(dirname "$0")")")" && ./scripts/monitor/test_server_connectivity.sh"
+alias mt5-logs="cd "$(dirname "$(dirname "$(dirname "$0")")")" && tail -f logs/*.log"
 
 # Docker快捷命令
 alias docker-clean="docker system prune -f && docker volume prune -f"
@@ -186,7 +186,7 @@ cat > scripts/dev/quick_deploy.sh << 'EOF'
 #!/bin/bash
 # 快速部署脚本
 
-cd /root/MT5-CRS
+cd "$(dirname "$(dirname "$(dirname "$0")")")"
 
 echo "🚀 快速部署MT5环境..."
 

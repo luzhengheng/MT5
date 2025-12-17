@@ -5,7 +5,10 @@
 
 set -e
 
-cd /root/MT5-CRS
+# 获取项目根目录
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(cd "$(dirname "$(dirname "$SCRIPT_DIR")")" && pwd)"
+cd "$PROJECT_ROOT"
 
 echo "🚀 开始配置跨服务器自动化协作框架..."
 

@@ -1,0 +1,12 @@
+groups:
+- name: mt5_system_alerts
+  rules:
+  - alert: HubServiceDown
+    expr: up{job="mt5-hub"} == 0
+    for: "1m"
+    labels:
+      severity: critical
+      service: hub
+    annotations:
+      summary: "中枢服务器服务宕机"
+      description: "中枢服务器关键服务已宕机超过1分钟"
