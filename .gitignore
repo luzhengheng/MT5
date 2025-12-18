@@ -23,4 +23,5 @@ Thumbs.db
 # data/
 
 # Docker volumes
-docker/volumes/
+docker/volumes/# GitHub Actions Runner 运行时目录
+.github-runner/
