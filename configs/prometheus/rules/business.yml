@@ -1,0 +1,363 @@
+# Prometheus 业务告警规则
+# 涵盖数据拉取、模型训练、回测等业务流程
+
+groups:
+  - name: Business Alerts
+    interval: 30s
+    rules:
+      # ========================================
+      # 1. 数据拉取告警
+      # ========================================
+      - alert: DataPullFailed
+        expr: |
+          increase(mt5_data_pull_failures_total[5m]) > 0
+        for: 2m
+        labels:
+          severity: critical
+          service: "{{ $labels.service }}"
+          business_type: "数据拉取"
+        annotations:
+          summary: "数据拉取失败: {{ $labels.service }}"
+          description: |
+            {{ $labels.service }} 数据拉取失败
+            失败数: {{ $value | humanize }}
+            需要立即检查数据源连接
+
+      - alert: PartialDataPullFailed
+        expr: |
+          (mt5_data_pull_success_count / (mt5_data_pull_success_count + mt5_data_pull_partial_fail_count)) < 0.9
+        for: 5m
+        labels:
+          severity: warning
+          service: "{{ $labels.service }}"
+          business_type: "数据拉取"
+        annotations:
+          summary: "部分数据拉取失败: {{ $labels.service }}"
+          description: |
+            {{ $labels.service }} 数据拉取成功率低于90%
+            当前成功率: {{ $value | humanizePercentage }}
+            需要检查数据质量
+
+      - alert: DataPullLatency
+        expr: |
+          histogram_quantile(0.95, rate(mt5_data_pull_duration_seconds_bucket[5m])) > 300
+        for: 5m
+        labels:
+          severity: warning
+          service: "{{ $labels.service }}"
+          business_type: "数据拉取"
+        annotations:
+          summary: "数据拉取延迟: {{ $labels.service }}"
+          description: |
+            {{ $labels.service }} 95%分位延迟: {{ $value | humanize }}s
+            超过5分钟,需要优化性能
+
+      - alert: DataQualityLow
+        expr: |
+          mt5_data_quality_score < 0.85
+        for: 10m
+        labels:
+          severity: warning
+          service: "{{ $labels.service }}"
+          business_type: "数据质量"
+        annotations:
+          summary: "数据质量低: {{ $labels.service }}"
+          description: |
+            {{ $labels.service }} 数据质量评分: {{ $value | humanizePercentage }}
+            低于85%阈值,需要检查数据来源
+
+      # ========================================
+      # 2. 模型训练告警
+      # ========================================
+      - alert: ModelTrainingFailed
+        expr: |
+          increase(mt5_model_training_failures_total[10m]) > 0
+        for: 2m
+        labels:
+          severity: critical
+          service: "{{ $labels.service }}"
+          business_type: "模型训练"
+        annotations:
+          summary: "模型训练失败: {{ $labels.model_name }}"
+          description: |
+            {{ $labels.model_name }} 训练失败
+            失败原因: {{ $labels.error_reason }}
+            需要立即调查
+
+      - alert: ModelTrainingTimeout
+        expr: |
+          mt5_model_training_duration_seconds > 7200
+        for: 5m
+        labels:
+          severity: warning
+          service: "{{ $labels.service }}"
+          business_type: "模型训练"
+        annotations:
+          summary: "模型训练超时: {{ $labels.model_name }}"
+          description: |
+            {{ $labels.model_name }} 训练时间: {{ $value | humanizeDuration }}
+            已超过2小时,可能需要调整参数或增加资源
+
+      - alert: ModelTrainingProgress
+        expr: |
+          mt5_model_training_progress{} < 0.5 and time() - mt5_model_training_start_time{} > 3600
+        for: 5m
+        labels:
+          severity: warning
+          service: "{{ $labels.service }}"
+          business_type: "模型训练"
+        annotations:
+          summary: "模型训练进度缓慢: {{ $labels.model_name }}"
+          description: |
+            {{ $labels.model_name }} 训练进度: {{ $value | humanizePercentage }}
+            运行超过1小时仍不足50%
+
+      # ========================================
+      # 3. 回测告警
+      # ========================================
+      - alert: BacktestFailed
+        expr: |
+          increase(mt5_backtest_failures_total[10m]) > 0
+        for: 2m
+        labels:
+          severity: critical
+          service: "{{ $labels.service }}"
+          business_type: "回测"
+        annotations:
+          summary: "回测失败: {{ $labels.strategy_name }}"
+          description: |
+            {{ $labels.strategy_name }} 回测失败
+            时间范围: {{ $labels.date_range }}
+            需要检查策略代码和数据
+
+      - alert: BacktestLowPerformance
+        expr: |
+          mt5_backtest_sharpe_ratio < 0.5
+        for: 5m
+        labels:
+          severity: warning
+          service: "{{ $labels.service }}"
+          business_type: "回测"
+        annotations:
+          summary: "策略夏普比率低: {{ $labels.strategy_name }}"
+          description: |
+            {{ $labels.strategy_name }} 夏普比率: {{ $value }}
+            低于0.5阈值,需要优化策略
+
+      - alert: BacktestMaxDrawdown
+        expr: |
+          mt5_backtest_max_drawdown > 0.4
+        for: 5m
+        labels:
+          severity: warning
+          service: "{{ $labels.service }}"
+          business_type: "回测"
+        annotations:
+          summary: "策略最大回撤过高: {{ $labels.strategy_name }}"
+          description: |
+            {{ $labels.strategy_name }} 最大回撤: {{ $value | humanizePercentage }}
+            超过40%,需要调整风险参数
+
+      # ========================================
+      # 4. 特征工程告警
+      # ========================================
+      - alert: FeatureEngineeringFailed
+        expr: |
+          increase(mt5_feature_engineering_failures_total[10m]) > 0
+        for: 2m
+        labels:
+          severity: critical
+          service: "{{ $labels.service }}"
+          business_type: "特征工程"
+        annotations:
+          summary: "特征工程失败: {{ $labels.feature_set }}"
+          description: |
+            {{ $labels.feature_set }} 特征生成失败
+            需要检查特征计算代码
+
+      - alert: FeatureEngineeringLatency
+        expr: |
+          histogram_quantile(0.95, rate(mt5_feature_engineering_duration_seconds_bucket[5m])) > 600
+        for: 5m
+        labels:
+          severity: warning
+          service: "{{ $labels.service }}"
+          business_type: "特征工程"
+        annotations:
+          summary: "特征工程延迟: {{ $labels.feature_set }}"
+          description: |
+            {{ $labels.feature_set }} 95%分位延迟: {{ $value | humanize }}s
+            超过10分钟,需要优化特征计算
+
+      # ========================================
+      # 5. OSS 备份告警
+      # ========================================
+      - alert: OSSBackupFailed
+        expr: |
+          increase(mt5_oss_backup_failures_total[10m]) > 0
+        for: 2m
+        labels:
+          severity: critical
+          service: "{{ $labels.service }}"
+          business_type: "OSS备份"
+        annotations:
+          summary: "OSS备份失败: {{ $labels.bucket }}"
+          description: |
+            {{ $labels.bucket }} OSS备份失败
+            需要检查OSS连接和权限
+
+      - alert: OSSBackupLatency
+        expr: |
+          histogram_quantile(0.95, rate(mt5_oss_backup_duration_seconds_bucket[5m])) > 1800
+        for: 5m
+        labels:
+          severity: warning
+          service: "{{ $labels.service }}"
+          business_type: "OSS备份"
+        annotations:
+          summary: "OSS备份延迟: {{ $labels.bucket }}"
+          description: |
+            {{ $labels.bucket }} 备份95%分位延迟: {{ $value | humanize }}s
+            超过30分钟,需要检查网络和OSS服务
+
+      # ========================================
+      # 6. 风险事件告警
+      # ========================================
+      - alert: RiskEventDetected
+        expr: |
+          mt5_risk_event_detected{severity="high"} > 0
+        for: 1m
+        labels:
+          severity: critical
+          service: "{{ $labels.service }}"
+          business_type: "风险事件"
+        annotations:
+          summary: "检测到高风险事件: {{ $labels.event_type }}"
+          description: |
+            事件类型: {{ $labels.event_type }}
+            风险等级: {{ $labels.severity }}
+            需要立即处理: {{ $labels.action }}
+
+      - alert: AbnormalTradingVolume
+        expr: |
+          abs(rate(mt5_trading_volume[5m]) - avg_over_time(rate(mt5_trading_volume[5m])[1h])) / avg_over_time(rate(mt5_trading_volume[5m])[1h]) > 2
+        for: 5m
+        labels:
+          severity: warning
+          service: "{{ $labels.service }}"
+          business_type: "异常检测"
+        annotations:
+          summary: "异常交易量: {{ $labels.symbol }}"
+          description: |
+            {{ $labels.symbol }} 交易量异常,偏离平均值 {{ $value | humanizePercentage }}
+
+      - alert: PriceAnomalyDetected
+        expr: |
+          abs((price_current - price_ma20) / price_ma20) > 0.1
+        for: 5m
+        labels:
+          severity: warning
+          service: "{{ $labels.service }}"
+          business_type: "异常检测"
+        annotations:
+          summary: "价格异常: {{ $labels.symbol }}"
+          description: |
+            {{ $labels.symbol }} 价格偏离20日均线 {{ $value | humanizePercentage }}
+
+      # ========================================
+      # 7. 系统服务可用性告警
+      # ========================================
+      - alert: ServiceAvailabilityLow
+        expr: |
+          (count(up{service!=""} == 1) / count(up{service!=""})) < 0.99
+        for: 5m
+        labels:
+          severity: warning
+          service: "System"
+          business_type: "可用性"
+        annotations:
+          summary: "系统服务可用性低"
+          description: |
+            整体可用性: {{ $value | humanizePercentage }}
+            低于99.9%目标,需要检查离线服务
+
+      - alert: CRSServiceDown
+        expr: up{service="CRS"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: "CRS"
+        annotations:
+          summary: "CRS 服务离线"
+          description: "中文股票研究服务已离线,数据拉取功能不可用"
+
+      - alert: PTSServiceDown
+        expr: up{service="PTS"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: "PTS"
+        annotations:
+          summary: "PTS 服务离线"
+          description: "多品种训练服务已离线,模型训练功能不可用"
+
+      - alert: TRSServiceDown
+        expr: up{service="TRS"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: "TRS"
+        annotations:
+          summary: "TRS 服务离线"
+          description: "A股推理服务已离线,模型推理功能不可用"
+
+      # ========================================
+      # 8. 数据一致性告警
+      # ========================================
+      - alert: DataConsistencyError
+        expr: |
+          mt5_data_consistency_errors_total > 0
+        for: 5m
+        labels:
+          severity: warning
+          service: "{{ $labels.service }}"
+          business_type: "数据一致性"
+        annotations:
+          summary: "数据一致性错误: {{ $labels.source }} vs {{ $labels.target }}"
+          description: |
+            发现 {{ $value | humanize }} 个数据一致性错误
+            需要检查并修复数据
+
+      # ========================================
+      # 9. API 调用失败告警
+      # ========================================
+      - alert: APICallFailureRate
+        expr: |
+          (rate(mt5_api_calls_failed_total[5m]) / rate(mt5_api_calls_total[5m])) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          service: "{{ $labels.api_endpoint }}"
+          business_type: "API"
+        annotations:
+          summary: "API 调用失败率过高: {{ $labels.api_endpoint }}"
+          description: |
+            失败率: {{ $value | humanizePercentage }}
+            超过5%阈值
+
+      # ========================================
+      # 10. 磁盘满告警(数据相关)
+      # ========================================
+      - alert: DataStorageLow
+        expr: |
+          (node_filesystem_avail_bytes{mountpoint="/data"} / node_filesystem_size_bytes{mountpoint="/data"}) < 0.1
+        for: 5m
+        labels:
+          severity: critical
+          service: "{{ $labels.instance }}"
+          business_type: "存储"
+        annotations:
+          summary: "数据存储空间不足: {{ $labels.instance }}"
+          description: |
+            /data 剩余空间不足10%
+            需要立即清理或扩容
