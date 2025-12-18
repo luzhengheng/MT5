@@ -14,15 +14,17 @@ Grok 在访问 GitHub raw URL 时可能遇到网络限制或格式问题。本�
 3. 粘贴给 Grok
 
 **URL 选项**：
-- **推荐**: https://raw.githubusercontent.com/luzhengheng/MT5/e2d275f/docs/reports/for_grok.md
-- **备用**: https://raw.githubusercontent.com/luzhengheng/MT5/dev-env-reform-v1.0/docs/reports/for_grok.md
+- **推荐（main 分支）**: https://raw.githubusercontent.com/luzhengheng/MT5/main/docs/reports/for_grok.md
+- **备用（v1.0 tag）**: https://raw.githubusercontent.com/luzhengheng/MT5/v1.0.0-env-reform/docs/reports/for_grok.md
+- **固定版本**: https://raw.githubusercontent.com/luzhengheng/MT5/4398e04/docs/reports/for_grok.md
 
 ---
 
 ## 📋 方式二：GitHub 网页查看（Grok 可能更容易访问）
 
 **标准 GitHub URL**：
-- https://github.com/luzhengheng/MT5/blob/dev-env-reform-v1.0/docs/reports/for_grok.md
+- **推荐（main 分支）**: https://github.com/luzhengheng/MT5/blob/main/docs/reports/for_grok.md
+- **备用（v1.0 tag）**: https://github.com/luzhengheng/MT5/blob/v1.0.0-env-reform/docs/reports/for_grok.md
 
 **操作**：
 1. Grok 访问上述链接
@@ -35,7 +37,7 @@ Grok 在访问 GitHub raw URL 时可能遇到网络限制或格式问题。本�
 
 **GitHub API URL**：
 ```
-https://api.github.com/repos/luzhengheng/MT5/contents/docs/reports/for_grok.md?ref=dev-env-reform-v1.0
+https://api.github.com/repos/luzhengheng/MT5/contents/docs/reports/for_grok.md?ref=main
 ```
 
 **注意**：
@@ -46,9 +48,10 @@ https://api.github.com/repos/luzhengheng/MT5/contents/docs/reports/for_grok.md?r
 
 ## 🧪 测试 URL 可访问性
 
-所有 URL 已在 2025-12-18 验证：
+所有 URL 已在 2025-12-18 更新并验证（v1.0.0-env-reform 发布后）：
+- ✅ Raw URL (main 分支): HTTP/2 200
+- ✅ Raw URL (v1.0 tag): HTTP/2 200
 - ✅ Raw URL (commit hash): HTTP/2 200
-- ✅ Raw URL (branch name): HTTP/2 200
 - ✅ GitHub web view: 可访问
 - ✅ API endpoint: 可访问
 
@@ -60,7 +63,7 @@ https://api.github.com/repos/luzhengheng/MT5/contents/docs/reports/for_grok.md?r
 
 ```
 请访问这个 GitHub 文件查看项目最新状态：
-https://github.com/luzhengheng/MT5/blob/dev-env-reform-v1.0/docs/reports/for_grok.md
+https://github.com/luzhengheng/MT5/blob/main/docs/reports/for_grok.md
 
 然后基于当前状态，生成下一个优先级最高的工单。
 ```
@@ -79,7 +82,7 @@ https://github.com/luzhengheng/MT5/blob/dev-env-reform-v1.0/docs/reports/for_gro
 
 ```
 请通过 API 访问这个文件：
-https://api.github.com/repos/luzhengheng/MT5/contents/docs/reports/for_grok.md?ref=dev-env-reform-v1.0
+https://api.github.com/repos/luzhengheng/MT5/contents/docs/reports/for_grok.md?ref=main
 
 解码 base64 内容后，基于项目状态生成下一个工单。
 ```
@@ -109,20 +112,23 @@ https://api.github.com/repos/luzhengheng/MT5/contents/docs/reports/for_grok.md?r
 
 ## 📊 当前报告摘要（快速参考）
 
-**最近提交**：
-- e2d275f - fix: 更新 Grok 报告文件内容
-- decb561 - feat: 添加 Grok 固定报告文件
-- f6b5b52 - feat: 完成开发环境改革 v1.0 全面部署
+**最近发布**：
+- v1.0.0-env-reform - 环境改革 v1.0 正式发布
+- 4398e04 - Merge dev-env-reform-v1.0 into main
+- 30 个提交已合并到 main 分支
 
 **项目状态**：
-- 当前分支: dev-env-reform-v1.0
-- 阶段: 开发环境改革 v1.0 完成
+- 当前分支: main
+- 版本: v1.0.0-env-reform
+- 阶段: 开发环境改革 v1.0 已发布
 - GitHub 集成: ✅ 完成
 
-**待执行**：
-- 等待 Grok 生成下一个工单
+**访问建议**：
+- 优先使用 main 分支 URL（始终最新）
+- 稳定版本使用 v1.0.0-env-reform tag
+- dev-env-reform-v1.0 分支已合并，不再维护
 
 ---
 
-*更新时间: 2025-12-18*
+*更新时间: 2025-12-18（工单 #005 完成后）*
 *维护者: Claude Sonnet 4.5*
