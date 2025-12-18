@@ -1,0 +1,16 @@
+[Unit]
+Description=MT5 Hub OSS Data Backup Service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/root/Mt5-CRS
+ExecStart=/bin/bash /root/Mt5-CRS/scripts/deploy/oss_backup.sh
+StandardOutput=journal
+StandardError=journal
+# 设置环境变量（如果需要）
+Environment=OSS_REGION=cn-hangzhou
+Environment=ALIYUN_ACCOUNT_ID=YOUR_ALIYUN_ACCOUNT_ID
+Environment=ALIYUN_ACCESS_KEY_ID=YOUR_ALIYUN_ACCESS_KEY_ID

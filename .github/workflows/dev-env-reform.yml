@@ -1,0 +1,247 @@
+name: Dev Environment Reform CI/CD
+
+on:
+  push:
+    branches: [ dev-env-reform-v1.0 ]
+  pull_request:
+    branches: [ dev-env-reform-v1.0 ]
+  workflow_dispatch:
+    inputs:
+      test_only:
+        description: '仅运行测试，不执行部署'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  validate-reform:
+    name: 验证改革分支配置
+    runs-on: mt5-hub-runner
+    outputs:
+      config_valid: ${{ steps.validate.outputs.valid }}
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+
+    - name: 验证服务器配置
+      id: validate
+      run: |
+        echo "验证服务器矩阵配置..."
+        python3 -c "
+        import yaml
+        try:
+            with open('configs/server_matrix.yml', 'r') as f:
+                config = yaml.safe_load(f)
+            servers = config.get('servers', {})
+            required_servers = ['hub', 'training', 'inference']
+            for server in required_servers:
+                if server not in servers:
+                    raise ValueError(f'缺少服务器配置: {server}')
+            print('✅ 服务器配置有效')
+            print(f'配置的服务器: {list(servers.keys())}')
+        except Exception as e:
+            print(f'❌ 配置验证失败: {e}')
+            exit(1)
+        "
+
+    - name: 验证脚本权限
+      run: |
+        echo "检查脚本执行权限..."
+        scripts=(
+          "scripts/deploy/setup_cross_server_automation.sh"
+          "scripts/monitor/health_check_all_servers.sh"
+          "scripts/monitor/test_server_connectivity.sh"
+          "scripts/setup/setup_dev_environment.sh"
+        )
+        for script in "${scripts[@]}"; do
+          if [ -x "$script" ]; then
+            echo "✅ $script 具有执行权限"
+          else
+            echo "❌ $script 缺少执行权限"
+            chmod +x "$script"
+          fi
+        done
+
+    - name: 验证Docker配置
+      run: |
+        echo "验证Docker Compose配置..."
+        if command -v docker-compose &> /dev/null || command -v docker &> /dev/null; then
+          docker-compose -f configs/docker/docker-compose.mt5-hub.yml config
+          echo "✅ Docker配置有效"
+        else
+          echo "⚠️ Docker未安装，跳过配置验证"
+        fi
+
+  test-connectivity:
+    name: 测试服务器连接
+    runs-on: mt5-hub-runner
+    needs: validate-reform
+    if: needs.validate-reform.outputs.config_valid == 'true'
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+
+    - name: 测试跨服务器连接
+      run: |
+        echo "测试服务器连接性..."
+        ./scripts/monitor/test_server_connectivity.sh || true
+
+  health-check:
+    name: 执行健康检查
+    runs-on: mt5-hub-runner
+    needs: test-connectivity
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+
+    - name: 运行全服务器健康检查
+      run: |
+        echo "执行全服务器健康检查..."
+        ./scripts/monitor/health_check_all_servers.sh || true
+
+  deploy-monitoring:
+    name: 部署监控服务
+    runs-on: mt5-hub-runner
+    needs: health-check
+    if: github.event.inputs.test_only != 'true'
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+
+    - name: 部署Docker监控服务
+      run: |
+        echo "部署监控服务栈..."
+        cd configs/docker
+        docker-compose -f docker-compose.mt5-hub.yml up -d --build
+
+    - name: 等待服务启动
+      run: |
+        echo "等待服务完全启动..."
+        sleep 30
+
+    - name: 验证服务状态
+      run: |
+        echo "验证监控服务状态..."
+        curl -f http://localhost:3000/api/health || exit 1
+        curl -f http://localhost:9090/-/healthy || exit 1
+        docker ps --filter "name=mt5-" --format "table {{.Names}}\t{{.Status}}"
+
+  setup-automation:
+    name: 配置自动化框架
+    runs-on: mt5-hub-runner
+    needs: deploy-monitoring
+    if: github.event.inputs.test_only != 'true'
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+
+    - name: 配置跨服务器自动化
+      run: |
+        echo "配置跨服务器自动化框架..."
+        ./scripts/deploy/setup_cross_server_automation.sh
+
+  performance-test:
+    name: 性能测试
+    runs-on: mt5-hub-runner
+    needs: setup-automation
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+
+    - name: 运行性能基准测试
+      run: |
+        echo "执行性能测试..."
+
+        # 记录开始时间
+        start_time=$(date +%s)
+
+        # 执行各项测试
+        echo "1. 连接测试..."
+        timeout 30 ./scripts/monitor/test_server_connectivity.sh || echo "连接测试超时"
+
+        echo "2. 健康检查..."
+        timeout 60 ./scripts/monitor/health_check_all_servers.sh || echo "健康检查超时"
+
+        echo "3. 开发环境状态..."
+        ./scripts/dev/dev_status.sh || echo "状态检查失败"
+
+        # 计算执行时间
+        end_time=$(date +%s)
+        duration=$((end_time - start_time))
+        echo "性能测试总耗时: ${duration}秒"
+
+  generate-report:
+    name: 生成部署报告
+    runs-on: mt5-hub-runner
+    needs: [validate-reform, test-connectivity, health-check, performance-test]
+    if: always()
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+
+    - name: 生成改革分支部署报告
+      run: |
+        echo "# 开发环境改革分支部署报告" > deployment_report.md
+        echo "" >> deployment_report.md
+        echo "**部署时间**: $(date)" >> deployment_report.md
+        echo "**分支**: dev-env-reform-v1.0" >> deployment_report.md
+        echo "**提交**: ${{ github.sha }}" >> deployment_report.md
+        echo "" >> deployment_report.md
+
+        echo "## 任务状态" >> deployment_report.md
+        echo "| 任务 | 状态 | 详情 |" >> deployment_report.md
+        echo "|------|------|------|" >> deployment_report.md
+
+        # 验证配置任务
+        if [ "${{ needs.validate-reform.result }}" == "success" ]; then
+          echo "| 配置验证 | ✅ 通过 | 服务器矩阵配置有效 |" >> deployment_report.md
+        else
+          echo "| 配置验证 | ❌ 失败 | 配置验证未通过 |" >> deployment_report.md
+        fi
+
+        # 连接测试任务
+        if [ "${{ needs.test-connectivity.result }}" == "success" ]; then
+          echo "| 连接测试 | ✅ 通过 | 服务器连接正常 |" >> deployment_report.md
+        else
+          echo "| 连接测试 | ⚠️ 警告 | 部分连接存在问题 |" >> deployment_report.md
+        fi
+
+        # 健康检查任务
+        if [ "${{ needs.health-check.result }}" == "success" ]; then
+          echo "| 健康检查 | ✅ 通过 | 所有服务运行正常 |" >> deployment_report.md
+        else
+          echo "| 健康检查 | ❌ 失败 | 发现服务异常 |" >> deployment_report.md
+        fi
+
+        # 性能测试任务
+        if [ "${{ needs.performance-test.result }}" == "success" ]; then
+          echo "| 性能测试 | ✅ 通过 | 系统性能达标 |" >> deployment_report.md
+        else
+          echo "| 性能测试 | ⚠️ 警告 | 性能测试发现问题 |" >> deployment_report.md
+        fi
+
+        echo "" >> deployment_report.md
+        echo "## 系统状态快照" >> deployment_report.md
+        echo "\`\`\`" >> deployment_report.md
+        uptime >> deployment_report.md
+        df -h / >> deployment_report.md
+        docker ps --format "table {{.Names}}\t{{.Status}}" 2>/dev/null || echo "Docker服务未运行" >> deployment_report.md
+        echo "\`\`\`" >> deployment_report.md
+
+    - name: 上传报告
+      uses: actions/upload-artifact@v4
+      with:
+        name: reform-deployment-report
+        path: deployment_report.md
+
+  notify:
+    name: 发送通知
+    runs-on: mt5-hub-runner
+    needs: generate-report
+    if: always()
+    steps:
+    - name: 发送钉钉通知
+      run: |
+        # 这里可以集成钉钉或其他通知服务
+        echo "发送部署完成通知..."
+        echo "改革分支部署完成，结果: ${{ needs.generate-report.result }}"

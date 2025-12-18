@@ -1,0 +1,183 @@
+groups:
+  # 系统级别告警规则
+  - name: system_alerts
+    rules:
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 85
+        for: 5m
+        labels:
+          severity: warning
+          category: system
+        annotations:
+          summary: "高CPU使用率 ({{ $labels.instance }})"
+          description: "CPU使用率超过85%，当前值: {{ $value }}%"
+
+      - alert: HighMemoryUsage
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 > 90
+        for: 5m
+        labels:
+          severity: critical
+          category: system
+        annotations:
+          summary: "高内存使用率 ({{ $labels.instance }})"
+          description: "内存使用率超过90%，当前值: {{ $value }}%"
+
+      - alert: HighDiskUsage
+        expr: (node_filesystem_size_bytes - node_filesystem_free_bytes) / node_filesystem_size_bytes * 100 > 85
+        for: 10m
+        labels:
+          severity: warning
+          category: system
+        annotations:
+          summary: "高磁盘使用率 ({{ $labels.instance }})"
+          description: "磁盘使用率超过85%，当前值: {{ $value }}%"
+
+      - alert: ServiceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+          category: system
+        annotations:
+          summary: "服务不可用 ({{ $labels.instance }})"
+          description: "服务 {{ $labels.job }} 在 {{ $labels.instance }} 上不可用"
+
+  # Docker容器级别告警规则
+  - name: docker_alerts
+    rules:
+      - alert: DockerContainerDown
+        expr: absent(container_last_seen{container_label_com_docker_compose_service="grafana"}) or container_last_seen{container_label_com_docker_compose_service="grafana"} < time() - 300
+        for: 5m
+        labels:
+          severity: critical
+          category: docker
+          service: grafana
+        annotations:
+          summary: "Grafana容器异常"
+          description: "Grafana容器未运行或响应异常"
+
+      - alert: DockerContainerDown
+        expr: absent(container_last_seen{container_label_com_docker_compose_service="prometheus"}) or container_last_seen{container_label_com_docker_compose_service="prometheus"} < time() - 300
+        for: 5m
+        labels:
+          severity: critical
+          category: docker
+          service: prometheus
+        annotations:
+          summary: "Prometheus容器异常"
+          description: "Prometheus容器未运行或响应异常"
+
+  # 业务级别告警规则
+  - name: business_alerts
+    rules:
+      - alert: OSSBackupFailed
+        expr: increase(mt5_backup_failures_total[1h]) > 0
+        for: 0m
+        labels:
+          severity: critical
+          category: business
+          service: oss_backup
+        annotations:
+          summary: "OSS数据备份失败"
+          description: "MT5数据备份到OSS失败，请检查备份脚本和OSS配置"
+
+      - alert: DataProcessingFailed
+        expr: increase(mt5_data_processing_errors_total[1h]) > 0
+        for: 0m
+        labels:
+          severity: warning
+          category: business
+          service: data_processing
+        annotations:
+          summary: "数据处理失败"
+          description: "数据拉取或处理过程中出现错误"
+
+      - alert: GitHubRunnerOffline
+        expr: up{job="github-runner"} == 0
+        for: 10m
+        labels:
+          severity: warning
+          category: business
+          service: github_runner
+        annotations:
+          summary: "GitHub Runner离线"
+          description: "GitHub Actions Runner服务离线，影响自动化部署"
+
+      - alert: LowDataVolume
+        expr: mt5_data_records_total < 1000
+        for: 1h
+        labels:
+          severity: warning
+          category: business
+          service: data_collection
+        annotations:
+          summary: "数据量异常偏低"
+          description: "MT5数据记录数量异常偏低，可能存在数据收集问题"
+
+      - alert: TradingSignalDelay
+        expr: mt5_signal_processing_delay_seconds > 300
+        for: 5m
+        labels:
+          severity: warning
+          category: business
+          service: trading_signals
+        annotations:
+          summary: "交易信号处理延迟"
+          description: "交易信号处理延迟超过5分钟"
+
+      - alert: ModelAccuracyDrop
+        expr: mt5_model_accuracy < 0.6
+        for: 1h
+        labels:
+          severity: critical
+          category: business
+          service: ml_model
+        annotations:
+          summary: "模型准确率下降"
+          description: "机器学习模型准确率降至60%以下"
+
+  # 网络和连接告警规则
+  - name: network_alerts
+    rules:
+      - alert: NetworkConnectivityIssue
+        expr: probe_success == 0
+        for: 5m
+        labels:
+          severity: critical
+          category: network
+        annotations:
+          summary: "网络连接问题"
+          description: "到 {{ $labels.instance }} 的网络连接失败"
+
+      - alert: HighNetworkLatency
+        expr: probe_duration_seconds > 2
+        for: 5m
+        labels:
+          severity: warning
+          category: network
+        annotations:
+          summary: "网络延迟过高"
+          description: "网络延迟超过2秒，当前值: {{ $value }}秒"
+
+  # 安全告警规则
+  - name: security_alerts
+    rules:
+      - alert: FailedSSHAttempts
+        expr: increase(node_sshd_sessions_opened_total[1h]) < increase(node_sshd_sessions_failed_total[1h])
+        for: 5m
+        labels:
+          severity: warning
+          category: security
+        annotations:
+          summary: "SSH登录失败率异常"
+          description: "SSH登录失败次数异常增加，可能存在暴力破解尝试"
+
+      - alert: UnusualFileChanges
+        expr: increase(node_filefd_allocated[1h]) > 1000
+        for: 10m
+        labels:
+          severity: info
+          category: security
+        annotations:
+          summary: "文件活动异常"
+          description: "文件描述符分配异常增加，可能存在异常文件操作"
