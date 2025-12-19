@@ -1,0 +1,147 @@
+version: '3.8'
+
+services:
+  grafana:
+    image: grafana/grafana:latest
+    container_name: mt5-grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - ../../configs/grafana:/etc/grafana
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=MT5Hub@2025!Secure
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-worldmap-panel
+    networks:
+      - mt5-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: mt5-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../../configs/prometheus:/etc/prometheus
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+    networks:
+      - mt5-network
+    restart: unless-stopped
+    depends_on:
+      - node-exporter
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: mt5-node-exporter
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      - mt5-network
+    restart: unless-stopped
+    pid: host
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    container_name: mt5-alertmanager
+    ports:
+      - "9093:9093"
+    volumes:
+      - ../../configs/alertmanager:/etc/alertmanager
+      - alertmanager_data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    networks:
+      - mt5-network
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+    driver: local
+  grafana_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  alertmanager_data:
+    driver: local
+
+networks:
+  mt5-network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+
+  # ============================================================================
+  # Redis 服务（事件总线核心）
+  # ============================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: mt5-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - ../../configs/redis/redis.conf:/usr/local/etc/redis/redis.conf:ro
+      - redis_data:/data
+    command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      - mt5-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    sysctls:
+      - net.core.somaxconn=1024
+
+  # Redis 通用指标导出器
+  redis-exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: mt5-redis-exporter
+    ports:
+      - "9121:9121"
+    environment:
+      - REDIS_ADDR=redis://redis:6379
+    networks:
+      - mt5-network
+    restart: unless-stopped
+    depends_on:
+      - redis
+
+  # Redis Streams 专用指标导出器
+  redis-streams-exporter:
+    image: chrnola/redis-streams-exporter:latest
+    container_name: mt5-redis-streams-exporter
+    ports:
+      - "9122:9122"
+    environment:
+      - REDIS_ADDR=redis:6379
+      - REDIS_STREAMS=mt5:events:news_raw,mt5:events:news_filtered,mt5:events:deadletter
+    networks:
+      - mt5-network
+    restart: unless-stopped
+    depends_on:
+      - redis

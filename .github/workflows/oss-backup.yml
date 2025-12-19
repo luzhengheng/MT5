@@ -1,0 +1,128 @@
+name: OSS Data Backup
+
+on:
+  # 每日凌晨2点自动执行
+  schedule:
+    - cron: '0 18 * * *'  # UTC时间，18:00对应北京时间凌晨2:00
+  # 允许手动触发
+  workflow_dispatch:
+  # 也可以通过API触发
+  repository_dispatch:
+    types: [oss-backup]
+
+# 限制并发执行
+concurrency:
+  group: oss-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: [self-hosted, mt5-hub]  # 使用自托管的MT5 Hub Runner
+
+    environment: production  # 使用生产环境
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        # 获取完整历史记录以确保所有文件都被正确处理
+        fetch-depth: 0
+
+    - name: Configure OIDC credentials
+      id: oidc
+      uses: actions/github-oidc-aws@v1
+      with:
+        role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActions-OIDC
+        aws-region: us-east-1
+
+    - name: Setup environment
+      run: |
+        echo "Setting up backup environment..."
+
+        # 确保脚本有执行权限
+        chmod +x scripts/deploy/oss_backup.sh
+
+        # 创建日志目录
+        sudo mkdir -p /var/log
+        sudo touch /var/log/oss_backup.log
+        sudo chmod 644 /var/log/oss_backup.log
+
+        # 安装必要的工具
+        if ! command -v jq &> /dev/null; then
+          sudo apt-get update
+          sudo apt-get install -y jq curl wget
+        fi
+
+        echo "Environment setup complete"
+
+    - name: Run OSS backup
+      id: backup
+      env:
+        # 从secrets读取阿里云配置
+        ALIYUN_ACCOUNT_ID: ${{ secrets.ALIYUN_ACCOUNT_ID }}
+        ALIYUN_ACCESS_KEY_ID: ${{ secrets.ALIYUN_ACCESS_KEY_ID }}
+        OSS_REGION: ${{ secrets.OSS_REGION || 'cn-hangzhou' }}
+        # 钉钉通知配置
+        DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_WEBHOOK }}
+      run: |
+        echo "Starting OSS data backup..."
+
+        # 执行备份脚本
+        if bash scripts/deploy/oss_backup.sh; then
+          echo "backup_success=true" >> $GITHUB_OUTPUT
+          echo "✅ OSS备份执行成功"
+        else
+          echo "backup_success=false" >> $GITHUB_OUTPUT
+          echo "❌ OSS备份执行失败"
+          exit 1
+        fi
+
+    - name: Verify backup integrity
+      if: steps.backup.outputs.backup_success == 'true'
+      run: |
+        echo "Verifying backup integrity..."
+
+        # 运行验证脚本
+        if bash scripts/deploy/verify_oss_backup.sh; then
+          echo "✅ 备份完整性验证通过"
+        else
+          echo "❌ 备份完整性验证失败"
+          exit 1
+        fi
+
+    - name: Send failure notification
+      if: failure()
+      env:
+        DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_WEBHOOK }}
+      run: |
+        echo "Sending failure notification..."
+
+        # 构建失败通知消息
+        FAILURE_MSG=$(cat << EOF
+        {
+            "msgtype": "markdown",
+            "markdown": {
+                "title": "OSS备份失败告警",
+                "text": "## ❌ OSS数据备份失败\n\n**时间**: $(date '+%Y-%m-%d %H:%M:%S')\n**服务器**: $(hostname)\n**工作流**: ${{ github.workflow }}\n**Run ID**: ${{ github.run_id }}\n\n**错误详情**: 备份过程出现异常，请检查日志\n\n[查看详细日志](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})"
+            }
+        }
+        EOF
+        )
+
+        # 发送钉钉通知
+        curl -X POST "${DINGTALK_WEBHOOK}" \
+          -H "Content-Type: application/json" \
+          -d "$FAILURE_MSG" \
+          --max-time 10 \
+          --retry 3
+
+    - name: Cleanup
+      if: always()
+      run: |
+        echo "Cleaning up temporary files..."
+
+        # 清理临时文件
+        rm -f /tmp/oss_backup_* 2>/dev/null || true
+
+        # 记录清理完成
+        echo "Cleanup complete"

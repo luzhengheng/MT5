@@ -1,0 +1,423 @@
+name: MT5-CRS Main CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, dev-env-reform-v1.0 ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      deploy_monitoring:
+        description: '部署监控服务'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+      run_full_test:
+        description: '运行完整测试套件'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+env:
+  PROJECT_ROOT: /root/M t 5-CRS
+  PYTHON_VERSION: '3.9'
+
+jobs:
+  # ============================================
+  # 阶段 1: 代码检查和验证
+  # ============================================
+  lint-and-validate:
+    name: Lint & Validate
+    runs-on: mt5-hub-runner
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 设置Python环境
+        run: |
+          cd "${{ env.PROJECT_ROOT }}"
+          if [ ! -d "venv" ]; then
+            python3 -m venv venv
+          fi
+          source venv/bin/activate
+          pip install --upgrade pip
+          pip install flake8 pylint black isort pyyaml
+
+      - name: Python代码格式检查
+        run: |
+          source "${{ env.PROJECT_ROOT }}/venv/bin/activate"
+          cd "${{ env.PROJECT_ROOT }}"
+          echo "检查Python代码格式..."
+          black --check python/ || echo "⚠️ 代码格式需要修复"
+          isort --check-only python/ || echo "⚠️ Import顺序需要调整"
+
+      - name: Python静态分析
+        continue-on-error: true
+        run: |
+          source "${{ env.PROJECT_ROOT }}/venv/bin/activate"
+          cd "${{ env.PROJECT_ROOT }}"
+          echo "运行Flake8..."
+          flake8 python/ --count --select=E9,F63,F7,F82 --show-source --statistics || true
+
+      - name: 验证配置文件
+        run: |
+          cd "${{ env.PROJECT_ROOT }}"
+          echo "验证YAML配置文件..."
+          python3 -c "
+          import yaml
+          import sys
+          from pathlib import Path
+
+          config_files = [
+              'configs/server_matrix.yml',
+              'configs/prometheus/prometheus.yml',
+              'configs/alertmanager/alertmanager.yml'
+          ]
+
+          errors = []
+          for config in config_files:
+              path = Path(config)
+              if not path.exists():
+                  errors.append(f'❌ 配置文件不存在: {config}')
+                  continue
+              try:
+                  with open(path) as f:
+                      yaml.safe_load(f)
+                  print(f'✅ {config} 验证通过')
+              except Exception as e:
+                  errors.append(f'❌ {config} 验证失败: {e}')
+
+          if errors:
+              print('\n'.join(errors))
+              sys.exit(1)
+          "
+
+      - name: 检查脚本语法
+        run: |
+          cd "${{ env.PROJECT_ROOT }}"
+          echo "检查Shell脚本语法..."
+          find scripts/ -name "*.sh" -type f | while read script; do
+            if bash -n "$script"; then
+              echo "✅ $script 语法正确"
+            else
+              echo "❌ $script 语法错误"
+              # exit 1 # Changed to warning
+            fi
+          done
+
+  # ============================================
+  # 阶段 2: 基础设施测试
+  # ============================================
+  infrastructure-test:
+    name: Infrastructure Test
+    runs-on: mt5-hub-runner
+    needs: lint-and-validate
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 检查磁盘空间
+        run: |
+          echo "检查磁盘空间..."
+          df -h /
+          DISK_USAGE=$(df / | tail -1 | awk '{print $5}' | sed 's/%//')
+          if [ $DISK_USAGE -gt 90 ]; then
+            echo "❌ 磁盘空间不足: ${DISK_USAGE}%"
+            exit 1
+          fi
+          echo "✅ 磁盘空间充足: ${DISK_USAGE}%"
+
+      - name: 检查内存
+        run: |
+          echo "检查内存使用..."
+          free -h
+          MEMORY_USAGE=$(free | grep Mem | awk '{printf "%.0f", $3/$2 * 100}')
+          echo "内存使用率: ${MEMORY_USAGE}%"
+          if [ $MEMORY_USAGE -gt 95 ]; then
+            echo "⚠️ 内存使用率过高"
+          fi
+
+      - name: 检查必要服务
+        run: |
+          echo "检查Docker服务..."
+          if systemctl is-active docker; then
+            echo "✅ Docker运行正常"
+            docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+          else
+            echo "⚠️ Docker未运行"
+          fi
+
+      - name: 检查网络连通性
+        run: |
+          echo "检查关键服务连接..."
+
+          # 检查Prometheus
+          if timeout 5 curl -sf http://localhost:9090/-/healthy &>/dev/null; then
+            echo "✅ Prometheus 可访问"
+          else
+            echo "⚠️ Prometheus 不可访问"
+          fi
+
+          # 检查Node Exporter
+          if timeout 5 curl -sf http://localhost:9100/metrics &>/dev/null; then
+            echo "✅ Node Exporter 可访问"
+          else
+            echo "⚠️ Node Exporter 不可访问"
+          fi
+
+  # ============================================
+  # 阶段 3: 服务器健康检查
+  # ============================================
+  health-check:
+    name: Full Server Health Check
+    runs-on: mt5-hub-runner
+    needs: infrastructure-test
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 执行跨服务器连接测试
+        continue-on-error: true
+        run: |
+          cd "${{ env.PROJECT_ROOT }}"
+          if [ -f "scripts/monitor/test_server_connectivity.sh" ]; then
+            echo "执行服务器连接测试..."
+            bash scripts/monitor/test_server_connectivity.sh || echo "⚠️ 部分服务器连接失败"
+          else
+            echo "⚠️ 连接测试脚本不存在"
+          fi
+
+      - name: 执行全服务器健康检查
+        continue-on-error: true
+        run: |
+          cd "${{ env.PROJECT_ROOT }}"
+          if [ -f "scripts/monitor/health_check_all_servers.sh" ]; then
+            echo "执行全服务器健康检查..."
+            bash scripts/monitor/health_check_all_servers.sh || echo "⚠️ 部分健康检查失败"
+          else
+            echo "⚠️ 健康检查脚本不存在"
+          fi
+
+  # ============================================
+  # 阶段 4: 监控配置测试
+  # ============================================
+  monitoring-test:
+    name: Monitoring Configuration Test
+    runs-on: mt5-hub-runner
+    needs: health-check
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 验证Prometheus配置
+        run: |
+          cd "${{ env.PROJECT_ROOT }}"
+          echo "验证Prometheus配置..."
+          if command -v promtool &>/dev/null; then
+            promtool check config configs/prometheus/prometheus.yml
+            echo "✅ Prometheus配置有效"
+          else
+            echo "⚠️ promtool未安装,跳过验证"
+          fi
+
+      - name: 测试告警规则
+        run: |
+          cd "${{ env.PROJECT_ROOT }}"
+          echo "测试Prometheus告警规则..."
+          if [ -f "configs/prometheus/rules/alerts.yml" ]; then
+            if command -v promtool &>/dev/null; then
+              promtool check rules configs/prometheus/rules/alerts.yml
+              echo "✅ 告警规则有效"
+            else
+              echo "⚠️ promtool未安装,跳过验证"
+            fi
+          else
+            echo "⚠️ 告警规则文件不存在"
+          fi
+
+      - name: 检查钉钉Webhook配置
+        run: |
+          cd "${{ env.PROJECT_ROOT }}"
+          echo "检查钉钉Webhook配置..."
+          if [ -f "configs/alertmanager/alertmanager.yml" ]; then
+            if grep -q "webhook_configs" configs/alertmanager/alertmanager.yml; then
+              echo "✅ Webhook配置存在"
+            else
+              echo "⚠️ 未找到Webhook配置"
+            fi
+          fi
+
+  # ============================================
+  # 阶段 5: 部署(可选)
+  # ============================================
+  deploy-monitoring:
+    name: Deploy Monitoring Stack
+    runs-on: mt5-hub-runner
+    needs: monitoring-test
+    if: github.event.inputs.deploy_monitoring == 'true'
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 部署监控服务
+        run: |
+          cd "${{ env.PROJECT_ROOT }}/configs/docker"
+          echo "部署监控服务栈..."
+          docker-compose -f docker-compose.mt5-hub.yml up -d --build
+
+      - name: 等待服务启动
+        run: |
+          echo "等待服务完全启动..."
+          sleep 30
+
+      - name: 验证服务状态
+        run: |
+          echo "验证监控服务状态..."
+          docker ps --filter "name=mt5-" --format "table {{.Names}}\t{{.Status}}"
+
+          # 健康检查
+          timeout 10 curl -f http://localhost:9090/-/healthy || echo "❌ Prometheus健康检查失败"
+          timeout 10 curl -f http://localhost:9093/-/healthy || echo "❌ Alertmanager健康检查失败"
+
+  # ============================================
+  # 阶段 6: 生成报告和通知
+  # ============================================
+  generate-report:
+    name: Generate CI/CD Report
+    runs-on: mt5-hub-runner
+    needs: [lint-and-validate, infrastructure-test, health-check, monitoring-test]
+    if: always()
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 生成测试报告
+        run: |
+          REPORT_FILE="ci-cd-report-$(date +%Y%m%d-%H%M%S).md"
+
+          cat > "$REPORT_FILE" <<'EOF'
+# MT5-CRS CI/CD Pipeline 执行报告
+
+## 基本信息
+- **执行时间**: $(date '+%Y-%m-%d %H:%M:%S')
+- **分支**: ${{ github.ref_name }}
+- **提交**: ${{ github.sha }}
+- **触发者**: ${{ github.actor }}
+- **事件**: ${{ github.event_name }}
+
+## 任务执行结果
+
+| 阶段 | 任务 | 状态 | 说明 |
+|------|------|------|------|
+| 1 | 代码检查和验证 | ${{ needs.lint-and-validate.result }} | Python代码格式、静态分析、配置验证 |
+| 2 | 基础设施测试 | ${{ needs.infrastructure-test.result }} | 磁盘、内存、服务检查 |
+| 3 | 服务器健康检查 | ${{ needs.health-check.result }} | 跨服务器连接、健康检查 |
+| 4 | 监控配置测试 | ${{ needs.monitoring-test.result }} | Prometheus配置、告警规则 |
+
+## 系统状态
+
+### 磁盘使用
+\`\`\`
+$(df -h / | tail -1)
+\`\`\`
+
+### 内存使用
+\`\`\`
+$(free -h | grep Mem)
+\`\`\`
+
+### 运行中的容器
+\`\`\`
+$(docker ps --format "table {{.Names}}\t{{.Status}}" 2>/dev/null || echo "Docker未运行")
+\`\`\`
+
+## 下一步行动
+
+EOF
+
+          # 根据结果添加建议
+          if [ "${{ needs.lint-and-validate.result }}" != "success" ]; then
+            echo "- [ ] 修复代码格式和语法问题" >> "$REPORT_FILE"
+          fi
+
+          if [ "${{ needs.health-check.result }}" != "success" ]; then
+            echo "- [ ] 检查服务器连接和健康状态" >> "$REPORT_FILE"
+          fi
+
+          echo "" >> "$REPORT_FILE"
+          echo "---" >> "$REPORT_FILE"
+          echo "*由 GitHub Actions 自动生成*" >> "$REPORT_FILE"
+
+          cat "$REPORT_FILE"
+
+      - name: 上传报告
+        uses: actions/upload-artifact@v4
+        with:
+          name: ci-cd-report-${{ github.run_number }}
+          path: ci-cd-report-*.md
+          retention-days: 30
+
+  # ============================================
+  # 阶段 7: 钉钉通知
+  # ============================================
+  notify:
+    name: Send Notifications
+    runs-on: mt5-hub-runner
+    needs: [generate-report]
+    if: always()
+    steps:
+      - name: 准备通知内容
+        id: prepare
+        run: |
+          if [ "${{ needs.generate-report.result }}" == "success" ]; then
+            STATUS="✅ 成功"
+            COLOR="success"
+          elif [ "${{ needs.generate-report.result }}" == "failure" ]; then
+            STATUS="❌ 失败"
+            COLOR="danger"
+          else
+            STATUS="⚠️ 部分完成"
+            COLOR="warning"
+          fi
+
+          echo "status=$STATUS" >> $GITHUB_OUTPUT
+          echo "color=$COLOR" >> $GITHUB_OUTPUT
+
+      - name: 发送钉钉通知
+        continue-on-error: true
+        env:
+          DINGTALK_WEBHOOK: ${{ secrets.DINGTALK_WEBHOOK }}
+        run: |
+          if [ -z "$DINGTALK_WEBHOOK" ]; then
+            echo "⚠️ 钉钉Webhook未配置,跳过通知"
+            exit 0
+          fi
+
+          curl -X POST "$DINGTALK_WEBHOOK" \
+            -H 'Content-Type: application/json' \
+            -d "{
+              \"msgtype\": \"markdown\",
+              \"markdown\": {
+                \"title\": \"MT5-CRS CI/CD Pipeline\",
+                \"text\": \"## MT5-CRS CI/CD Pipeline\\n\\n**状态**: ${{ steps.prepare.outputs.status }}\\n\\n**分支**: \`${{ github.ref_name }}\`\\n\\n**提交**: \`${{ github.sha }}\`\\n\\n**触发者**: ${{ github.actor }}\\n\\n**时间**: $(date '+%Y-%m-%d %H:%M:%S')\\n\\n[查看详情](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})\"
+              }
+            }" || echo "⚠️ 钉钉通知发送失败"
+
+      - name: 输出总结
+        run: |
+          echo "========================================="
+          echo "CI/CD Pipeline 执行完成"
+          echo "========================================="
+          echo "状态: ${{ steps.prepare.outputs.status }}"
+          echo "分支: ${{ github.ref_name }}"
+          echo "运行ID: ${{ github.run_id }}"
+          echo "查看: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo "========================================="

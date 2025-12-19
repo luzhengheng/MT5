@@ -1,0 +1,98 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: 'default-receiver'
+  group_by: ['service', 'severity', 'alertname']
+  group_wait: 10s
+  group_interval: 10s
+  repeat_interval: 12h
+
+  routes:
+    # 关键告警（立即发送）
+    - match:
+        severity: 'critical'
+      receiver: 'critical-receiver'
+      group_wait: 0s
+      repeat_interval: 2h
+
+    # CRS 服务告警
+    - match:
+        service: 'CRS'
+      receiver: 'crs-receiver'
+      group_wait: 5s
+      repeat_interval: 12h
+
+    # PTS 服务告警
+    - match:
+        service: 'PTS'
+      receiver: 'pts-receiver'
+      group_wait: 5s
+      repeat_interval: 12h
+
+    # TRS 服务告警
+    - match:
+        service: 'TRS'
+      receiver: 'trs-receiver'
+      group_wait: 5s
+      repeat_interval: 12h
+
+    # 业务告警
+    - match:
+        business_type: '数据拉取'
+      receiver: 'business-receiver'
+      repeat_interval: 12h
+
+receivers:
+  # 默认接收器
+  - name: 'default-receiver'
+    webhook_configs:
+      - url: 'http://host.docker.internal:5001/alert'
+        send_resolved: true
+
+  # CRS 服务接收器
+  - name: 'crs-receiver'
+    webhook_configs:
+      - url: 'http://host.docker.internal:5001/alert'
+        send_resolved: true
+
+  # PTS 服务接收器
+  - name: 'pts-receiver'
+    webhook_configs:
+      - url: 'http://host.docker.internal:5001/alert'
+        send_resolved: true
+
+  # TRS 服务接收器
+  - name: 'trs-receiver'
+    webhook_configs:
+      - url: 'http://host.docker.internal:5001/alert'
+        send_resolved: true
+
+  # 关键告警接收器（不发送恢复信息）
+  - name: 'critical-receiver'
+    webhook_configs:
+      - url: 'http://host.docker.internal:5001/alert'
+        send_resolved: false
+
+  # 业务告警接收器
+  - name: 'business-receiver'
+    webhook_configs:
+      - url: 'http://host.docker.internal:5001/alert'
+        send_resolved: true
+
+inhibit_rules:
+  # 抑制离线实例的其他告警
+  - source_match:
+      severity: 'critical'
+      alertname: 'InstanceDown'
+    target_match_re:
+      severity: 'warning|info'
+    equal: ['instance', 'job']
+
+  # 抑制离线服务的其他告警
+  - source_match:
+      severity: 'critical'
+      alertname: 'ServiceDown'
+    target_match_re:
+      severity: 'warning|info'
+    equal: ['service']

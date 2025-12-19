@@ -1,0 +1,37 @@
+apiVersion: 1
+
+contactPoints:
+  - name: dingtalk-mt5-alerts
+    type: dingding
+    settings:
+      url: https://oapi.dingtalk.com/robot/send?access_token=3df74b9dd5f916bed39020e318f415cc5617f59041ba26aa50a8e823cd54a1fb
+      msgType: markdown
+
+templates:
+  - name: dingtalk.title
+    template: |
+      [{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ if gt (.Alerts.Resolved | len) 0 }}, RESOLVED:{{ .Alerts.Resolved | len }}{{ end }}{{ end }}] {{ .GroupLabels.SortedPairs.Values | join "_" }}
+
+  - name: dingtalk.text
+    template: |
+      # 告警通知
+
+      {{ range .Alerts }}
+      ## {{ .Annotations.summary }}
+
+      **状态**: {{ .Status | toUpper }}
+      **描述**: {{ .Annotations.description }}
+      **时间**: {{ .StartsAt.Format "2006-01-02 15:04:05" }}
+
+      ### 标签信息
+      {{ range .Labels.SortedPairs }}
+      - **{{ .Name }}**: {{ .Value }}
+      {{ end }}
+
+      {{ if gt (len .Annotations) 0 }}
+      ### 附加信息
+      {{ range .Annotations.SortedPairs }}
+      - **{{ .Name }}**: {{ .Value }}
+      {{ end }}
+      {{ end }}
+      {{ end }}

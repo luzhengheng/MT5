@@ -1,0 +1,14 @@
+[Unit]
+Description=MT5 Hub OSS Data Backup Timer
+Requires=oss_backup.service
+
+[Timer]
+# 每日凌晨2点执行
+OnCalendar=daily
+# 如果错过执行时间，在系统启动后5分钟内执行
+Persistent=true
+# 随机延迟0-5分钟，避免同时执行
+RandomizedDelaySec=300
+
+[Install]
+WantedBy=timers.target
