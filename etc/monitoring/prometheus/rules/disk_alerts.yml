@@ -1,0 +1,62 @@
+# MT5-CRS 磁盘监控告警规则
+# 监控磁盘使用率并在超过阈值时触发告警
+
+groups:
+  - name: disk_alerts
+    interval: 60s
+    rules:
+      # 警告: 磁盘使用率超过 70%
+      - alert: DiskUsageWarning
+        expr: (node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_free_bytes{mountpoint="/"}) / node_filesystem_size_bytes{mountpoint="/"} * 100 > 70
+        for: 5m
+        labels:
+          severity: warning
+          service: mt5-crs
+        annotations:
+          summary: "磁盘使用率警告: {{ $labels.instance }}"
+          description: "服务器 {{ $labels.instance }} 的磁盘使用率已达到 {{ $value | humanize }}%,超过 70% 警告阈值。请考虑清理旧文件。"
+
+      # 严重: 磁盘使用率超过 85%
+      - alert: DiskUsageCritical
+        expr: (node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_free_bytes{mountpoint="/"}) / node_filesystem_size_bytes{mountpoint="/"} * 100 > 85
+        for: 5m
+        labels:
+          severity: critical
+          service: mt5-crs
+        annotations:
+          summary: "磁盘使用率严重告警: {{ $labels.instance }}"
+          description: "服务器 {{ $labels.instance }} 的磁盘使用率已达到 {{ $value | humanize }}%,超过 85% 严重阈值!请立即清理磁盘空间。"
+
+      # 紧急: 磁盘使用率超过 90%
+      - alert: DiskUsageEmergency
+        expr: (node_filesystem_size_bytes{mountpoint="/"} - node_filesystem_free_bytes{mountpoint="/"}) / node_filesystem_size_bytes{mountpoint="/"} * 100 > 90
+        for: 2m
+        labels:
+          severity: emergency
+          service: mt5-crs
+        annotations:
+          summary: "磁盘空间紧急告警: {{ $labels.instance }}"
+          description: "服务器 {{ $labels.instance }} 的磁盘使用率已达到 {{ $value | humanize }}%,超过 90% 紧急阈值!系统可能即将崩溃,请立即采取行动!"
+          action: "运行清理脚本: /opt/mt5-crs/scripts/maintenance/cleanup_routine.sh"
+
+      # 可用空间小于 5GB
+      - alert: DiskSpaceLow
+        expr: node_filesystem_free_bytes{mountpoint="/"} / 1024 / 1024 / 1024 < 5
+        for: 5m
+        labels:
+          severity: warning
+          service: mt5-crs
+        annotations:
+          summary: "磁盘可用空间不足: {{ $labels.instance }}"
+          description: "服务器 {{ $labels.instance }} 的磁盘可用空间仅剩 {{ $value | humanize }}GB,低于 5GB 阈值。"
+
+      # Inode 使用率警告
+      - alert: InodeUsageWarning
+        expr: (node_filesystem_files{mountpoint="/"} - node_filesystem_files_free{mountpoint="/"}) / node_filesystem_files{mountpoint="/"} * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          service: mt5-crs
+        annotations:
+          summary: "Inode 使用率警告: {{ $labels.instance }}"
+          description: "服务器 {{ $labels.instance }} 的 Inode 使用率已达到 {{ $value | humanize }}%。可能有大量小文件需要清理。"
