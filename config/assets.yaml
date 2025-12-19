@@ -1,0 +1,90 @@
+# 资产配置文件
+# 定义需要采集的所有资产
+
+assets:
+  # 股票 (30)
+  stocks:
+    - AAPL.US
+    - MSFT.US
+    - NVDA.US
+    - TSLA.US
+    - AMD.US
+    - GOOGL.US
+    - AMZN.US
+    - META.US
+    - NFLX.US
+    - INTC.US
+    - JPM.US
+    - BAC.US
+    - WFC.US
+    - GS.US
+    - MS.US
+    - V.US
+    - MA.US
+    - JNJ.US
+    - PFE.US
+    - UNH.US
+    - XOM.US
+    - CVX.US
+    - DIS.US
+    - NKE.US
+    - MCD.US
+    - HD.US
+    - WMT.US
+    - PG.US
+    - KO.US
+    - PEP.US
+
+  # 加密货币 (10)
+  crypto:
+    - BTC-USD
+    - ETH-USD
+    - BNB-USD
+    - SOL-USD
+    - XRP-USD
+    - ADA-USD
+    - DOGE-USD
+    - MATIC-USD
+    - DOT-USD
+    - AVAX-USD
+
+  # 外汇 (8)
+  forex:
+    - EURUSD
+    - GBPUSD
+    - USDJPY
+    - AUDUSD
+    - USDCAD
+    - USDCHF
+    - NZDUSD
+    - USDCNY
+
+  # 商品 (4)
+  commodities:
+    - GC.COMM  # Gold
+    - SI.COMM  # Silver
+    - CL.COMM  # Oil WTI
+    - NG.COMM  # Natural Gas
+
+  # 指数 (3)
+  indices:
+    - GSPC.INDX  # S&P 500
+    - NDX.INDX   # NASDAQ 100
+    - DJI.INDX   # Dow Jones
+
+# 数据采集配置
+data_collection:
+  start_date: "2023-12-01"
+  frequency: "daily"
+
+# 数据源配置
+data_sources:
+  primary: "eodhd"
+  backup: "yfinance"
+
+  eodhd:
+    api_key_env: "EODHD_API_KEY"
+    rate_limit: 60  # requests per minute
+
+  yfinance:
+    rate_limit: 2000  # requests per hour

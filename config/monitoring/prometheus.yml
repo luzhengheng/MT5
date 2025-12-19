@@ -1,0 +1,55 @@
+# Prometheus 配置文件
+# 用于采集 MT5-CRS 数据质量指标
+
+global:
+  scrape_interval: 15s  # 每 15 秒采集一次
+  evaluation_interval: 15s  # 每 15 秒评估一次告警规则
+  external_labels:
+    monitor: 'mt5-crs-monitor'
+    env: 'production'
+
+# 告警管理器配置
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+            - localhost:9093
+
+# 告警规则文件
+rule_files:
+  - "/opt/mt5-crs/config/monitoring/alert_rules.yml"
+
+# 采集配置
+scrape_configs:
+  # MT5-CRS 数据质量指标
+  - job_name: 'mt5-crs-dq-score'
+    static_configs:
+      - targets:
+          - 'localhost:9090'  # Prometheus exporter 地址
+        labels:
+          instance: 'mt5-crs-main'
+          component: 'data-quality'
+
+    # 采集间隔
+    scrape_interval: 30s
+    scrape_timeout: 10s
+
+    # 指标路径
+    metrics_path: '/metrics'
+
+    # 健康检查
+    health_check_path: '/health'
+
+  # Prometheus 自监控
+  - job_name: 'prometheus'
+    static_configs:
+      - targets:
+          - 'localhost:9091'
+
+  # Node Exporter (系统指标)
+  - job_name: 'node'
+    static_configs:
+      - targets:
+          - 'localhost:9100'
+        labels:
+          instance: 'mt5-crs-server'

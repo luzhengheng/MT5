@@ -1,0 +1,124 @@
+# Prometheus 告警规则
+# MT5-CRS 数据质量监控告警
+
+groups:
+  - name: data_quality_alerts
+    interval: 30s
+    rules:
+      # 1. DQ Score 低于阈值
+      - alert: LowDQScore
+        expr: dq_score_total < 70
+        for: 5m
+        labels:
+          severity: warning
+          component: data-quality
+        annotations:
+          summary: "数据质量得分过低"
+          description: "{{ $labels.symbol }} 的 DQ Score 为 {{ $value }},低于 70 分阈值"
+
+      # 2. DQ Score 严重低于阈值
+      - alert: CriticalDQScore
+        expr: dq_score_total < 50
+        for: 2m
+        labels:
+          severity: critical
+          component: data-quality
+        annotations:
+          summary: "数据质量得分严重过低"
+          description: "{{ $labels.symbol }} 的 DQ Score 为 {{ $value }},低于 50 分,需立即处理"
+
+      # 3. 完整性得分过低
+      - alert: LowCompletenessScore
+        expr: dq_score_completeness < 80
+        for: 5m
+        labels:
+          severity: warning
+          component: data-quality
+        annotations:
+          summary: "数据完整性不足"
+          description: "{{ $labels.symbol }} 的完整性得分为 {{ $value }},存在较多缺失值"
+
+      # 4. 准确性得分过低
+      - alert: LowAccuracyScore
+        expr: dq_score_accuracy < 85
+        for: 5m
+        labels:
+          severity: warning
+          component: data-quality
+        annotations:
+          summary: "数据准确性不足"
+          description: "{{ $labels.symbol }} 的准确性得分为 {{ $value }},存在异常值或错误数据"
+
+      # 5. 及时性得分过低 (数据更新不及时)
+      - alert: LowTimelinessScore
+        expr: dq_score_timeliness < 60
+        for: 10m
+        labels:
+          severity: warning
+          component: data-quality
+        annotations:
+          summary: "数据更新不及时"
+          description: "{{ $labels.symbol }} 的及时性得分为 {{ $value }},数据可能过期"
+
+      # 6. 平均 DQ Score 下降
+      - alert: DQScoreDropping
+        expr: dq_score_avg < 75
+        for: 5m
+        labels:
+          severity: warning
+          component: data-quality
+        annotations:
+          summary: "整体数据质量下降"
+          description: "平均 DQ Score 为 {{ $value }},低于 75 分"
+
+      # 7. 导出器不健康
+      - alert: ExporterUnhealthy
+        expr: exporter_health == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: monitoring
+        annotations:
+          summary: "Prometheus 导出器不健康"
+          description: "数据质量指标导出器无法正常工作"
+
+      # 8. 资产数量异常
+      - alert: AssetsCountAnomaly
+        expr: assets_count < 3
+        for: 5m
+        labels:
+          severity: warning
+          component: data-quality
+        annotations:
+          summary: "监控资产数量异常"
+          description: "当前监控资产数量为 {{ $value }},少于预期"
+
+  - name: data_pipeline_alerts
+    interval: 60s
+    rules:
+      # 9. 数据记录数异常 (某个资产记录数突然下降)
+      - alert: RecordsCountDrop
+        expr: |
+          (
+            data_records_count
+            - data_records_count offset 1h
+          ) < -50
+        for: 5m
+        labels:
+          severity: warning
+          component: data-pipeline
+        annotations:
+          summary: "数据记录数下降"
+          description: "{{ $labels.symbol }} 的记录数在过去 1 小时下降了 {{ $value }} 条"
+
+      # 10. 所有资产 DQ Score 同时下降 (可能系统性问题)
+      - alert: SystemicQualityIssue
+        expr: |
+          count(dq_score_total < 70) > 3
+        for: 10m
+        labels:
+          severity: critical
+          component: system
+        annotations:
+          summary: "系统性数据质量问题"
+          description: "超过 3 个资产的 DQ Score 低于 70 分,可能存在系统性问题"

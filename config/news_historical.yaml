@@ -1,0 +1,60 @@
+# 历史新闻数据采集配置
+
+# 数据源配置
+data_source:
+  api: "eodhd"
+  endpoint: "https://eodhd.com/api/news"
+  api_key_env: "EODHD_API_KEY"
+
+# 采集时间范围
+date_range:
+  start_date: "2023-12-01"
+  end_date: null  # null 表示采集到当前日期
+
+# 限流配置
+rate_limiting:
+  requests_per_minute: 60
+  retry_attempts: 3
+  retry_delays: [1, 2, 4]  # 秒
+
+# 分页配置
+pagination:
+  limit_per_request: 1000
+  offset_increment: 1000
+
+# 过滤配置
+filters:
+  # 只采集提及特定 ticker 的新闻
+  require_ticker: true
+  # 语言过滤
+  languages: ["en"]
+
+# FinBERT 情感分析配置
+sentiment_analysis:
+  model_path: "/opt/mt5-crs/var/cache/models/finbert"
+  batch_size: 32
+  max_length: 512
+  device: "cpu"  # 或 "cuda" 如果有 GPU
+
+# 输出配置
+output:
+  base_path: "/opt/mt5-crs/data_lake/news_processed"
+  filename_pattern: "news_processed_{year}{month:02d}.parquet"
+  partition_by: ["year", "month"]
+
+# 断点续拉配置
+checkpoint:
+  enabled: true
+  checkpoint_file: "/opt/mt5-crs/var/checkpoints/news_fetch_checkpoint.json"
+  save_interval: 100  # 每采集 100 条新闻保存一次断点
+
+# 数据验证
+validation:
+  min_news_count: 60000
+  required_fields:
+    - "news_id"
+    - "timestamp"
+    - "ticker_list"
+    - "sentiment_per_ticker"
+    - "title"
+  sentiment_success_rate_threshold: 0.98

@@ -1,0 +1,150 @@
+# 特征工程配置文件
+
+# 基础特征配置
+basic_features:
+  # 趋势类特征
+  trend:
+    - name: "ema_12"
+      period: 12
+    - name: "ema_26"
+      period: 26
+    - name: "ema_50"
+      period: 50
+    - name: "ema_200"
+      period: 200
+    - name: "sma_20"
+      period: 20
+    - name: "sma_60"
+      period: 60
+
+  # 动量类特征
+  momentum:
+    - name: "rsi_14"
+      period: 14
+    - name: "macd"
+      fast: 12
+      slow: 26
+      signal: 9
+    - name: "roc_10"
+      period: 10
+    - name: "stochastic"
+      k_period: 14
+      d_period: 3
+    - name: "williams_r"
+      period: 14
+
+  # 波动类特征
+  volatility:
+    - name: "atr_14"
+      period: 14
+    - name: "bbands"
+      period: 20
+      std: 2
+    - name: "realized_volatility_20"
+      period: 20
+
+  # 成交量类特征
+  volume:
+    - name: "volume_sma20"
+      period: 20
+    - name: "obv"
+
+  # 滞后回报
+  returns:
+    periods: [1, 3, 5, 10, 20]
+
+# 高级特征配置
+advanced_features:
+  # 分数差分
+  fractional_diff:
+    - field: "close"
+      d_values: [0.3, 0.5, 0.7]
+      threshold: 1e-5
+    - field: "volume"
+      d_values: [0.5]
+      threshold: 1e-5
+    - field: "sentiment_score"
+      d_values: [0.3, 0.5]
+      threshold: 1e-5
+
+  # 滚动统计
+  rolling_stats:
+    windows: [5, 20, 60]
+    metrics:
+      - "skew"
+      - "kurtosis"
+      - "hurst"
+      - "quantile_25"
+      - "quantile_75"
+      - "quantile_90"
+
+  # 横截面排名
+  cross_sectional_rank:
+    features:
+      - "sentiment_score"
+      - "return_1d"
+      - "volume"
+      - "rsi_14"
+      - "realized_volatility_20"
+
+  # 情感动量
+  sentiment_momentum:
+    decay_lambda: 0.3
+    windows: [5, 10]
+    zscore_window: 20
+    extreme_threshold: 2.0
+
+  # 自适应窗口
+  adaptive_window:
+    base_window: 20
+    scale: 2.0
+    features:
+      - "ema"
+      - "rsi"
+      - "atr"
+
+  # 跨资产特征
+  cross_asset:
+    reference_symbol: "GSPC.INDX"  # S&P 500
+    windows: [20, 60]
+
+  # 宏观经济特征
+  macro_indicators:
+    - name: "unemployment_rate"
+      fred_series: "UNRATE"
+      frequency: "monthly"
+    - name: "cpi_yoy"
+      fred_series: "CPIAUCSL"
+      frequency: "monthly"
+    - name: "fed_funds_rate"
+      fred_series: "DFF"
+      frequency: "daily"
+    - name: "vix_index"
+      symbol: "^VIX"
+      frequency: "daily"
+    - name: "treasury_10y_yield"
+      fred_series: "DGS10"
+      frequency: "daily"
+
+# 标签配置
+labeling:
+  triple_barrier:
+    upper_barrier: 0.02  # 2% 止盈
+    lower_barrier: -0.02  # -2% 止损触发
+    max_holding_days: 5
+    stop_loss: -0.01  # -1% 止损
+
+  # 回报期限
+  return_periods: [3, 5, 10]
+
+# 特征验证配置
+validation:
+  ic_threshold: 0.03  # IC > 0.03 视为有效特征
+  psi_threshold: 0.25  # PSI > 0.25 视为显著漂移
+  nan_threshold: 0.01  # NaN 率阈值
+
+# 输出配置
+output:
+  format: "parquet"
+  compression: "gzip"
+  partition_by: ["year", "month"]

@@ -1,0 +1,69 @@
+================================================================================
+迭代 2: 基础特征工程 - 执行报告
+================================================================================
+生成时间: 2025-12-19 22:14:29
+
+## 1. 数据处理
+  - 处理资产数: 5
+  - 总记录数: 2590
+  - 日期范围: 2023-01-01 00:00:00 to 2024-06-01 00:00:00
+
+## 2. 特征工程
+  - 总特征数: 39
+  - 特征完整率: 98.31%
+  - 包含情感数据的资产: 0/5
+
+  - 特征类别:
+    * 趋势类: 10 个 (EMA, SMA, 交叉信号等)
+    * 动量类: 8 个 (RSI, MACD, ROC, Stochastic, Williams %R)
+    * 波动类: 6 个 (ATR, Bollinger Bands, 已实现波动率)
+    * 成交量类: 3 个 (Volume SMA, Volume Ratio, OBV)
+    * 回报类: 5 个 (1/3/5/10/20 日回报)
+    * 情感类: 3 个 (情感均值、动量、移动平均)
+
+## 3. 数据质量
+  - 平均完整率: 98.31%
+  - 最高完整率: 98.31% (AAPL.US)
+  - 最低完整率: 98.31% (AAPL.US)
+
+## 4. 情感数据覆盖
+  - 有情感数据的资产: 0/5
+  - 平均新闻天数: 0.0 天
+
+## 5. 输出文件
+  - 特征数据: /opt/mt5-crs/data_lake/features_daily/
+  - 质量报告: /opt/mt5-crs/var/reports/iteration2_feature_quality_report.csv
+
+## 6. 特征列表示例（前 20 个）
+   1. sentiment_mean
+   2. sentiment_std
+   3. news_count
+   4. sentiment_confidence
+   5. ema_12
+   6. ema_26
+   7. ema_50
+   8. ema_200
+   9. sma_20
+  10. sma_60
+  11. price_vs_ema200
+  12. golden_cross
+  13. death_cross
+  14. trend_strength
+  15. rsi_14
+  16. macd
+  17. macd_signal
+  18. macd_hist
+  19. roc_10
+  20. stochastic_k
+  ... 还有 19 个特征
+
+## 7. 下一步 (迭代 3)
+  - 实现 Fractional Differentiation（6 维）
+  - 实现 Rolling Statistics（12 维）
+  - 实现 Cross-Sectional Rank（6 维）
+  - 实现 Sentiment Momentum（8 维）
+  - 实现 Triple Barrier Labeling
+
+================================================================================
+迭代 2 完成！✅
+================================================================================

@@ -1,0 +1,162 @@
+{
+  "dashboard": {
+    "title": "MT5-CRS 数据质量监控总览",
+    "description": "数据质量 (DQ Score) 实时监控仪表盘",
+    "tags": ["mt5-crs", "data-quality", "dq-score"],
+    "timezone": "browser",
+    "schemaVersion": 27,
+    "version": 1,
+    "refresh": "30s",
+    
+    "panels": [
+      {
+        "id": 1,
+        "title": "平均 DQ Score",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 6, "x": 0, "y": 0},
+        "targets": [
+          {
+            "expr": "dq_score_avg",
+            "legendFormat": "平均得分",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "graphMode": "area",
+          "orientation": "auto",
+          "textMode": "value_and_name",
+          "colorMode": "value"
+        },
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "mode": "absolute",
+              "steps": [
+                {"value": 0, "color": "red"},
+                {"value": 60, "color": "orange"},
+                {"value": 70, "color": "yellow"},
+                {"value": 80, "color": "green"}
+              ]
+            },
+            "unit": "short",
+            "decimals": 2
+          }
+        }
+      },
+      
+      {
+        "id": 2,
+        "title": "监控资产数量",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 6, "x": 6, "y": 0},
+        "targets": [
+          {
+            "expr": "assets_count",
+            "legendFormat": "资产数",
+            "refId": "A"
+          }
+        ]
+      },
+      
+      {
+        "id": 3,
+        "title": "导出器健康状态",
+        "type": "stat",
+        "gridPos": {"h": 8, "w": 6, "x": 12, "y": 0},
+        "targets": [
+          {
+            "expr": "exporter_health",
+            "legendFormat": "健康状态",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "mappings": [
+              {"options": {"0": {"text": "不健康", "color": "red"}}, "type": "value"},
+              {"options": {"1": {"text": "健康", "color": "green"}}, "type": "value"}
+            ]
+          }
+        }
+      },
+      
+      {
+        "id": 4,
+        "title": "DQ Score 趋势",
+        "type": "graph",
+        "gridPos": {"h": 10, "w": 24, "x": 0, "y": 8},
+        "targets": [
+          {
+            "expr": "dq_score_total",
+            "legendFormat": "{{symbol}}",
+            "refId": "A"
+          }
+        ],
+        "yaxes": [
+          {"format": "short", "min": 0, "max": 100, "label": "DQ Score"},
+          {"format": "short"}
+        ],
+        "legend": {"show": true, "alignAsTable": true, "rightSide": true}
+      },
+      
+      {
+        "id": 5,
+        "title": "五维度得分对比",
+        "type": "graph",
+        "gridPos": {"h": 10, "w": 12, "x": 0, "y": 18},
+        "targets": [
+          {
+            "expr": "avg(dq_score_completeness)",
+            "legendFormat": "完整性",
+            "refId": "A"
+          },
+          {
+            "expr": "avg(dq_score_accuracy)",
+            "legendFormat": "准确性",
+            "refId": "B"
+          },
+          {
+            "expr": "avg(dq_score_consistency)",
+            "legendFormat": "一致性",
+            "refId": "C"
+          },
+          {
+            "expr": "avg(dq_score_timeliness)",
+            "legendFormat": "及时性",
+            "refId": "D"
+          },
+          {
+            "expr": "avg(dq_score_validity)",
+            "legendFormat": "有效性",
+            "refId": "E"
+          }
+        ]
+      },
+      
+      {
+        "id": 6,
+        "title": "各资产 DQ Score 排名",
+        "type": "table",
+        "gridPos": {"h": 10, "w": 12, "x": 12, "y": 18},
+        "targets": [
+          {
+            "expr": "dq_score_total",
+            "format": "table",
+            "instant": true,
+            "refId": "A"
+          }
+        ],
+        "transformations": [
+          {
+            "id": "organize",
+            "options": {
+              "excludeByName": {"Time": true},
+              "indexByName": {"symbol": 0, "Value": 1},
+              "renameByName": {"symbol": "资产", "Value": "DQ Score"}
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
