@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+*.egg-info/
+dist/
+build/
+
+# 临时文件
+tmp/
+*.tmp
+*.swp
+*.swo
+*~
+
+# 日志文件
+*.log
+var/log/*.log
+
+# 缓存
+var/cache/
+var/run/
+*.pid
+
+# IDE
+.vscode/
+.idea/
+.cursor/
+*.code-workspace
+
+# 系统
+.DS_Store
+Thumbs.db
+*.bak
+
+# 敏感信息
+secrets/
+*.pem
+*.key
+.env
+.env.*
+!.env.example
+
+# 备份文件
+*.backup
+backup_*/
+.backup_*/
+
+# 数据文件（可选，根据需要调整）
+# data/
+# var/spool/
