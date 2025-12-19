@@ -1,0 +1,23 @@
+# MT5-CRS Python Dependencies
+# 用于三台服务器的核心依赖
+
+# Redis 和事件总线
+redis>=4.5.0
+
+# 监控和指标
+prometheus-client>=0.16.0
+
+# 新闻和情感分析
+requests>=2.28.0
+transformers>=4.30.0  # FinBERT
+torch>=2.0.0          # 神经网络后端
+
+# 数据处理
+numpy>=1.24.0
+pandas>=2.0.0
+
+# API 客户端
+# eodhd  # EOD Historical Data API (可选)
+
+# 工具库
+python-dotenv>=1.0.0  # 环境变量管理
