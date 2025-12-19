@@ -61,8 +61,14 @@ class FinBERTAnalyzer:
         else:
             self.device = device
 
-        # 缓存目录
-        self.cache_dir = cache_dir or os.path.expanduser('~/.cache/finbert')
+        # 缓存目录 (优先使用 FHS 标准路径)
+        if cache_dir is None:
+            # 优先使用项目缓存目录
+            cache_dir = '/opt/mt5-crs/var/cache/models'
+            if not os.path.exists(cache_dir):
+                cache_dir = os.path.expanduser('~/.cache/finbert')
+
+        self.cache_dir = cache_dir
         os.makedirs(self.cache_dir, exist_ok=True)
 
         logger.info(f"初始化 FinBERT 分析器: model={model_name}, device={self.device}")
@@ -77,16 +83,29 @@ class FinBERTAnalyzer:
         try:
             logger.info(f"正在加载模型: {self.model_path}")
 
+            # 尝试从本地缓存加载 (手动下载的模型)
+            local_model_path = os.path.join(self.cache_dir, 'ProsusAI--finbert')
+            use_local = os.path.exists(local_model_path)
+
+            if use_local:
+                logger.info(f"使用本地模型: {local_model_path}")
+                model_source = local_model_path
+                load_kwargs = {'local_files_only': True}
+            else:
+                logger.info(f"从 HuggingFace 下载模型...")
+                model_source = self.model_path
+                load_kwargs = {'cache_dir': self.cache_dir}
+
             # 加载分词器
             self.tokenizer = AutoTokenizer.from_pretrained(
-                self.model_path,
-                cache_dir=self.cache_dir
+                model_source,
+                **load_kwargs
             )
 
             # 加载模型
             self.model = AutoModelForSequenceClassification.from_pretrained(
-                self.model_path,
-                cache_dir=self.cache_dir
+                model_source,
+                **load_kwargs
             )
 
             # 移动到指定设备
