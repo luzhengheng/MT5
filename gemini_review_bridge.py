@@ -417,17 +417,17 @@ class GeminiReviewBridge:
         # 尝试使用中转服务
         if PROXY_API_URL and PROXY_API_KEY:
             try:
-                return self._call_gemini_proxy(prompt)
+                return self._call_gemini_proxy(prompt, save_response)
             except Exception as e:
                 print(f"⚠️ 中转服务失败: {e}")
 
         # 备用：直接调用
         try:
-            return self._call_gemini_direct(prompt)
+            return self._call_gemini_direct(prompt, save_response)
         except Exception as e:
             return {"error": f"所有 API 调用失败: {e}"}
 
-    def _call_gemini_proxy(self, prompt):
+    def _call_gemini_proxy(self, prompt, save_response=True):
         """使用中转服务调用 Gemini"""
         url = f"{PROXY_API_URL}/v1/chat/completions"
 
@@ -471,7 +471,7 @@ class GeminiReviewBridge:
 
         return {"error": f"API 调用失败: {response.status_code}"}
 
-    def _call_gemini_direct(self, prompt):
+    def _call_gemini_direct(self, prompt, save_response=True):
         """直接调用 Gemini API"""
         url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
 
@@ -490,7 +490,8 @@ class GeminiReviewBridge:
             if "candidates" in result and result["candidates"]:
                 review_text = result["candidates"][0]["content"]["parts"][0]["text"]
 
-                self._save_review_response(prompt, review_text)
+                if save_response:
+                    self._save_review_response(prompt, review_text)
 
                 return {
                     "success": True,
