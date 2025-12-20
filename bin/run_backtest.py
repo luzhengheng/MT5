@@ -18,6 +18,7 @@ import os
 from pathlib import Path
 from datetime import datetime, timedelta
 import logging
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 # 添加项目路径
 project_root = Path(__file__).parent.parent
@@ -61,6 +62,87 @@ class MLDataFeed(bt.feeds.PandasData):
         ('y_pred_proba_short', 'y_pred_proba_short'),
         ('volatility', 'volatility'),
     )
+
+
+def run_single_fold(fold_num: int, test_df: pd.DataFrame, train_dates: tuple,
+                   test_dates: tuple, config: dict) -> dict:
+    """
+    执行单个 Walk-Forward 窗口的回测（顶层函数，用于多进程）
+
+    Args:
+        fold_num: 窗口编号
+        test_df: 测试集数据
+        train_dates: (train_start, train_end)
+        test_dates: (test_start, test_end)
+        config: 配置字典
+
+    Returns:
+        dict: 该窗口的回测结果
+    """
+    # 在子进程中创建新的 Cerebro 实例（避免 pickle 问题）
+    cerebro = bt.Cerebro()
+
+    # 添加策略
+    cerebro.addstrategy(MLStrategy)
+
+    # 添加数据
+    data = MLDataFeed(dataname=test_df)
+    cerebro.adddata(data)
+
+    # 设置初始资金和交易成本
+    initial_cash = config.get('initial_cash', 100000.0)
+    cerebro.broker.setcash(initial_cash)
+
+    cerebro.broker.setcommission(
+        commission=config.get('commission', 0.0002),
+        margin=None,
+        mult=1.0,
+    )
+
+    cerebro.broker.set_slippage_perc(
+        perc=config.get('slippage', 0.0005),
+        slip_open=True,
+        slip_limit=True,
+        slip_match=True,
+        slip_out=True
+    )
+
+    # 添加 Kelly Sizer
+    if config.get('use_kelly_sizer', True):
+        cerebro.addsizer(KellySizer,
+                       kelly_fraction=config.get('kelly_fraction', 0.25),
+                       max_position_pct=config.get('max_position_pct', 0.50))
+
+    # 添加分析器
+    cerebro.addanalyzer(bt.analyzers.SharpeRatio, _name='sharpe',
+                      timeframe=bt.TimeFrame.Days, compression=1, riskfreerate=0.02)
+    cerebro.addanalyzer(bt.analyzers.DrawDown, _name='drawdown')
+    cerebro.addanalyzer(bt.analyzers.Returns, _name='returns')
+    cerebro.addanalyzer(bt.analyzers.TradeAnalyzer, _name='trades')
+
+    # 运行回测
+    logger.info(f"[窗口 {fold_num}] 开始回测 - 测试集: {test_dates[0].date()} 至 {test_dates[1].date()}")
+    results = cerebro.run()
+
+    # 提取结果
+    strat = results[0]
+    final_value = cerebro.broker.getvalue()
+
+    fold_result = {
+        'fold': fold_num,
+        'train_start': train_dates[0],
+        'train_end': train_dates[1],
+        'test_start': test_dates[0],
+        'test_end': test_dates[1],
+        'final_value': final_value,
+        'sharpe': strat.analyzers.sharpe.get_analysis().get('sharperatio', None),
+        'max_drawdown': strat.analyzers.drawdown.get_analysis().get('max', {}).get('drawdown', None),
+        'total_trades': strat.analyzers.trades.get_analysis().get('total', {}).get('total', 0),
+    }
+
+    logger.info(f"[窗口 {fold_num}] 完成 - 收益率={(final_value/initial_cash-1)*100:.2f}%")
+
+    return fold_result
 
 
 class BacktestRunner:
@@ -233,18 +315,23 @@ class BacktestRunner:
 
         return cerebro, strat
 
-    def run_walkforward(self, df: pd.DataFrame, train_months: int = 6, test_months: int = 2):
+    def run_walkforward(self, df: pd.DataFrame, train_months: int = 6, test_months: int = 2,
+                       parallel: bool = True, max_workers: int = None):
         """
-        执行 Walk-Forward 回测
+        执行 Walk-Forward 回测（支持并行）
 
         Args:
             df: 完整数据集
             train_months: 训练集月数
             test_months: 测试集月数
+            parallel: 是否并行执行（默认 True）
+            max_workers: 最大并行进程数（默认为 CPU 核心数）
+
+        Returns:
+            list: 各窗口的回测结果
         """
         logger.info(f"开始 Walk-Forward 回测 - 训练: {train_months}月, 测试: {test_months}月")
 
-        results = []
         total_data_months = (df.index[-1] - df.index[0]).days // 30
 
         # 计算分割点
@@ -252,6 +339,8 @@ class BacktestRunner:
 
         logger.info(f"总数据: {total_data_months}月, 分割: {n_folds} 个窗口")
 
+        # 准备所有窗口的参数
+        fold_params = []
         for i in range(n_folds):
             # 计算窗口日期
             train_start = df.index[0] + timedelta(days=i * test_months * 30)
@@ -262,30 +351,82 @@ class BacktestRunner:
             if test_end > df.index[-1]:
                 break
 
-            logger.info(f"\n--- 窗口 {i+1}/{n_folds} ---")
-            logger.info(f"训练集: {train_start.date()} 至 {train_end.date()}")
-            logger.info(f"测试集: {test_start.date()} 至 {test_end.date()}")
-
             # 分割数据
-            train_df = df.loc[train_start:train_end]
             test_df = df.loc[test_start:test_end]
 
-            # 在测试集上回测（模拟真实场景）
-            cerebro, strat = self.run_backtest(test_df)
+            fold_params.append({
+                'fold_num': i + 1,
+                'test_df': test_df,
+                'train_dates': (train_start, train_end),
+                'test_dates': (test_start, test_end),
+                'config': self.config.copy()
+            })
 
-            # 提取结果
-            fold_result = {
-                'fold': i + 1,
-                'train_start': train_start,
-                'train_end': train_end,
-                'test_start': test_start,
-                'test_end': test_end,
-                'final_value': cerebro.broker.getvalue(),
-                'sharpe': strat.analyzers.sharpe.get_analysis().get('sharperatio', None),
-                'max_drawdown': strat.analyzers.drawdown.get_analysis().get('max', {}).get('drawdown', None),
-            }
+        logger.info(f"将执行 {len(fold_params)} 个窗口的回测")
 
-            results.append(fold_result)
+        # ============================================================
+        # 并行执行或串行执行
+        # ============================================================
+        results = []
+
+        if parallel and len(fold_params) > 1:
+            import time
+            start_time = time.time()
+
+            logger.info(f"🚀 启动并行回测 - 最大进程数: {max_workers or os.cpu_count()}")
+
+            with ProcessPoolExecutor(max_workers=max_workers) as executor:
+                # 提交所有任务
+                futures = {
+                    executor.submit(
+                        run_single_fold,
+                        params['fold_num'],
+                        params['test_df'],
+                        params['train_dates'],
+                        params['test_dates'],
+                        params['config']
+                    ): params['fold_num']
+                    for params in fold_params
+                }
+
+                # 收集结果
+                for future in as_completed(futures):
+                    fold_num = futures[future]
+                    try:
+                        result = future.result()
+                        results.append(result)
+                        logger.info(f"✅ 窗口 {fold_num} 完成")
+                    except Exception as e:
+                        logger.error(f"❌ 窗口 {fold_num} 失败: {e}")
+
+            elapsed = time.time() - start_time
+            logger.info(f"⏱️  并行回测完成 - 耗时: {elapsed:.2f}s")
+
+        else:
+            # 串行执行（单线程）
+            import time
+            start_time = time.time()
+
+            logger.info("🔄 启动串行回测（单线程）")
+
+            for params in fold_params:
+                try:
+                    result = run_single_fold(
+                        params['fold_num'],
+                        params['test_df'],
+                        params['train_dates'],
+                        params['test_dates'],
+                        params['config']
+                    )
+                    results.append(result)
+                except Exception as e:
+                    logger.error(f"❌ 窗口 {params['fold_num']} 失败: {e}")
+
+            elapsed = time.time() - start_time
+            logger.info(f"⏱️  串行回测完成 - 耗时: {elapsed:.2f}s")
+
+        # 按 fold 编号排序
+        results.sort(key=lambda x: x['fold'])
 
         # 汇总结果
         logger.info("\n" + "="*50)
@@ -293,9 +434,17 @@ class BacktestRunner:
         logger.info("="*50)
 
         for r in results:
-            logger.info(f"窗口 {r['fold']}: 收益率={(r['final_value']/self.config['initial_cash']-1)*100:.2f}%, "
-                       f"Sharpe={r['sharpe']:.2f if r['sharpe'] else 'N/A'}, "
-                       f"回撤={r['max_drawdown']:.2f if r['max_drawdown'] else 'N/A'}%")
+            sharpe_str = f"{r['sharpe']:.2f}" if r['sharpe'] else "N/A"
+            dd_str = f"{r['max_drawdown']:.2f}" if r['max_drawdown'] else "N/A"
+            logger.info(
+                f"窗口 {r['fold']}: "
+                f"收益率={(r['final_value']/self.config['initial_cash']-1)*100:.2f}%, "
+                f"Sharpe={sharpe_str}, "
+                f"回撤={dd_str}%, "
+                f"交易次数={r.get('total_trades', 'N/A')}"
+            )
+
+        logger.info("="*50)
 
         return results
 
@@ -356,6 +505,9 @@ def main():
     parser.add_argument('--commission', type=float, default=0.0002, help='手续费率')
     parser.add_argument('--spread', type=float, default=0.0002, help='点差 (pips)')
     parser.add_argument('--slippage', type=float, default=0.0005, help='滑点比例')
+    parser.add_argument('--parallel', action='store_true', default=True, help='启用并行回测（默认开启）')
+    parser.add_argument('--no-parallel', dest='parallel', action='store_false', help='禁用并行回测')
+    parser.add_argument('--max-workers', type=int, default=None, help='最大并行进程数（默认为 CPU 核心数）')
 
     args = parser.parse_args()
 
@@ -367,7 +519,7 @@ def main():
         'slippage': args.slippage,
         'use_kelly_sizer': True,
         'kelly_fraction': 0.25,
-        'max_position_pct': 0.20,
+        'max_position_pct': 0.50,  # 更新为 50%（Kelly 修正后的新默认值）
     }
 
     runner = BacktestRunner(config)
@@ -377,7 +529,7 @@ def main():
 
     # 执行回测
     if args.walk_forward:
-        runner.run_walkforward(df)
+        runner.run_walkforward(df, parallel=args.parallel, max_workers=args.max_workers)
     elif args.benchmark:
         runner.compare_with_benchmark(df)
     else:

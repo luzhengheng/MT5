@@ -16,34 +16,42 @@ logger = logging.getLogger(__name__)
 
 class KellySizer(bt.Sizer):
     """
-    Kelly Criterion 仓位管理器
+    Kelly Criterion 仓位管理器（通用公式版本）
 
     公式：
-        Position Size = (P_win - 0.5) / Volatility * Account_Value / Price
+        f* = [p(b+1) - 1] / b
 
     其中：
-        - P_win: 预测胜率（从 ML 模型输出）
-        - Volatility: 市场波动率（使用 ATR 归一化）
-        - Account_Value: 当前账户净值
-        - Price: 当前价格
+        - f*: Kelly 风险比例（Optimal Risk Fraction）
+        - p: 预测胜率（从 ML 模型输出的 y_pred_proba）
+        - b: 赔率（策略的 take_profit_ratio，即盈亏比）
+
+    仓位计算：
+        Risk Amount = Account Value * f* * kelly_fraction
+        Position Size = Risk Amount / (ATR * stop_loss_multiplier)
+
+    重要区别：
+        - f* 是"风险比例"，不是"持仓比例"
+        - 实际仓位大小取决于止损距离（ATR * multiplier）
+        - 赔率 b=2.0 意味着盈利是亏损的 2 倍
 
     参数：
         kelly_fraction (float): Kelly 比例 (0-1)，建议 0.25 (四分之一 Kelly)
-        max_position_pct (float): 单笔最大仓位占比 (默认 20%)
+        max_position_pct (float): 单笔最大仓位占比 (默认 50%)
         min_position_pct (float): 单笔最小仓位占比 (默认 1%)
-        volatility_lookback (int): 波动率回溯周期 (默认 20)
+        stop_loss_multiplier (float): 止损倍数 (默认 2.0, 即 2*ATR)
     """
 
     params = (
         ('kelly_fraction', 0.25),  # 保守的四分之一 Kelly
-        ('max_position_pct', 0.20),  # 最大 20% 仓位
+        ('max_position_pct', 0.50),  # 最大 50% 仓位（因为是持仓比，而非风险比）
         ('min_position_pct', 0.01),  # 最小 1% 仓位
-        ('volatility_lookback', 20),
+        ('stop_loss_multiplier', 2.0),  # 止损距离为 2*ATR
     )
 
     def _getsizing(self, comminfo, cash, data, isbuy):
         """
-        计算仓位大小
+        计算仓位大小（使用通用 Kelly 公式）
 
         Returns:
             int: 交易手数（正数为买入，负数为卖出）
@@ -62,49 +70,107 @@ class KellySizer(bt.Sizer):
             else:
                 p_win = data.y_pred_proba_short[0]
 
-            if np.isnan(p_win) or p_win <= 0.5:
+            # 注意：这里不再要求 p_win > 0.5
+            # 通用 Kelly 公式可以处理低胜率高赔率的情况
+            if np.isnan(p_win) or p_win <= 0:
                 return 0
 
         except (AttributeError, IndexError):
-            logger.warning("无法获取预测概率，使用默认仓位")
-            p_win = 0.6  # 默认值
+            logger.warning("无法获取预测概率，跳过仓位计算")
+            return 0
 
-        # 计算 ATR（动态计算，避免初始化问题）
+        # 获取策略的盈亏比（赔率 b）
         try:
-            # 尝试从策略中获取 ATR
+            if hasattr(self.strategy, 'params') and hasattr(self.strategy.params, 'take_profit_ratio'):
+                b = self.strategy.params.take_profit_ratio
+            else:
+                # 如果策略没有定义，使用保守默认值
+                b = 2.0
+                logger.debug("策略未定义 take_profit_ratio，使用默认值 2.0")
+        except (AttributeError, Exception) as e:
+            logger.warning(f"获取 take_profit_ratio 失败: {e}，使用默认值 2.0")
+            b = 2.0
+
+        # 防止除零错误
+        if b <= 0:
+            logger.warning(f"无效的赔率 b={b}，跳过仓位计算")
+            return 0
+
+        # ============================================================
+        # 通用 Kelly 公式：f* = [p(b+1) - 1] / b
+        # ============================================================
+        kelly_f = (p_win * (b + 1) - 1) / b
+
+        # 如果 Kelly 比例为负数，说明该交易期望值为负，不应开仓
+        if kelly_f <= 0:
+            logger.debug(f"Kelly f*={kelly_f:.4f} <= 0 (p={p_win:.3f}, b={b:.2f})，跳过交易")
+            return 0
+
+        # 应用保守系数（四分之一 Kelly）
+        risk_pct = kelly_f * self.params.kelly_fraction
+
+        # 计算 ATR（用于确定止损距离）
+        try:
             if hasattr(self.strategy, 'atr'):
                 atr_value = self.strategy.atr[0]
             else:
-                # 使用简化的 ATR 估计
+                # 使用简化的 ATR 估计（High-Low）
                 atr_value = abs(data.high[0] - data.low[0])
         except (AttributeError, IndexError):
             # 如果无法获取，使用价格的 1% 作为估计
             atr_value = current_price * 0.01
+            logger.debug(f"无法获取 ATR，使用估计值 {atr_value:.5f}")
 
         if atr_value <= 0:
+            logger.warning(f"ATR 值无效 ({atr_value})，跳过仓位计算")
             return 0
 
-        # 使用 ATR/Price 作为波动率指标
-        normalized_volatility = atr_value / current_price
+        # ============================================================
+        # 仓位计算：从"风险比例"转换为"持仓数量"
+        # ============================================================
+        # 1. 计算目标风险金额
+        risk_amount = account_value * risk_pct
 
-        # Kelly 公式变体
-        kelly_pct = (p_win - 0.5) / normalized_volatility
+        # 2. 计算单股风险（止损距离）
+        risk_per_share = atr_value * self.params.stop_loss_multiplier
 
-        # 应用保守系数
-        kelly_pct = kelly_pct * self.params.kelly_fraction
+        if risk_per_share <= 0:
+            logger.warning(f"单股风险无效 ({risk_per_share})，跳过仓位计算")
+            return 0
 
-        # 限制仓位范围
-        kelly_pct = max(self.params.min_position_pct, min(kelly_pct, self.params.max_position_pct))
+        # 3. 计算目标股数
+        target_shares = risk_amount / risk_per_share
 
-        # 计算实际投入金额
-        position_value = account_value * kelly_pct
+        # 4. 计算实际持仓价值占比（用于边界检查）
+        position_value = target_shares * current_price
+        position_pct = position_value / account_value
 
-        # 计算手数（向下取整）
-        size = int(position_value / current_price)
+        # 5. 应用持仓比例限制
+        if position_pct > self.params.max_position_pct:
+            # 超过最大持仓比例，按比例缩减
+            target_shares = target_shares * (self.params.max_position_pct / position_pct)
+            position_pct = self.params.max_position_pct
+            logger.debug(f"持仓比例超限，缩减至 {self.params.max_position_pct:.1%}")
 
-        # 记录日志
-        logger.debug(f"Kelly Sizer - P_win: {p_win:.3f}, Volatility: {normalized_volatility:.5f}, "
-                    f"Kelly%: {kelly_pct:.2%}, Size: {size}")
+        if position_pct < self.params.min_position_pct:
+            # 低于最小持仓比例，不开仓
+            logger.debug(f"持仓比例 {position_pct:.3%} < 最小值 {self.params.min_position_pct:.1%}，跳过交易")
+            return 0
+
+        # 6. 向下取整（确保不超出资金限制）
+        size = int(target_shares)
+
+        # 7. 最终验证
+        if size <= 0:
+            return 0
+
+        # 记录详细日志
+        logger.debug(
+            f"Kelly Sizer - "
+            f"P={p_win:.3f}, b={b:.2f}, f*={kelly_f:.4f}, "
+            f"Risk%={risk_pct:.2%}, Position%={position_pct:.2%}, "
+            f"ATR={atr_value:.5f}, Size={size}"
+        )
 
         return size
 

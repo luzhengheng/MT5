@@ -1,0 +1,8 @@
+{
+  "global_trial_count": 0,
+  "metadata": {
+    "description": "全局试验计数器（用于 DSR 计算）",
+    "created_at": null,
+    "last_updated": null
+  }
+}
