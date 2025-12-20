@@ -35,14 +35,14 @@ class NotionGitUpdater:
             commit_msg = subprocess.check_output(
                 ["git", "log", "-1", "--format=%B"],
                 cwd=self.project_root,
-                text=True
+                universal_newlines=True
             ).strip()
 
             # 获取提交详细信息
             commit_details = subprocess.check_output(
                 ["git", "log", "-1", "--format=%H|%an|%cd", "--date=iso"],
                 cwd=self.project_root,
-                text=True
+                universal_newlines=True
             ).strip().split('|')
 
             commit_hash = commit_details[0]
