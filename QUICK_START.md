@@ -1,0 +1,330 @@
+# 🚀 Gemini Pro AI 协同系统 - 快速开始指南
+
+**⏱️ 只需 5 分钟上手！**
+
+---
+
+## 1️⃣ 最快的开始方式 (一行代码)
+
+```bash
+python3 gemini_review_bridge.py
+```
+
+**这将自动为您**:
+- 📊 收集最新项目状态
+- 💻 读取核心代码文件
+- 🎯 获取 Notion 中的最新任务
+- 🤖 发送给 Gemini Pro 进行评估
+- 📝 保存报告到本地和 Notion
+
+**时间**: ~2-3 分钟
+
+---
+
+## 2️⃣ 在 Notion 中创建任务 (更灵活)
+
+1. 打开 [AI Command Center](https://www.notion.so/2cfc88582b4e817ea4a5fe17be413d64)
+2. 点击 "New"
+3. 填写任务:
+
+```
+标题: 🔍 评估工单 #011 MT5 实盘交易系统
+
+上下文文件:
+- src/strategy/risk_manager.py
+- src/mt5/connection.py
+- nexus_with_proxy.py
+
+审查重点:
+- 代码质量和最佳实践
+- 潜在的 bug 或安全问题
+- 性能优化机会
+- 下一步建议
+```
+
+4. 运行: `python3 gemini_review_bridge.py`
+
+---
+
+## 3️⃣ 标准开发工作流 (自动同步)
+
+```bash
+# 编写代码
+vim src/strategy/my_feature.py
+
+# 标准化提交 (使用模板)
+git add src/strategy/my_feature.py
+git commit
+
+# 或者一行提交
+git commit -m "feat(strategy): 实现新策略功能 #011
+
+- 添加动态仓位调整
+- 集成 Kelly 公式
+- 更新风险管理器"
+
+# 推送到 GitHub
+git push
+```
+
+**自动发生**:
+- ✅ Git Hook 触发
+- ✅ Notion 工单状态自动更新
+- ✅ 知识自动沉淀
+- ✅ AI 审查任务自动创建
+
+---
+
+## 4️⃣ 4 个最常用的命令
+
+### 获取项目评估
+```bash
+python3 gemini_review_bridge.py
+```
+**用途**: 获取 Gemini Pro 的项目评估和建议
+
+---
+
+### 检查系统状态
+```bash
+python3 check_sync_status.py
+```
+**用途**: 检查 Git、Notion、文件同步状态
+
+---
+
+### 查看最近提交
+```bash
+git log --oneline -10
+```
+**用途**: 查看最近的 Git 提交历史
+
+---
+
+### 查看 Notion 数据库
+```bash
+# 打开浏览器访问 Notion 数据库
+AI Command Center:     https://www.notion.so/2cfc88582b4e817ea4a5fe17be413d64
+Issues:                https://www.notion.so/2cfc88582b4e816b9a15d85908bf4a21
+Knowledge Graph:       https://www.notion.so/2cfc88582b4e811d83bed3bd3957adea
+MT5-CRS Nexus:        https://www.notion.so/2cfc88582b4e801bb15bd96893b7ba09
+```
+
+---
+
+## 5️⃣ 4 个最常见的场景
+
+### 📊 每周项目评估
+
+```bash
+python3 gemini_review_bridge.py
+```
+
+**Gemini Pro 会提供**:
+- 本周开发进展
+- 完成的工单
+- 发现的问题
+- 下周建议
+
+---
+
+### 🔍 代码审查
+
+在 Notion AI Command Center 创建任务，然后:
+
+```bash
+python3 gemini_review_bridge.py
+```
+
+**Gemini Pro 会审查**:
+- 代码质量
+- 设计模式
+- 潜在 bug
+- 改进建议
+
+---
+
+### ⚠️ 风险评估
+
+在 Notion 创建任务指定风险评估，然后:
+
+```bash
+python3 gemini_review_bridge.py
+```
+
+**Gemini Pro 会分析**:
+- 技术风险
+- 业务风险
+- 优先级排序
+- 缓解方案
+
+---
+
+### 📝 技术债务评估
+
+在 Notion 创建任务指定技术债务评估，然后:
+
+```bash
+python3 gemini_review_bridge.py
+```
+
+**Gemini Pro 会提供**:
+- 当前技术债务清单
+- 影响程度评估
+- 优先级排序
+- 改进计划
+
+---
+
+## 🎯 预期结果示例
+
+运行 `python3 gemini_review_bridge.py` 后，Gemini Pro 会返回类似的评估报告:
+
+### 📊 项目状态评估
+
+```
+# MT5-CRS 项目评估报告
+
+## 当前状态
+- 工单 #011 (MT5 实盘交易系统): 进行中
+- 最近提交: feat(nexus): 完成 Notion Nexus 知识库部署
+- 开发周期: 第 11 周
+
+## 已完成成就
+- ✅ 75+ 维度特征工程
+- ✅ 机器学习框架
+- ✅ 回测验证系统
+- ✅ 数据质量监控
+- ✅ AI 协同机制
+
+## 当前焦点
+- 🎯 MT5 API 集成
+- 🎯 Kelly 资金管理
+- 🎯 实盘交易系统
+
+## 建议下一步
+1. 完成 MT5 连接模块 (预计 2-3 天)
+2. 集成 Kelly 资金管理系统 (预计 2-3 天)
+3. 部署到生产环境 (预计 1-2 天)
+4. 实盘小额测试 (预计 1 周)
+
+## 风险识别
+- ⚠️ API 连接稳定性
+- ⚠️ 资金管理安全性
+- ⚠️ 交易延迟问题
+
+## 优化建议
+1. 添加断路器机制
+2. 增加交易延迟监控
+3. 完善风险管理告警
+```
+
+---
+
+## 💡 5 个专业技巧
+
+### 1️⃣ 聚焦特定问题
+创建 Notion 任务时，明确指定审查范围和重点，Gemini Pro 会更有针对性。
+
+### 2️⃣ 定期对比
+每周保存评估报告，对比改进：
+```bash
+python3 gemini_review_bridge.py > reports/weekly_$(date +%Y-%m-%d).md
+```
+
+### 3️⃣ 历史追踪
+查看 `docs/reviews/` 目录下的历史审查报告，跟踪项目演进。
+
+### 4️⃣ 集成到 CI/CD
+在 GitHub Actions 中自动运行评估：
+```yaml
+- name: Gemini Pro Review
+  run: python3 gemini_review_bridge.py
+```
+
+### 5️⃣ 定制审查重点
+编辑 `gemini_review_bridge.py` 中的 `REVIEW_FOCUS` 来自定义审查方向。
+
+---
+
+## 🚨 常见问题
+
+### Q: Gemini Pro 如何获知项目最新信息？
+A: `gemini_review_bridge.py` 自动收集：
+- Git 状态 (分支、提交、未提交更改)
+- Notion 任务 (优先级、状态、上下文)
+- 代码文件 (核心文件内容)
+- 项目历史 (工单、知识图谱)
+
+### Q: 多长时间运行一次评估？
+A: 建议：
+- **日常**: 在关键决策前运行
+- **每周**: 每周一或每周五运行综合评估
+- **按需**: 遇到问题或不确定时运行
+
+### Q: 如何在没有 Gemini Pro 的情况下使用？
+A: 仍然可以使用：
+- Git 自动同步到 Notion (✅ 工作)
+- Notion 任务管理 (✅ 工作)
+- GitHub-Notion 知识沉淀 (✅ 工作)
+- 仅 Gemini Pro 评估需要 API 密钥
+
+### Q: 报告保存在哪里？
+A: 两个位置：
+1. **Notion**: AI Command Center 数据库
+2. **本地**: `docs/reviews/` 目录
+
+---
+
+## 📱 在线访问
+
+**关键 Notion 页面**:
+
+| 用途 | 链接 |
+|------|------|
+| AI 任务中心 | https://www.notion.so/2cfc88582b4e817ea4a5fe17be413d64 |
+| 工单管理 | https://www.notion.so/2cfc88582b4e816b9a15d85908bf4a21 |
+| 知识图谱 | https://www.notion.so/2cfc88582b4e811d83bed3bd3957adea |
+| 项目主页 | https://www.notion.so/2cfc88582b4e801bb15bd96893b7ba09 |
+
+---
+
+## 🎬 30 秒演示
+
+```bash
+# 1. 运行评估
+python3 gemini_review_bridge.py
+
+# 2. 等待 2-3 分钟
+
+# 3. 查看本地报告
+cat docs/reviews/latest_review.md
+
+# 4. 在 Notion 中查看任务
+# 打开 AI Command Center，查看新创建的审查任务
+
+# 完成！
+```
+
+---
+
+## 🏁 总结
+
+1. **最快上手**: `python3 gemini_review_bridge.py`
+2. **自动工作**: Git 提交自动同步 Notion
+3. **持续学习**: 查看 `HOW_TO_USE_GEMINI_REVIEW.md` 了解更多
+4. **需要帮助**: 查看 `GEMINI_PRO_INTEGRATION_GUIDE.md` 了解技术细节
+
+---
+
+**🚀 现在就开始吧！**
+
+```bash
+python3 gemini_review_bridge.py
+```
+
+---
+
+*版本: 1.0*
+*最后更新: 2025-12-21*
+*工单: #010.9 完成*
