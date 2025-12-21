@@ -47,6 +47,8 @@ class KellySizer(bt.Sizer):
         ('max_position_pct', 0.50),  # 最大 50% 仓位（因为是持仓比，而非风险比）
         ('min_position_pct', 0.01),  # 最小 1% 仓位
         ('stop_loss_multiplier', 2.0),  # 止损距离为 2*ATR
+        ('max_leverage', 3.0),  # 最大杠杆倍数 (Gemini建议添加硬约束)
+        ('max_risk_per_trade', 0.02),  # 单笔最大风险金额占比 (默认 2%, Gemini建议)
     )
 
     def _getsizing(self, comminfo, cash, data, isbuy):
@@ -56,8 +58,32 @@ class KellySizer(bt.Sizer):
         Returns:
             int: 交易手数（正数为买入，负数为卖出）
         """
-        # 获取当前账户价值和价格
-        account_value = self.broker.getvalue()
+        # ============================================================
+        # Gemini Pro 审查建议修复:
+        # 使用 getcash() 或 Balance 而非 getvalue() (Equity)
+        # 原因: Equity 会因持仓浮动盈亏剧烈跳动，导致仓位震荡
+        # ============================================================
+
+        # 优先使用 getcash() 获取可用资金
+        # 如果策略中有明确的 initial_capital 设置，使用该值
+        if hasattr(self.broker, 'getcash'):
+            account_value = self.broker.getcash() + self.broker.getvalue() - self.broker.getcash()
+            # 简化：直接使用可用现金 + 当前持仓成本
+            # 避免使用动态权益 (Equity = Balance + 浮动盈亏)
+            try:
+                # 获取初始资金作为基准
+                if hasattr(self.strategy, 'initial_capital'):
+                    account_value = self.strategy.initial_capital
+                else:
+                    # 回退到可用现金
+                    account_value = self.broker.getcash()
+            except (AttributeError, Exception):
+                # 最终回退方案
+                account_value = self.broker.getvalue()
+                logger.debug("使用 getvalue() 作为账户价值（可能受浮动盈亏影响）")
+        else:
+            account_value = self.broker.getvalue()
+
         current_price = data.close[0]
 
         if current_price <= 0:
@@ -109,6 +135,19 @@ class KellySizer(bt.Sizer):
         # 应用保守系数（四分之一 Kelly）
         risk_pct = kelly_f * self.params.kelly_fraction
 
+        # ============================================================
+        # Gemini Pro 建议: 添加硬性约束
+        # 防止极端情况下的过高杠杆
+        # ============================================================
+
+        # 1. 风险金额硬约束 (每笔最大亏损)
+        max_risk_amount = account_value * self.params.max_risk_per_trade
+        risk_pct = min(risk_pct, self.params.max_risk_per_trade)
+
+        logger.debug(
+            f"应用风险约束: risk_pct={risk_pct:.2%}, max_allowed={self.params.max_risk_per_trade:.2%}"
+        )
+
         # 计算 ATR（用于确定止损距离）
         try:
             if hasattr(self.strategy, 'atr'):
@@ -144,6 +183,20 @@ class KellySizer(bt.Sizer):
         # 4. 计算实际持仓价值占比（用于边界检查）
         position_value = target_shares * current_price
         position_pct = position_value / account_value
+
+        # ============================================================
+        # Gemini Pro 建议: 杠杆硬约束
+        # 防止极端胜率导致的过高杠杆
+        # ============================================================
+        # 2. 杠杆约束 (position_value / account_value)
+        leverage = position_value / account_value
+        if leverage > self.params.max_leverage:
+            logger.warning(
+                f"杠杆 {leverage:.2f}x 超过最大限制 {self.params.max_leverage}x，缩减仓位"
+            )
+            target_shares = target_shares * (self.params.max_leverage / leverage)
+            position_value = target_shares * current_price
+            position_pct = position_value / account_value
 
         # 5. 应用持仓比例限制
         if position_pct > self.params.max_position_pct:
