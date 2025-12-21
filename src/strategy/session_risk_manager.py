@@ -54,17 +54,34 @@ class DailyRiskState:
         """
         return self.daily_loss_pct <= limit
 
-    def to_dict(self) -> Dict:
-        """转换为字典用于日志和报告"""
-        return {
-            'session_date': str(self.session_date),
-            'session_start_time': self.session_start_time.isoformat(),
-            'session_start_balance': f"${self.session_start_balance:.2f}",
-            'daily_realized_pnl': f"${self.daily_realized_pnl:.2f}",
-            'daily_unrealized_pnl': f"${self.daily_unrealized_pnl:.2f}",
-            'daily_total_pnl': f"${self.daily_total_pnl:.2f}",
-            'daily_loss_pct': f"{self.daily_loss_pct * 100:.4f}%",
-        }
+    def to_dict(self, formatted: bool = True) -> Dict:
+        """
+        转换为字典用于日志和报告
+
+        Args:
+            formatted: 是否返回格式化的字符串（用于显示），否则返回原始数值（用于计算）
+        """
+        if formatted:
+            return {
+                'session_date': str(self.session_date),
+                'session_start_time': self.session_start_time.isoformat(),
+                'session_start_balance': f"${self.session_start_balance:.2f}",
+                'daily_realized_pnl': f"${self.daily_realized_pnl:.2f}",
+                'daily_unrealized_pnl': f"${self.daily_unrealized_pnl:.2f}",
+                'daily_total_pnl': f"${self.daily_total_pnl:.2f}",
+                'daily_loss_pct': f"{self.daily_loss_pct * 100:.4f}%",
+            }
+        else:
+            # 返回原始数值（不格式化）
+            return {
+                'session_date': self.session_date,
+                'session_start_time': self.session_start_time,
+                'session_start_balance': self.session_start_balance,
+                'daily_realized_pnl': self.daily_realized_pnl,
+                'daily_unrealized_pnl': self.daily_unrealized_pnl,
+                'daily_total_pnl': self.daily_total_pnl,
+                'daily_loss_pct': self.daily_loss_pct,
+            }
 
 
 class SessionRiskManager:

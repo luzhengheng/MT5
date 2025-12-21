@@ -10,6 +10,7 @@ import backtrader as bt
 import numpy as np
 import logging
 from typing import Optional
+from src.strategy.session_risk_manager import SessionRiskManager, get_session_risk_manager
 
 logger = logging.getLogger(__name__)
 
@@ -271,7 +272,8 @@ class DynamicRiskManager:
 
     def __init__(self, broker: bt.brokers.BackBroker,
                  max_drawdown_pct: float = 10.0,
-                 stop_trading_on_breach: bool = True):
+                 stop_trading_on_breach: bool = True,
+                 daily_loss_limit: float = -0.05):
         self.broker = broker
         self.max_drawdown_pct = max_drawdown_pct / 100.0
         self.stop_trading_on_breach = stop_trading_on_breach
@@ -280,7 +282,10 @@ class DynamicRiskManager:
         self.is_halted = False
         self.breach_datetime = None
 
-        logger.info(f"风险管理器初始化 - 最大回撤: {max_drawdown_pct}%")
+        # 会话风控管理器 - 监控每日损失限制
+        self.session_risk = get_session_risk_manager(daily_loss_limit)
+
+        logger.info(f"风险管理器初始化 - 最大回撤: {max_drawdown_pct}%, 每日损失限制: {daily_loss_limit*100:.0f}%")
 
     def update(self, current_datetime=None) -> dict:
         """
@@ -326,10 +331,20 @@ class DynamicRiskManager:
         检查是否可以交易
 
         Returns:
-            bool: True 表示可以交易，False 表示被熔断
+            bool: True 表示可以交易，False 表示被熔断或每日停损
         """
+        # 检查最大回撤限制
         if self.stop_trading_on_breach and self.is_halted:
+            logger.warning("⚠️ 账户回撤熔断，禁止交易")
             return False
+
+        # 检查每日损失限制
+        if not self.session_risk.can_trade():
+            daily_stats = self.session_risk.get_daily_stats()
+            if daily_stats:
+                logger.warning(f"⚠️ 每日损失限制触发，当日损失: {daily_stats['daily_loss_pct']}")
+            return False
+
         return True
 
     def get_summary(self) -> str:
@@ -340,6 +355,7 @@ class DynamicRiskManager:
             str: 格式化的风险报告
         """
         report = self.update()
+        daily_stats = self.session_risk.get_daily_stats()
 
         summary = f"""
 ========== 风险管理报告 ==========
@@ -351,6 +367,16 @@ class DynamicRiskManager:
 """
         if report['breach_datetime']:
             summary += f"熔断时间: {report['breach_datetime']}\n"
+
+        # 添加每日损失信息
+        if daily_stats:
+            summary += f"""
+========== 每日损失报告 ==========
+当日已实现 P&L: {daily_stats['daily_realized_pnl']}
+当日未实现 P&L: {daily_stats['daily_unrealized_pnl']}
+当日总 P&L: {daily_stats['daily_total_pnl']}
+当日损失百分比: {daily_stats['daily_loss_pct']}
+"""
 
         summary += "=================================\n"
 

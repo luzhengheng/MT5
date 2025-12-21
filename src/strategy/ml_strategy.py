@@ -12,6 +12,7 @@ import backtrader as bt
 import numpy as np
 from typing import Optional, Dict
 import logging
+from src.strategy.session_risk_manager import SessionRiskManager, get_session_risk_manager
 
 logger = logging.getLogger(__name__)
 
@@ -65,6 +66,10 @@ class MLStrategy(bt.Strategy):
         self.win_count = 0
         self.total_pnl = 0.0
 
+        # 会话风控管理器 - 监控每日损失限制
+        self.session_risk = get_session_risk_manager()
+        self.session_started = False
+
         logger.info(f"策略初始化完成 - 做多阈值: {self.params.threshold_long}, "
                    f"做空阈值: {self.params.threshold_short}")
 
@@ -112,11 +117,20 @@ class MLStrategy(bt.Strategy):
 
         win_rate = (self.win_count / self.trade_count * 100) if self.trade_count > 0 else 0
 
+        # 更新会话风控的已实现 P&L
+        self.session_risk.update_realized_pnl(pnl)
+
         self.log(f'交易结束 - 盈亏: {pnl:.2f}, 净利润: {trade.pnlcomm:.2f}, '
                 f'胜率: {win_rate:.1f}% ({self.win_count}/{self.trade_count})')
 
     def next(self):
         """策略主逻辑 - 每个 bar 调用一次"""
+        # 初始化会话（第一次调用时）
+        if not self.session_started:
+            self.session_risk.start_session(self.broker.getvalue())
+            self.session_started = True
+            self.log(f'会话启动 - 起始余额: {self.broker.getvalue():.2f}')
+
         # 如果有待处理订单，跳过
         if self.order:
             return
@@ -180,6 +194,13 @@ class MLStrategy(bt.Strategy):
 
         # 检查是否有有效预测
         if np.isnan(y_pred_long) or np.isnan(y_pred_short):
+            return
+
+        # ⚠️ 检查每日停损限制 - 优先级最高
+        if not self.session_risk.can_trade():
+            daily_stats = self.session_risk.get_daily_stats()
+            if daily_stats:
+                self.log(f'⚠��� 每日停损触发 - 当日损失: {daily_stats["daily_loss_pct"]}, 禁止新建头寸', doprint=True)
             return
 
         # 做多信号
