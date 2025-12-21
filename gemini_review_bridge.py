@@ -437,7 +437,7 @@ class GeminiReviewBridge:
         }
 
         data = {
-            "model": "gemini-1.5-pro",  # 修复: 使用官方支持的模型名称
+            "model": "gemini-2.5-pro",  # 改进: 使用官方支持的最新模型 (2025 年发布)
             "messages": [
                 {
                     "role": "system",
@@ -465,7 +465,7 @@ class GeminiReviewBridge:
                 return {
                     "success": True,
                     "review": review_text,
-                    "model": "gemini-1.5-pro (via proxy)",
+                    "model": "gemini-2.5-pro (via proxy)",
                     "timestamp": datetime.now().isoformat()
                 }
 
@@ -473,8 +473,8 @@ class GeminiReviewBridge:
 
     def _call_gemini_direct(self, prompt, save_response=True):
         """直接调用 Gemini API"""
-        # 修复: 使用官方支持的模型名称 gemini-1.5-pro (稳定) 或 gemini-2.0-flash-exp (实验性)
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={GEMINI_API_KEY}"
+        # 改进: 使用官方支持的最新模型 gemini-2.5-pro (稳定/高性能) 或 gemini-2.5-flash (快速)
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key={GEMINI_API_KEY}"
 
         data = {
             "contents": [{
@@ -497,7 +497,7 @@ class GeminiReviewBridge:
                 return {
                     "success": True,
                     "review": review_text,
-                    "model": "gemini-1.5-pro (direct)",
+                    "model": "gemini-2.5-pro (direct)",
                     "timestamp": datetime.now().isoformat()
                 }
 
