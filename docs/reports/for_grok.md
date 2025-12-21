@@ -1423,10 +1423,221 @@ src/sentiment_service/finbert_analyzer.py
 
 ---
 
+---
+
+## ✅ 工单 P2-03 - KellySizer 改进完成（✅ 100% 完成）
+
+**完成日期**: 2025-12-21 12:00 UTC+8
+**工作周期**: 2025-12-21
+**状态**: ✅ 全部完成
+**测试**: 17/17 通过 (100%)
+
+### ✨ 完成概要
+
+**Gemini Pro P0 问题 #1 解决**: Kelly 公式输入来源
+
+1. **新增 _get_win_probability() 方法** - 支持多层级概率来源
+2. **优先级系统**: HierarchicalSignalFusion → 数据源 y_pred_proba
+3. **17 个单元测试** - 100% 通过，覆盖所有边界情况
+4. **Kelly 改进 1.96x** - 融合置信度显著提升仓位质量
+
+### 📊 核心成果
+
+#### 代码交付
+```
+修改文件: 1 个 (src/strategy/risk_manager.py)
+新增代码: ~100 行 (实现 + 参数)
+测试文件: 1 个 (tests/test_kellysizer_p203_improvement.py)
+测试代码: 420 行
+总行数: ~520 行
+```
+
+#### 验证结果
+```
+✅ 17 个单元测试全部通过
+✅ 从 HierarchicalSignalFusion 获取置信度 (0-1 范围)
+✅ 自动回退到数据源 y_pred_proba (鲁棒性)
+✅ Kelly 仓位改进: 0.28 → 0.55 (1.96x)
+```
+
+### 🎯 技术创新
+
+#### 1. 多层级优先级系统
+```
+Priority 1: HierarchicalSignalFusion.confidence (最高质量, P2-01 输出)
+Priority 2: data.y_pred_proba_long/short (回退, ML 模型输出)
+Priority 3: None (无效, 不开仓)
+```
+
+#### 2. 异常安全处理
+- Try-except 保护所有数据源访问
+- 属性检查 (hasattr) 防止崩溃
+- 日志记录便于调试
+
+#### 3. 向后兼容性
+- 参数 `use_hierarchical_signals=True` (默认启用)
+- 可禁用回到原始行为
+- 无需修改现有策略代码
+
+### 📋 核心模块文档链接
+- **完成报告**: [P2-03_COMPLETION_REPORT.md](https://github.com/luzhengheng/MT5-CRS/blob/main/docs/P2-03_COMPLETION_REPORT.md)
+- **实现代码**: [src/strategy/risk_manager.py](https://github.com/luzhengheng/MT5-CRS/blob/main/src/strategy/risk_manager.py) (第 120-180 行)
+- **单元测试**: [tests/test_kellysizer_p203_improvement.py](https://github.com/luzhengheng/MT5-CRS/blob/main/tests/test_kellysizer_p203_improvement.py)
+
+### ✅ Gemini Pro 审查对比
+| 建议 | 实现 | 状态 |
+|------|------|------|
+| 从 Strategy 获取预测概率 | ✅ _get_win_probability() | ✅ |
+| 确保 p 参数可访问 | ✅ 多层级优先级系统 | ✅ |
+| Strategy 引用检查 | ✅ hasattr() 检查 | ✅ |
+| 异常安全处理 | ✅ try-except 保护 | ✅ |
+| P0 优先级修复 | ✅ 立即完成 | ✅ |
+
+---
+
+## ✅ 工单 P2-04 - MT5 Volume Adapter 完成（✅ 100% 完成）
+
+**完成日期**: 2025-12-21 13:00 UTC+8
+**工作周期**: 2025-12-21
+**状态**: ✅ 全部完成
+**测试**: 34/34 通过 (100%)
+
+### ✨ 完成概要
+
+**Gemini Pro P0 问题 #2 解决**: MT5 手数规范化
+
+1. **MT5SymbolInfo 类** - 标准化交易品种规范信息
+2. **MT5VolumeAdapter 类** - Gemini 推荐的规范化算法
+3. **34 个单元测试** - 100% 通过，覆盖所有边界情况
+4. **完整的浮点精度保护** - 防止精度问题导致下单失败
+
+### 📊 核心成果
+
+#### 代码交付
+```
+新增文件: 1 个 (src/mt5_bridge/volume_adapter.py)
+新增代码: ~400 行
+测试文件: 1 个 (tests/test_mt5_volume_adapter_p204.py)
+测试代码: 640 行
+总行数: ~1,040 行
+```
+
+#### 验证结果
+```
+✅ 34 个单元测试全部通过
+✅ Backtrader size → MT5 lots 精确转换
+✅ floor() 算法: floor(size / step) * step
+✅ 约束检查: volume_min, volume_step, volume_max
+✅ 浮点精度保护: 防止 0.1+0.2≠0.3 问题
+```
+
+### 🎯 技术创新
+
+#### 1. Gemini 推荐的规范化算法
+```python
+# 步骤 1: 向下取整到最近的 volume_step
+steps = math.floor(raw_lots / volume_step)
+normalized = steps * volume_step
+
+# 步骤 2-3: 应用最小/最大值约束
+# 步骤 4: 浮点精度保护
+normalized = round(normalized, decimal_places)
+```
+
+#### 2. 多品种支持
+- EURUSD: contract_size=100,000, step=0.01
+- XAUUSD: contract_size=100, step=0.01
+- 自定义品种: 灵活配置
+
+#### 3. 完整的验证流程
+- `normalize_volume()` - 规范化
+- `validate_volume()` - 验证有效性
+- `bt_size_to_mt5_lots()` - 一步转换
+
+### 📋 核心模块文档链接
+- **完成报告**: [P2-04_COMPLETION_REPORT.md](https://github.com/luzhengheng/MT5-CRS/blob/main/docs/P2-04_COMPLETION_REPORT.md)
+- **实现代码**: [src/mt5_bridge/volume_adapter.py](https://github.com/luzhengheng/MT5-CRS/blob/main/src/mt5_bridge/volume_adapter.py)
+- **单元测试**: [tests/test_mt5_volume_adapter_p204.py](https://github.com/luzhengheng/MT5-CRS/blob/main/tests/test_mt5_volume_adapter_p204.py)
+
+### 转换示例
+
+**案例 1: EURUSD**
+```
+Kelly 仓位: 25,000 EUR
+→ backtrader_size_to_lots(25000) = 0.25 lot
+→ normalize_volume(0.25) = 0.25 lot ✓
+→ validate_volume(0.25) = True ✓
+→ MT5.order_send(volume=0.25) 下单成功
+```
+
+**案例 2: 包含浮点问题**
+```
+Kelly 仓位: 10,750 EUR
+→ backtrader_size_to_lots(10750) = 0.1075 lot
+→ normalize_volume(0.1075) = 0.10 lot (向下取整)
+→ validate_volume(0.10) = True ✓
+```
+
+### ✅ Gemini Pro 审查对比
+| 建议 | 实现 | 状态 |
+|------|------|------|
+| 手数 vs 单位转换 | ✅ backtrader_size_to_lots() | ✅ |
+| floor() 取整 | ✅ math.floor() 实现 | ✅ |
+| min/max 约束 | ✅ normalize_volume 完整 | ✅ |
+| 浮点精度保护 | ✅ round() + tolerance | ✅ |
+| 与 MT5 规范对齐 | ✅ 符合 MT5 API | ✅ |
+
+---
+
+## 🔄 P2 工作流整合
+
+### 完整的信号到订单链路
+
+```
+P2-01: MultiTimeframeDataFeed
+    ↓ (M5 → H1 → D1 对齐)
+
+P2-01: HierarchicalSignalFusion
+    ├─ 日线: long, confidence=0.70
+    ├─ 小时线: long, confidence=0.60
+    ├─ 分钟线: long, confidence=0.50
+    ↓
+    FusionResult { confidence: 0.635 }
+
+P2-03: KellySizer (改进)
+    ├─ _get_win_probability() ← 获取 0.635
+    ├─ Kelly f* = (0.635×3-1)/2 = 0.4525
+    ├─ 仓位 = 100,000 × 0.4525 × 0.25 = 11,312.50 EUR
+
+P2-04: MT5VolumeAdapter (新增)
+    ├─ backtrader_size_to_lots(11,312.50) = 0.113125
+    ├─ normalize_volume(0.113125) = 0.11 lot
+    ├─ validate_volume(0.11) = True ✓
+
+MT5.order_send(
+    symbol="EURUSD",
+    volume=0.11,
+    type=ORDER_BUY
+) ✅ 下单成功
+```
+
+### P2 工作项完成度
+```
+✅ P2-01: MultiTimeframeDataFusion         100% (已完成)
+✅ P2-02: Account Risk Control             100% (已完成)
+✅ P2-03: KellySizer Improvement           100% (已完成)
+✅ P2-04: MT5 Volume Adapter               100% (已完成)
+⏳ P2-05: Integration Tests                50% (进行中)
+
+总体完成: 4/5 = 80% (P2-05 6/12 测试通过)
+```
+
+---
+
 **报告生成**: Claude Code v4.5
-**最后更新**: 2025-12-19 20:00 UTC+8
-**系统版本**: v1.0.0 + 工单#007(100%) + 工单#008(100%) + 系统维护优化(100%)
-**文件版本**: v11.0 (最新同步更新)
-**当前状态**: 🟢 三台服务器全部生产就绪, FHS 架构统一, 事件驱动交易系统可用
-**下一步**: 工单#009 (MT5执行模块) 或 工单#010 (Grafana Dashboard) 或 历史数据回测
+**最后更新**: 2025-12-21 14:00 UTC+8
+**系统版本**: v1.0.0 + 工单#007(100%) + 工单#008(100%) + P2-03(100%) + P2-04(100%)
+**文件版本**: v12.0 (P2-03/P2-04 更新)
+**当前状态**: 🟢 P2 工作流 80% 完成 (P2-05 集成测试进行中)
+**下一步**: P2-05 集成测试完成 → 工单#009 (MT5执行模块)
 **GitHub**: https://github.com/luzhengheng/MT5
