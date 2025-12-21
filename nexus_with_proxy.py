@@ -36,7 +36,9 @@ def notion_headers():
 def call_gemini_direct(prompt):
     """直接调用 Google Gemini API"""
     try:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_KEY}"
+        # 使用稳定版本 gemini-1.5-flash (修正：gemini-2.5-flash 不存在)
+        # 参考 Gemini Pro 审查建议：验证正确的API模型名称
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_KEY}"
 
         data = {
             "contents": [{

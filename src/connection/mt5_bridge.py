@@ -398,6 +398,94 @@ class MT5Bridge:
             logger.error(f"❌ 检查新K线出错: {e}")
             return False
 
+    def normalize_volume(self, symbol: str, volume: float) -> float:
+        """
+        规范化手数 - 确保订单量符合MT5合约规范
+
+        根据Gemini Pro审查建议实现。MT5订单要求：
+        - volume >= volume_min（最小手数）
+        - (volume - volume_min) % volume_step == 0（按步长递增）
+        - volume <= volume_max（最大手数，如果限制的话）
+
+        参考Gemini建议的normalize_volume函数：
+        ```python
+        def normalize_volume(symbol_info, volume):
+            if volume < symbol_info.volume_min:
+                return 0.0
+
+            steps = int(volume / symbol_info.volume_step)
+            norm_vol = steps * symbol_info.volume_step
+
+            if symbol_info.volume_max > 0:
+                norm_vol = min(norm_vol, symbol_info.volume_max)
+
+            return float(f"{norm_vol:.2f}")
+        ```
+
+        Args:
+            symbol: 品种代码（如 "EURUSD"）
+            volume: 原始手数
+
+        Returns:
+            规范化后的手数，0.0表示低于最小手数
+
+        Raises:
+            MT5OrderError: 无法获取品种信息时
+        """
+        try:
+            # 选中品种
+            if not mt5.symbol_select(symbol, True):
+                raise MT5OrderError(f"无法选择品种 {symbol}")
+
+            # 获取品种信息
+            symbol_info = mt5.symbol_info(symbol)
+            if symbol_info is None:
+                raise MT5OrderError(f"无法获取品种 {symbol} 的信息")
+
+            # 检查是否低于最小手数
+            if volume < symbol_info.volume_min:
+                logger.warning(
+                    f"⚠️ {symbol} 手数 {volume} 低于最小值 {symbol_info.volume_min}，"
+                    f"将返回0.0（不下单）"
+                )
+                return 0.0
+
+            # 按照 volume_step 进行对齐
+            # 计算可以按 step 递增多少次
+            if symbol_info.volume_step > 0:
+                steps = int(volume / symbol_info.volume_step)
+                normalized = steps * symbol_info.volume_step
+            else:
+                logger.warning(f"⚠️ {symbol} 的 volume_step={symbol_info.volume_step}，使用原值")
+                normalized = volume
+
+            # 检查最大手数限制
+            if symbol_info.volume_max > 0 and normalized > symbol_info.volume_max:
+                logger.warning(
+                    f"⚠️ {symbol} 规范化手数 {normalized} 超过最大值 {symbol_info.volume_max}，"
+                    f"将限制为 {symbol_info.volume_max}"
+                )
+                normalized = symbol_info.volume_max
+
+            # 防止浮点精度问题，四舍五入到2位小数
+            normalized = float(f"{normalized:.2f}")
+
+            if normalized != volume:
+                logger.info(
+                    f"📏 {symbol} 手数规范化: {volume} → {normalized} "
+                    f"(min={symbol_info.volume_min}, step={symbol_info.volume_step}, "
+                    f"max={symbol_info.volume_max})"
+                )
+
+            return normalized
+
+        except MT5OrderError as e:
+            logger.error(f"❌ 手数规范化失败: {e}")
+            raise
+        except Exception as e:
+            logger.error(f"❌ 手数规范化出错: {e}")
+            raise MT5OrderError(f"手数规范化异常: {e}")
+
     def send_order(self, order: OrderInfo, deviation: int = 20) -> Tuple[bool, Optional[int]]:
         """
         发送订单
@@ -436,6 +524,19 @@ class MT5Bridge:
             mt5_order_type = order_type_map.get(order.order_type)
             if mt5_order_type is None:
                 raise MT5OrderError(f"不支持的订单类型: {order.order_type}")
+
+            # 规范化手数（P0优先级 - Gemini建议）
+            try:
+                normalized_volume = self.normalize_volume(order.symbol, order.volume)
+                if normalized_volume == 0.0:
+                    raise MT5OrderError(
+                        f"规范化手数为0（低于{order.symbol}最小手数），拒绝下单"
+                    )
+                order.volume = normalized_volume
+            except MT5OrderError as e:
+                logger.error(f"❌ 手数规范化失败，拒绝下单: {e}")
+                order.status = OrderStatus.REJECTED
+                return (False, None)
 
             # 构建订单请求
             request = {
