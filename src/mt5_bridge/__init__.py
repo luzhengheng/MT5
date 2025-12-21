@@ -26,6 +26,15 @@ from .config import (
     print_network_status,
 )
 
+from .mt5_heartbeat import (
+    # 心跳监控
+    MT5HeartbeatMonitor,
+    HeartbeatConfig,
+    HeartbeatEvent,
+    ConnectionStatus,
+    get_heartbeat_monitor,
+)
+
 __all__ = [
     "NetworkTopology",
     "ServerAssets",
@@ -38,6 +47,11 @@ __all__ = [
     "get_zmq_pub_address",
     "get_server_info",
     "print_network_status",
+    "MT5HeartbeatMonitor",
+    "HeartbeatConfig",
+    "HeartbeatEvent",
+    "ConnectionStatus",
+    "get_heartbeat_monitor",
 ]
 
 __version__ = "1.0.0"
