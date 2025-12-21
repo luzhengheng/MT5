@@ -24,7 +24,7 @@ class KellySizer(bt.Sizer):
 
     其中：
         - f*: Kelly 风险比例（Optimal Risk Fraction）
-        - p: 预测胜率（从 ML 模型输出的 y_pred_proba）
+        - p: 预测胜率（从 ML 模型输出的 y_pred_proba 或 HierarchicalSignalFusion 置信度）
         - b: 赔率（策略的 take_profit_ratio，即盈亏比）
 
     仓位计算：
@@ -41,6 +41,13 @@ class KellySizer(bt.Sizer):
         max_position_pct (float): 单笔最大仓位占比 (默认 50%)
         min_position_pct (float): 单笔最小仓位占比 (默认 1%)
         stop_loss_multiplier (float): 止损倍数 (默认 2.0, 即 2*ATR)
+        use_hierarchical_signals (bool): 优先使用 HierarchicalSignalFusion 置信度 (默认 True)
+
+    P2-03 改进 (2025-12-21):
+        - 添加 _get_win_probability() 方法
+        - 优先从 HierarchicalSignalFusion 获取置信度
+        - 回退到数据源的 y_pred_proba
+        - 确保 Kelly 公式获得高质量的胜率输入
     """
 
     params = (
@@ -50,7 +57,65 @@ class KellySizer(bt.Sizer):
         ('stop_loss_multiplier', 2.0),  # 止损距离为 2*ATR
         ('max_leverage', 3.0),  # 最大杠杆倍数 (Gemini建议添加硬约束)
         ('max_risk_per_trade', 0.02),  # 单笔最大风险金额占比 (默认 2%, Gemini建议)
+        ('use_hierarchical_signals', True),  # P2-03: 优先使用分层信号置信度
     )
+
+    def _get_win_probability(self, data, isbuy: bool) -> Optional[float]:
+        """
+        获取交易的赢率概率
+
+        P2-03 改进: 支持多个概率来源
+        1. 优先从 HierarchicalSignalFusion 获取置信度 (highest quality)
+        2. 其次从数据源获取 y_pred_proba (fallback)
+        3. 返回 None 如果都无法获取
+
+        Args:
+            data: Backtrader 数据源
+            isbuy: True 为买入，False 为卖出
+
+        Returns:
+            float: 赢率概率 (0-1)，或 None 如果无法获取
+        """
+        p_win = None
+
+        # P2-03: 方式 1 - 从 HierarchicalSignalFusion 获取置信度
+        if self.params.use_hierarchical_signals:
+            try:
+                if hasattr(self.strategy, 'hierarchical_signals'):
+                    fusion_engine = self.strategy.hierarchical_signals
+                    last_result = fusion_engine.get_last_signal()
+
+                    if last_result is not None:
+                        # 使用融合结果的置信度作为赢率
+                        p_win = last_result.confidence
+                        logger.debug(
+                            f"从 HierarchicalSignalFusion 获取赢率: {p_win:.4f} "
+                            f"(信号: {last_result.final_signal})"
+                        )
+                        return p_win
+            except (AttributeError, Exception) as e:
+                logger.debug(f"无法从 HierarchicalSignalFusion 获取赢率: {e}")
+
+        # P2-03: 方式 2 - 从数据源获取 y_pred_proba (回退方案)
+        try:
+            if isbuy:
+                p_win = data.y_pred_proba_long[0]
+            else:
+                p_win = data.y_pred_proba_short[0]
+
+            # 验证有效性
+            if np.isnan(p_win) or p_win <= 0:
+                return None
+
+            logger.debug(
+                f"从数据源获取赢率 (回退): {p_win:.4f} "
+                f"({'y_pred_proba_long' if isbuy else 'y_pred_proba_short'})"
+            )
+            return p_win
+
+        except (AttributeError, IndexError):
+            logger.debug("无法从数据源获取 y_pred_proba")
+            return None
 
     def _getsizing(self, comminfo, cash, data, isbuy):
         """
@@ -90,21 +155,16 @@ class KellySizer(bt.Sizer):
         if current_price <= 0:
             return 0
 
-        # 获取 ML 模型的预测概率
-        try:
-            if isbuy:
-                p_win = data.y_pred_proba_long[0]
-            else:
-                p_win = data.y_pred_proba_short[0]
+        # P2-03: 使用新的 _get_win_probability() 方法获取赢率
+        # 优先从 HierarchicalSignalFusion 获取置信度，再回退到数据源
+        p_win = self._get_win_probability(data, isbuy)
 
-            # 注意：这里不再要求 p_win > 0.5
-            # 通用 Kelly 公式可以处理低胜率高赔率的情况
-            if np.isnan(p_win) or p_win <= 0:
-                return 0
-
-        except (AttributeError, IndexError):
-            logger.warning("无法获取预测概率，跳过仓位计算")
+        if p_win is None or p_win <= 0:
+            logger.debug("无法获取有效的赢率概率，跳过仓位计算")
             return 0
+
+        # 注意：这里不再要求 p_win > 0.5
+        # 通用 Kelly 公式可以处理低胜率高赔率的情况
 
         # 获取策略的盈亏比（赔率 b）
         try:
