@@ -437,7 +437,7 @@ class GeminiReviewBridge:
         }
 
         data = {
-            "model": "gemini-3-pro-preview",
+            "model": "gemini-1.5-pro",  # 修复: 使用官方支持的模型名称
             "messages": [
                 {
                     "role": "system",
@@ -452,7 +452,7 @@ class GeminiReviewBridge:
             "max_tokens": 8000
         }
 
-        response = requests.post(url, headers=headers, json=data, timeout=120)
+        response = requests.post(url, headers=headers, json=data, timeout=60)  # 改进: 缩短超时到60秒
 
         if response.status_code == 200:
             result = response.json()
@@ -465,7 +465,7 @@ class GeminiReviewBridge:
                 return {
                     "success": True,
                     "review": review_text,
-                    "model": "gemini-3-pro-preview (via proxy)",
+                    "model": "gemini-1.5-pro (via proxy)",
                     "timestamp": datetime.now().isoformat()
                 }
 
@@ -473,7 +473,8 @@ class GeminiReviewBridge:
 
     def _call_gemini_direct(self, prompt, save_response=True):
         """直接调用 Gemini API"""
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={GEMINI_API_KEY}"
+        # 修复: 使用官方支持的模型名称 gemini-1.5-pro (稳定) 或 gemini-2.0-flash-exp (实验性)
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key={GEMINI_API_KEY}"
 
         data = {
             "contents": [{
@@ -483,7 +484,7 @@ class GeminiReviewBridge:
             }]
         }
 
-        response = requests.post(url, json=data, timeout=120)
+        response = requests.post(url, json=data, timeout=60)  # 改进: 缩短超时到60秒
 
         if response.status_code == 200:
             result = response.json()
@@ -496,7 +497,7 @@ class GeminiReviewBridge:
                 return {
                     "success": True,
                     "review": review_text,
-                    "model": "gemini-2.5-flash (direct)",
+                    "model": "gemini-1.5-pro (direct)",
                     "timestamp": datetime.now().isoformat()
                 }
 
