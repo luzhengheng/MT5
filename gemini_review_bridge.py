@@ -432,26 +432,18 @@ class GeminiReviewBridge:
 ## 核心代码审查
 """
 
-        # 添加关键文件内容
-        key_files = [
-            "src/strategy/risk_manager.py",
-            "nexus_with_proxy.py",
-            "src/feature_engineering/"
-        ]
-
-        for file_path in key_files:
-            if file_path in code_context:
-                file_info = code_context[file_path]
-                if file_info.get("type") == "file":
-                    prompt += f"\n### 📄 {file_path}\n"
-                    prompt += f"```python\n{file_info.get('content', 'Unable to read file')[:2000]}...\n```\n"
-                elif file_info.get("type") == "directory":
-                    prompt += f"\n### 📁 {file_path}\n"
-                    files = file_info.get("files", [])
-                    if files:
-                        prompt += f"包含 {len(files)} 个文件: {', '.join(files[:10])}"
-                        if len(files) > 10:
-                            prompt += f" 等 {len(files)} 个文件"
+        # 直接遍历所有已动态获取的代码文件（修复：删除硬编码白名单）
+        for file_path, file_info in code_context.items():
+            if file_info.get("type") == "file":
+                prompt += f"\n### 📄 {file_path}\n"
+                prompt += f"```python\n{file_info.get('content', 'Unable to read file')[:2000]}...\n```\n"
+            elif file_info.get("type") == "directory":
+                prompt += f"\n### 📁 {file_path}\n"
+                files = file_info.get("files", [])
+                if files:
+                    prompt += f"包含 {len(files)} 个文件: {', '.join(files[:10])}"
+                    if len(files) > 10:
+                        prompt += f" 等 {len(files)} 个文件"
 
         prompt += f"""
 ## 审查重点
