@@ -42,6 +42,62 @@ echo "✅ 同步完成"
 * 使用 Git-Notion 同步机制自动更新 Notion 看板
 * 提交信息中必须包含工单号以触发自动化
 
+## 7. 工单创建与 Notion 录入标准流程 (Issue Creation & Notion Entry)
+
+当用户要求"创建并录入工单"时，请严格执行以下流程：
+
+### 第 1 步：创建本地工单文件
+```bash
+# 工单文件位置：docs/issues/📋 工单 #XXX 工单名称….md
+# 文件格式：完整的 Markdown 文档，包含以下部分：
+# - 工单标题、优先级、类型、依赖关系、目标
+# - 📋 需求背景
+# - 🛠️ 实施任务清单
+# - 💻 代码变更规范 (如有)
+# - 🚀 执行指令
+```
+
+### 第 2 步：Git 提交并推送到 GitHub
+```bash
+git add "docs/issues/📋 工单 #XXX 工单名称….md"
+git commit -m "docs(issues): 添加工单 #XXX - 工单简短描述 #XXX"
+git push
+```
+
+### 第 3 步：创建 Notion Issue 页面
+使用 `create_notion_issue.py` 脚本创建页面：
+```bash
+python3 << 'EOF'
+from create_notion_issue import create_issue_in_notion
+
+create_issue_in_notion(
+    issue_id="#XXX",
+    title="📋 工单 #XXX: 工单完整标题",
+    priority="P1",  # 或 P2, P3
+    issue_type="Feature/Refactor/Fix/Optimization",
+    status="未开始",  # 或 进行中, 完成
+    description="工单简短描述（1-2 句）"
+)
+EOF
+```
+
+### 第 4 步：添加工单完整内容到 Notion 页面
+使用 `add_issue_content_to_notion.py` 脚本添加所有详细内容：
+```bash
+python3 add_issue_content_to_notion.py
+```
+
+### 验证清单
+提交工单后，确保：
+- ✅ 本地工单文件存在：`docs/issues/📋 工单 #XXX …….md`
+- ✅ GitHub 已推送：运行 `git log --oneline -1` 确认提交
+- ✅ Notion Issue 已创建：页面包含工单号 #XXX
+- ✅ Notion 内容已录入：76+ 个内容块（包含需求、任务、代码规范、执行指令）
+- ✅ Git-Notion 同步已触发：检查 update_notion_from_git.py 日志
+
+### 快速命令
+用户输入 `创建工单 #XXX` 时，自动执行上述 4 步并生成验证报告。
+
 ---
 
 **使用方法**:
