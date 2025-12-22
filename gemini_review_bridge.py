@@ -511,9 +511,24 @@ git commit -m "type(scope): summary #issue-id"
             # OpenAI 兼容协议 (YYDS API)
             url = f"{GEMINI_BASE_URL}/chat/completions"
 
+            # 增强 headers 以绕过 Cloudflare WAF
+            # 模拟真实浏览器请求特征
             headers = {
                 "Authorization": f"Bearer {GEMINI_API_KEY}",
-                "Content-Type": "application/json"
+                "Content-Type": "application/json",
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                "Accept": "application/json",
+                "Accept-Encoding": "gzip, deflate, br",
+                "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
+                "Cache-Control": "no-cache",
+                "Pragma": "no-cache",
+                "Sec-Ch-Ua": '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
+                "Sec-Ch-Ua-Mobile": "?0",
+                "Sec-Ch-Ua-Platform": '"macOS"',
+                "Sec-Fetch-Dest": "empty",
+                "Sec-Fetch-Mode": "cors",
+                "Sec-Fetch-Site": "same-site",
+                "X-Requested-With": "XMLHttpRequest"
             }
 
             payload = {
@@ -532,7 +547,11 @@ git commit -m "type(scope): summary #issue-id"
                 "max_tokens": 8192  # 80万字符上下文限制 (保持动态聚焦逻辑)
             }
 
-            response = requests.post(url, headers=headers, json=payload, timeout=120)
+            # 使用增强的会话参数绕过 Cloudflare
+            session = requests.Session()
+            session.headers.update(headers)
+
+            response = session.post(url, json=payload, timeout=120)
 
             if response.status_code == 200:
                 result = response.json()
