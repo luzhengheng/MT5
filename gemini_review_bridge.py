@@ -11,6 +11,7 @@ import json
 import subprocess
 import requests  # 使用增强的 headers 来模拟浏览器并绕过 Cloudflare
 from datetime import datetime
+from pathlib import Path
 from dotenv import load_dotenv
 
 # 加载环境变量
@@ -19,7 +20,8 @@ NOTION_TOKEN = os.getenv("NOTION_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_BASE_URL = os.getenv("GEMINI_BASE_URL", "https://api.yyds168.net/v1")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-pro-preview")
-PROJECT_ROOT = os.getenv("PROJECT_ROOT", "/opt/mt5-crs/")
+# 修复 #2: 改进 PROJECT_ROOT 配置 - 使用动态路径而不是硬编码
+PROJECT_ROOT = os.getenv("PROJECT_ROOT", os.getcwd())
 
 class GeminiReviewBridge:
     def __init__(self):
@@ -44,42 +46,75 @@ class GeminiReviewBridge:
         优先检查：
         1. 未提交的修改 (git diff HEAD)
         2. 最近一次提交的修改 (git diff HEAD~1)
+        3. 未跟踪的新文件 (git ls-files --others) 【修复 #1】
+
+        修复 #3: 改进异常处理，区分不同的错误类型
         """
         try:
             changed_files = []
 
-            # 获取未暂存和已暂存的修改
+            # 1. 获取未暂存和已暂存的修改
             try:
                 cmd = "git diff --name-only HEAD"
                 changed = subprocess.check_output(
                     cmd.split(),
                     cwd=self.project_root,
-                    universal_newlines=True
+                    universal_newlines=True,
+                    stderr=subprocess.DEVNULL
                 ).strip().split('\n')
-                changed_files.extend([f for f in changed if f and f.endswith('.py')])
+                changed_files.extend([f.strip() for f in changed if f.strip() and f.strip().endswith('.py')])
+            except subprocess.CalledProcessError as e:
+                print(f"⚠️ Git diff HEAD 命令失败 (通常表示无提交历史): {e}")
+            except FileNotFoundError:
+                print(f"⚠️ Git 命令未找到，请确保 Git 已安装")
+                return []
             except Exception as e:
                 print(f"⚠️ 获取未提交修改失败: {e}")
 
-            # 如果没有未提交的修改，检查最近一次提交
+            # 2. 如果没有未提交的修改，检查最近一次提交
             if not changed_files:
                 try:
                     cmd = "git diff --name-only HEAD~1"
                     changed = subprocess.check_output(
                         cmd.split(),
                         cwd=self.project_root,
-                        universal_newlines=True
+                        universal_newlines=True,
+                        stderr=subprocess.DEVNULL
                     ).strip().split('\n')
-                    changed_files.extend([f for f in changed if f and f.endswith('.py')])
+                    changed_files.extend([f.strip() for f in changed if f.strip() and f.strip().endswith('.py')])
+                except subprocess.CalledProcessError as e:
+                    print(f"⚠️ Git diff HEAD~1 命令失败 (通常表示仓库历史不足): {e}")
                 except Exception as e:
                     print(f"⚠️ 获取最近提交修改失败: {e}")
+
+            # 【修复 #1】3. 检查未跟踪的新文件
+            try:
+                cmd = "git ls-files --others --exclude-standard"
+                untracked = subprocess.check_output(
+                    cmd.split(),
+                    cwd=self.project_root,
+                    universal_newlines=True,
+                    stderr=subprocess.DEVNULL
+                ).strip().split('\n')
+                untracked_py = [f.strip() for f in untracked if f.strip() and f.strip().endswith('.py')]
+                if untracked_py:
+                    print(f"✅ 检测到 {len(untracked_py)} 个未跟踪的 Python 文件")
+                    changed_files.extend(untracked_py)
+            except subprocess.CalledProcessError as e:
+                print(f"⚠️ Git ls-files 命令失败: {e}")
+            except Exception as e:
+                print(f"⚠️ 获取未跟踪文件失败: {e}")
 
             # 过滤非 Python 文件、空行，并确保文件存在
             valid_files = []
             for f in changed_files:
-                if f.strip() and f.endswith('.py'):
+                f = f.strip()
+                if f and f.endswith('.py'):
                     full_path = os.path.join(self.project_root, f)
                     if os.path.exists(full_path):
                         valid_files.append(f)
+                    else:
+                        print(f"⚠️ 文件不存在或无法访问: {full_path}")
 
             return list(set(valid_files))  # 去重
 
