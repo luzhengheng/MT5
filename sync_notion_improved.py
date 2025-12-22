@@ -13,13 +13,14 @@ import json
 import re
 from datetime import datetime
 from dotenv import load_dotenv
+from src.utils.path_utils import get_project_root
 
 load_dotenv()
 
 # ========== 环境配置 ==========
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
 NOTION_ISSUES_DB_ID = os.getenv("NOTION_ISSUES_DB_ID")
-PROJECT_ROOT = os.getenv("PROJECT_ROOT", "/opt/mt5-crs/")
+PROJECT_ROOT = str(get_project_root())
 
 # ========== Notion API 配置 ==========
 NOTION_API_URL = "https://api.notion.com/v1"

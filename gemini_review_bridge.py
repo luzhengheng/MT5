@@ -13,6 +13,7 @@ import requests  # 使用增强的 headers 来模拟浏览器并绕过 Cloudflar
 from datetime import datetime
 from pathlib import Path
 from dotenv import load_dotenv
+from src.utils.path_utils import get_project_root
 
 # 加载环境变量
 load_dotenv()
@@ -20,8 +21,8 @@ NOTION_TOKEN = os.getenv("NOTION_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_BASE_URL = os.getenv("GEMINI_BASE_URL", "https://api.yyds168.net/v1")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-pro-preview")
-# 修复 #2: 改进 PROJECT_ROOT 配置 - 使用动态路径而不是硬编码
-PROJECT_ROOT = os.getenv("PROJECT_ROOT", os.getcwd())
+# 使用动态路径工具获取项目根目录
+PROJECT_ROOT = str(get_project_root())
 
 class GeminiReviewBridge:
     def __init__(self):

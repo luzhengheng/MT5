@@ -11,6 +11,7 @@ import time
 import textwrap
 import requests
 from dotenv import load_dotenv
+from src.utils.path_utils import get_project_root
 
 # 加载环境变量
 load_dotenv()
@@ -19,7 +20,7 @@ GEMINI_KEY = os.getenv("GEMINI_API_KEY")
 PROXY_API_KEY = os.getenv("PROXY_API_KEY")
 PROXY_API_URL = os.getenv("PROXY_API_URL")
 DATABASE_ID = os.getenv("NOTION_DB_ID")
-PROJECT_ROOT = os.getenv("PROJECT_ROOT", "/opt/mt5-crs/")
+PROJECT_ROOT = str(get_project_root())
 
 # Notion API 配置
 NOTION_VERSION = "2022-06-28"

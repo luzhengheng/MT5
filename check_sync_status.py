@@ -11,9 +11,11 @@ import requests
 import json
 from datetime import datetime
 from dotenv import load_dotenv
+from src.utils.path_utils import get_project_root
 
 load_dotenv()
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
+PROJECT_ROOT = str(get_project_root())
 
 def check_git_status():
     """检查 Git 状态"""
@@ -96,7 +98,7 @@ def check_file_sync_status():
     sync_status = {}
 
     for file_path in key_files:
-        full_path = os.path.join("/opt/mt5-crs", file_path)
+        full_path = os.path.join(PROJECT_ROOT, file_path)
 
         if os.path.exists(full_path):
             if os.path.isdir(full_path):

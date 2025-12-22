@@ -9,9 +9,12 @@ import os
 import subprocess
 from datetime import datetime
 from pathlib import Path
+from src.utils.path_utils import get_project_root
 
 class ContextExporter:
-    def __init__(self, project_root="/opt/mt5-crs"):
+    def __init__(self, project_root=None):
+        if project_root is None:
+            project_root = str(get_project_root())
         self.project_root = project_root
         self.export_dir = f"{project_root}/exports"
         self.timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
