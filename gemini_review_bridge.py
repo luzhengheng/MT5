@@ -9,7 +9,7 @@ import os
 import sys
 import json
 import subprocess
-import requests
+import requests  # 使用增强的 headers 来模拟浏览器并绕过 Cloudflare
 from datetime import datetime
 from dotenv import load_dotenv
 
@@ -518,7 +518,6 @@ git commit -m "type(scope): summary #issue-id"
                 "Content-Type": "application/json",
                 "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
                 "Accept": "application/json",
-                "Accept-Encoding": "gzip, deflate, br",
                 "Accept-Language": "zh-CN,zh;q=0.9,en;q=0.8",
                 "Cache-Control": "no-cache",
                 "Pragma": "no-cache",
@@ -547,12 +546,15 @@ git commit -m "type(scope): summary #issue-id"
                 "max_tokens": 8192  # 80万字符上下文限制 (保持动态聚焦逻辑)
             }
 
-            # 使用增强的会话参数绕过 Cloudflare
-            session = requests.Session()
-            session.headers.update(headers)
+            # 使用增强的 headers 以浏览器指纹模拟的方式绕过 Cloudflare WAF
+            response = requests.post(
+                url,
+                headers=headers,
+                json=payload,
+                timeout=120
+            )
 
-            response = session.post(url, json=payload, timeout=120)
-
+            # requests 库会自动处理 gzip 解压，无需额外处理
             if response.status_code == 200:
                 result = response.json()
                 if "choices" in result and result["choices"]:
