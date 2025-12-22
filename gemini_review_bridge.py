@@ -17,8 +17,8 @@ from dotenv import load_dotenv
 load_dotenv()
 NOTION_TOKEN = os.getenv("NOTION_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-PROXY_API_KEY = os.getenv("PROXY_API_KEY")
-PROXY_API_URL = os.getenv("PROXY_API_URL")
+GEMINI_BASE_URL = os.getenv("GEMINI_BASE_URL", "https://api.yyds168.net/v1")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-pro-preview")
 PROJECT_ROOT = os.getenv("PROJECT_ROOT", "/opt/mt5-crs/")
 
 class GeminiReviewBridge:
@@ -31,6 +31,12 @@ class GeminiReviewBridge:
             "Content-Type": "application/json",
             "Notion-Version": "2022-06-28"
         }
+
+        # 验证 API 配置
+        print(f"🔑 使用 API 基址: {GEMINI_BASE_URL}")
+        print(f"🤖 模型: {GEMINI_MODEL}")
+        if not GEMINI_API_KEY:
+            print("⚠️ 警告: GEMINI_API_KEY 未设置，API 调用可能失败")
 
     def get_changed_files(self):
         """获取 Git 变动的文件列表
@@ -498,101 +504,56 @@ git commit -m "type(scope): summary #issue-id"
         return prompt
 
     def send_to_gemini(self, prompt, save_response=True):
-        """发送提示到 Gemini Pro"""
-        print("🤖 发送审查请求到 Gemini Pro...")
+        """发送提示到 Gemini Pro (通过 OpenAI 兼容 API)"""
+        print(f"🤖 发送审查请求到 {GEMINI_MODEL} (via {GEMINI_BASE_URL})...")
 
-        # 尝试使用中转服务
-        if PROXY_API_URL and PROXY_API_KEY:
-            try:
-                return self._call_gemini_proxy(prompt, save_response)
-            except Exception as e:
-                print(f"⚠️ 中转服务失败: {e}")
-
-        # 备用：直接调用
         try:
-            return self._call_gemini_direct(prompt, save_response)
-        except Exception as e:
-            return {"error": f"所有 API 调用失败: {e}"}
+            # OpenAI 兼容协议 (YYDS API)
+            url = f"{GEMINI_BASE_URL}/chat/completions"
 
-    def _call_gemini_proxy(self, prompt, save_response=True):
-        """使用中转服务调用 Gemini 3 Pro"""
-        url = f"{PROXY_API_URL}/v1/chat/completions"
-
-        headers = {
-            "Authorization": f"Bearer {PROXY_API_KEY}",
-            "Content-Type": "application/json"
-        }
-
-        data = {
-            "model": "gemini-3-pro-preview",  # 升级: Gemini 3 Pro (超长上下文支持)
-            "messages": [
-                {
-                    "role": "system",
-                    "content": "你是一位资深的量化交易系统和 Python 开发专家，以及高效的代码审查工程师。请基于代码全貌进行深度分析，直接输出可用的工作成果。"
-                },
-                {
-                    "role": "user",
-                    "content": prompt
-                }
-            ],
-            "temperature": 0.7,
-            "max_tokens": 16000  # 增加输出 token，支持更多内容
-        }
-
-        response = requests.post(url, headers=headers, json=data, timeout=60)  # 改进: 缩短超时到60秒
-
-        if response.status_code == 200:
-            result = response.json()
-            if "choices" in result and result["choices"]:
-                review_text = result["choices"][0]["message"]["content"]
-
-                if save_response:
-                    self._save_review_response(prompt, review_text)
-
-                return {
-                    "success": True,
-                    "review": review_text,
-                    "model": "gemini-2.5-pro (via proxy)",
-                    "timestamp": datetime.now().isoformat()
-                }
-
-        return {"error": f"API 调用失败: {response.status_code}"}
-
-    def _call_gemini_direct(self, prompt, save_response=True):
-        """直接调用 Gemini 3 Pro API"""
-        # 升级: 使用 Gemini 3 Pro (1M+ token 上下文窗口)
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key={GEMINI_API_KEY}"
-
-        data = {
-            "contents": [{
-                "parts": [{
-                    "text": prompt
-                }]
-            }],
-            "generationConfig": {
-                "maxOutputTokens": 16000,  # 增加输出 token
-                "temperature": 0.7
+            headers = {
+                "Authorization": f"Bearer {GEMINI_API_KEY}",
+                "Content-Type": "application/json"
             }
-        }
 
-        response = requests.post(url, json=data, timeout=60)  # 改进: 缩短超时到60秒
+            payload = {
+                "model": GEMINI_MODEL,
+                "messages": [
+                    {
+                        "role": "system",
+                        "content": "你是一位资深的量化交易系统和 Python 开发专家，以及高效的代码审查工程师。请基于代码全貌进行深度分析，直接输出可用的工作成果。"
+                    },
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                "temperature": 0.7,
+                "max_tokens": 8192  # 80万字符上下文限制 (保持动态聚焦逻辑)
+            }
 
-        if response.status_code == 200:
-            result = response.json()
-            if "candidates" in result and result["candidates"]:
-                review_text = result["candidates"][0]["content"]["parts"][0]["text"]
+            response = requests.post(url, headers=headers, json=payload, timeout=120)
 
-                if save_response:
-                    self._save_review_response(prompt, review_text)
+            if response.status_code == 200:
+                result = response.json()
+                if "choices" in result and result["choices"]:
+                    review_text = result["choices"][0]["message"]["content"]
 
-                return {
-                    "success": True,
-                    "review": review_text,
-                    "model": "gemini-2.5-pro (direct)",
-                    "timestamp": datetime.now().isoformat()
-                }
+                    if save_response:
+                        self._save_review_response(prompt, review_text)
 
-        return {"error": f"API 调用失败: {response.status_code}"}
+                    return {
+                        "success": True,
+                        "review": review_text,
+                        "model": f"{GEMINI_MODEL} (OpenAI-compatible)",
+                        "timestamp": datetime.now().isoformat()
+                    }
+
+            return {"error": f"API 调用失败: {response.status_code}, {response.text}"}
+
+        except Exception as e:
+            return {"error": f"API 调用异常: {str(e)}"}
+
 
     def _save_review_response(self, prompt, response):
         """保存审查响应到文件"""
