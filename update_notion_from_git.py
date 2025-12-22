@@ -131,13 +131,13 @@ class NotionGitUpdater:
     def _update_single_issue(self, db_id, issue_id, commit_info):
         """更新单个工单状态"""
         try:
-            # 查询工单
+            # 查询工单 - 使用"名称"属性查询
             query_url = f"{self.notion_base_url}/databases/{db_id}/query"
             query_data = {
                 "filter": {
-                    "property": "ID",
-                    "rich_text": {
-                        "equals": f"#{issue_id}"
+                    "property": "名称",  # 修复: 使用正确的属性名
+                    "title": {  # 修复: 使用 title 类型而不是 rich_text
+                        "contains": f"#{issue_id}"
                     }
                 }
             }
@@ -157,11 +157,8 @@ class NotionGitUpdater:
                     update_url = f"{self.notion_base_url}/pages/{page_id}"
                     update_data = {
                         "properties": {
-                            "Status": {
+                            "状态": {  # 修复: 使用正确的属性名 "状态" 而不是 "Status"
                                 "status": {"name": new_status}
-                            },
-                            "Code Delta": {
-                                "number": 1  # 每次提交增加1行代码计数
                             }
                         }
                     }
