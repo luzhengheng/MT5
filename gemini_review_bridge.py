@@ -32,6 +32,55 @@ class GeminiReviewBridge:
             "Notion-Version": "2022-06-28"
         }
 
+    def get_changed_files(self):
+        """获取 Git 变动的文件列表
+
+        优先检查：
+        1. 未提交的修改 (git diff HEAD)
+        2. 最近一次提交的修改 (git diff HEAD~1)
+        """
+        try:
+            changed_files = []
+
+            # 获取未暂存和已暂存的修改
+            try:
+                cmd = "git diff --name-only HEAD"
+                changed = subprocess.check_output(
+                    cmd.split(),
+                    cwd=self.project_root,
+                    universal_newlines=True
+                ).strip().split('\n')
+                changed_files.extend([f for f in changed if f and f.endswith('.py')])
+            except Exception as e:
+                print(f"⚠️ 获取未提交修改失败: {e}")
+
+            # 如果没有未提交的修改，检查最近一次提交
+            if not changed_files:
+                try:
+                    cmd = "git diff --name-only HEAD~1"
+                    changed = subprocess.check_output(
+                        cmd.split(),
+                        cwd=self.project_root,
+                        universal_newlines=True
+                    ).strip().split('\n')
+                    changed_files.extend([f for f in changed if f and f.endswith('.py')])
+                except Exception as e:
+                    print(f"⚠️ 获取最近提交修改失败: {e}")
+
+            # 过滤非 Python 文件、空行，并确保文件存在
+            valid_files = []
+            for f in changed_files:
+                if f.strip() and f.endswith('.py'):
+                    full_path = os.path.join(self.project_root, f)
+                    if os.path.exists(full_path):
+                        valid_files.append(f)
+
+            return list(set(valid_files))  # 去重
+
+        except Exception as e:
+            print(f"⚠️ 获取 Git 变动失败: {e}")
+            return []
+
     def get_project_overview(self):
         """获取项目最新概览"""
         print("🔍 获取项目最新概览...")
@@ -228,9 +277,10 @@ class GeminiReviewBridge:
                     with open(full_path, 'r', encoding='utf-8') as f:
                         content = f.read()
 
-                        # 限制文件大小以避免 token 限制
-                        if len(content) > 8000:
-                            content = content[:8000] + "\n... [文件过长已截断]"
+                        # 针对 Gemini 3 Pro 优化：大幅提升字符限制
+                        MAX_CHAR_LIMIT = 500000  # 约 1.5MB 文本
+                        if len(content) > MAX_CHAR_LIMIT:
+                            content = content[:MAX_CHAR_LIMIT] + "\n... [文件极长，截取前50万字符]"
 
                         code_context[file_path] = {
                             "type": "file",
@@ -307,14 +357,31 @@ class GeminiReviewBridge:
             return {"error": str(e)}
 
     def generate_review_prompt(self, focus_area=None):
-        """生成 Gemini Pro 审查提示"""
+        """生成 Gemini Pro 审查提示
+
+        动态聚焦策略：
+        1. 优先读取变动的文件列表（如果存在）
+        2. 补充 CONTEXT_SUMMARY.md 作为背景
+        3. 如果没有变动文件，使用默认的核心文件列表
+        """
         print("📝 生成 Gemini Pro 审查提示...")
 
         # 获取项目概览
         overview = self.get_project_overview()
 
-        # 获取代码上下文
-        code_context = self.get_code_context()
+        # 【新增】动态聚焦：获取变动的文件
+        changed_files = self.get_changed_files()
+        if changed_files:
+            print(f"✅ 检测到 {len(changed_files)} 个变动的 Python 文件")
+            # 优先使用变动文件 + CONTEXT_SUMMARY.md
+            file_paths_to_read = changed_files.copy()
+            if os.path.exists(os.path.join(self.project_root, "CONTEXT_SUMMARY.md")):
+                file_paths_to_read.append("CONTEXT_SUMMARY.md")
+            code_context = self.get_code_context(file_paths=file_paths_to_read)
+        else:
+            print("⚠️ 没有检测到文件变动，使用默认的核心文件列表")
+            # 回退到默认的核心文件列表
+            code_context = self.get_code_context()
 
         # 获取 AI Command Center 任务
         ai_tasks = self.get_ai_command_center_tasks()
@@ -395,17 +462,37 @@ class GeminiReviewBridge:
 5. 潜在的安全风险
 """
 
+        # 【新增】ROI Max 指令：充分利用 Gemini 3 Pro 的超长上下文能力
         prompt += """
-## 审查要求
-请对以上内容进行全面审查，重点关注：
+## 🚀 深度指令 (ROI Maximization)
 
-1. **架构评估**: 当前设计是否适合 MT5 实盘交易系统？
-2. **代码质量**: 是否存在潜在 bug、性能问题或安全问题？
-3. **最佳实践**: 是否遵循 Python 和量化开发的最佳实践？
-4. **优化建议**: 有哪些具体的改进建议？
-5. **风险评估**: 当前实现可能面临哪些技术或业务风险？
+作为资深量化架构师，请基于 Gemini 3 Pro 的超长上下文能力，对上述代码进行深度审计。
 
-请提供具体、可操作的建议，并标注优先级。
+**重要：请严格按照以下 Markdown 格式输出 4 部分内容（不要输出其他废话或介绍）**：
+
+### 1. 🛡️ 深度代码审计 (Audit)
+- **逻辑闭环**: 检查是否有未处理的边界情况、异常流程
+- **类型安全**: 检查潜在的类型错误、None 检查遗漏
+- **资源管理**: (如有) 检查连接池、文件句柄、网络连接是否正确释放
+- **并发安全**: (如有) 检查多线程/异步场景下的竞态条件
+
+### 2. ⚡ 性能与架构优化 (Optimize)
+- **异步优化**: 指出具体的 async/await 优化机会
+- **算法复杂度**: 指出时间空间复杂度可改进的地方
+- **缓存机会**: 指出可以添加缓存的关键路径
+- **并发策略**: 建议的并发处理方案（如有必要）
+
+### 3. 📝 推荐 Git Commit Message
+```bash
+git commit -m "type(scope): summary #issue-id"
+```
+(请根据修改内容生成，确保包含工单号 #011.3)
+
+### 4. 📋 Notion 进度简报
+(一段简练的中文摘要，用于粘贴到 Notion 评论区，包括：
+- 本次审查发现的主要问题
+- 建议的优先级排序
+- 下一步行动计划)
 """
 
         return prompt
@@ -428,7 +515,7 @@ class GeminiReviewBridge:
             return {"error": f"所有 API 调用失败: {e}"}
 
     def _call_gemini_proxy(self, prompt, save_response=True):
-        """使用中转服务调用 Gemini"""
+        """使用中转服务调用 Gemini 3 Pro"""
         url = f"{PROXY_API_URL}/v1/chat/completions"
 
         headers = {
@@ -437,11 +524,11 @@ class GeminiReviewBridge:
         }
 
         data = {
-            "model": "gemini-2.5-pro",  # 改进: 使用官方支持的最新模型 (2025 年发布)
+            "model": "gemini-3-pro-preview",  # 升级: Gemini 3 Pro (超长上下文支持)
             "messages": [
                 {
                     "role": "system",
-                    "content": "你是一位资深的量化交易系统和 Python 开发专家，请提供专业的代码审查和架构建议。"
+                    "content": "你是一位资深的量化交易系统和 Python 开发专家，以及高效的代码审查工程师。请基于代码全貌进行深度分析，直接输出可用的工作成果。"
                 },
                 {
                     "role": "user",
@@ -449,7 +536,7 @@ class GeminiReviewBridge:
                 }
             ],
             "temperature": 0.7,
-            "max_tokens": 8000
+            "max_tokens": 16000  # 增加输出 token，支持更多内容
         }
 
         response = requests.post(url, headers=headers, json=data, timeout=60)  # 改进: 缩短超时到60秒
@@ -472,16 +559,20 @@ class GeminiReviewBridge:
         return {"error": f"API 调用失败: {response.status_code}"}
 
     def _call_gemini_direct(self, prompt, save_response=True):
-        """直接调用 Gemini API"""
-        # 改进: 使用官方支持的最新模型 gemini-2.5-pro (稳定/高性能) 或 gemini-2.5-flash (快速)
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent?key={GEMINI_API_KEY}"
+        """直接调用 Gemini 3 Pro API"""
+        # 升级: 使用 Gemini 3 Pro (1M+ token 上下文窗口)
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3-pro-preview:generateContent?key={GEMINI_API_KEY}"
 
         data = {
             "contents": [{
                 "parts": [{
                     "text": prompt
                 }]
-            }]
+            }],
+            "generationConfig": {
+                "maxOutputTokens": 16000,  # 增加输出 token
+                "temperature": 0.7
+            }
         }
 
         response = requests.post(url, json=data, timeout=60)  # 改进: 缩短超时到60秒
