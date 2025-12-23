@@ -132,21 +132,11 @@ def external_ai_review(diff_content):
                 # 清理 JSON 包装
                 clean_content = content.replace("```json", "").replace("```", "").strip()
 
-                # 智能提取 JSON 块（处理 JSON 后的额外文字）
-                if '{' in clean_content:
-                    start = clean_content.index('{')
-                    # 从起始位置开始，找到完整的 JSON 对象
-                    brace_count = 0
-                    end = start
-                    for i in range(start, len(clean_content)):
-                        if clean_content[i] == '{':
-                            brace_count += 1
-                        elif clean_content[i] == '}':
-                            brace_count -= 1
-                            if brace_count == 0:
-                                end = i + 1
-                                break
-                    clean_content = clean_content[start:end]
+                # 尝试提取 JSON 块（优先使用正则）
+                import re
+                json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', clean_content)
+                if json_match:
+                    clean_content = json_match.group(0)
 
                 try:
                     result = json.loads(clean_content)
@@ -158,7 +148,7 @@ def external_ai_review(diff_content):
                         return None
                 except json.JSONDecodeError as je:
                     log(f"JSON 解析失败: {str(je)[:80]}", "WARN")
-                    log(f"原始内容: {clean_content[:200]}...", "WARN")
+                    log(f"原始内容 (前 100 字): {clean_content[:100]}...", "WARN")
                     log("强制通过 (Fail-open)", "WARN")
                     return None
             except Exception as e:
