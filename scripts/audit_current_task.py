@@ -1,29 +1,17 @@
 #!/usr/bin/env python3
 """
-[审计脚本] - Task #014.1: Core MT5 Service
-用于验证 MT5Service 单例类的实现是否满足技术规范。
-
-检查清单：
-1. src/gateway/mt5_service.py 文件存在
-2. 包含 "MetaTrader5" 关键字（核心库）
-3. 包含 "path=" 关键字（便携式路径支持）
-4. 包含 "class MT5Service" 关键字（单例类定义）
+审计脚本 - Task #014.2: Verify MT5 Connectivity
+验证 MT5 连接验证脚本是否正确实现
 """
-
 import sys
 import os
 
-
-# --- 辅助函数：彩色输出 ---
+# --- 辅助函数 ---
 def log_success(msg):
-    """输出成功信息（绿色）"""
     print(f"\033[92m✅ {msg}\033[0m")
 
-
 def log_fail(msg):
-    """输出失败信息（红色）"""
     print(f"\033[91m❌ {msg}\033[0m")
-
 
 def check_file_exists(filepath):
     """检查文件是否存在"""
@@ -32,9 +20,8 @@ def check_file_exists(filepath):
         sys.exit(1)
     log_success(f"文件存在: {filepath}")
 
-
 def check_keywords_in_file(filepath, keywords):
-    """检查文件中是否包含所有必需的关键字"""
+    """检查文件中是否包含核心关键字"""
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
             content = f.read()
@@ -55,65 +42,60 @@ def check_keywords_in_file(filepath, keywords):
         log_fail(f"读取文件出错: {e}")
         sys.exit(1)
 
-
 def main():
-    """主审计流程"""
-    print("🕵️‍♂️ 启动任务审计程序 (Task #014.1 - Core MT5 Service)...")
+    print("🕵️‍♂️ 启动任务审计程序 (Task #014.2 - Verify MT5 Connectivity)...")
     print()
 
     # ---------------------------------------------------------
-    # 1. 定义本次任务的目标文件
+    # 1. 验证 MT5 连接验证脚本存在
     # ---------------------------------------------------------
-    TARGET_FILE = "src/gateway/mt5_service.py"
-
-    # ---------------------------------------------------------
-    # 2. 执行基础检查
-    # ---------------------------------------------------------
-    print("[检查1] 文件存在性...")
+    print("[检查1] 验证脚本存在性...")
+    TARGET_FILE = "scripts/verify_mt5_connection.py"
     check_file_exists(TARGET_FILE)
     print()
 
     # ---------------------------------------------------------
-    # 3. 执行业务逻辑检查 (关键字校验)
+    # 2. 验证脚本包含必要的导入和逻辑
     # ---------------------------------------------------------
-    print("[检查2] 核心业务逻辑完整性...")
+    print("[检查2] 验证脚本内容完整性...")
     REQUIRED_KEYWORDS = [
-        "MetaTrader5",        # 核心库导入
-        "path=",              # 便携式路径支持（mt5.initialize(path=...)）
-        "class MT5Service",   # 单例类定义
+        "from src.gateway.mt5_service import MT5Service",  # 正确导入
+        "MT5Service()",                                     # 实例化
+        "connect()",                                        # 连接方法
+        "is_connected()",                                   # 状态检查
     ]
     check_keywords_in_file(TARGET_FILE, REQUIRED_KEYWORDS)
     print()
 
     # ---------------------------------------------------------
-    # 4. 额外检查：确保实现了 connect() 和 is_connected()
+    # 3. 验证 MT5Service 源文件存在
     # ---------------------------------------------------------
-    print("[检查3] 核心方法实现...")
-    REQUIRED_METHODS = ["def connect", "def is_connected"]
-    try:
-        with open(TARGET_FILE, 'r', encoding='utf-8') as f:
-            content = f.read()
+    print("[检查3] MT5Service 源文件...")
+    MT5_SERVICE_FILE = "src/gateway/mt5_service.py"
+    check_file_exists(MT5_SERVICE_FILE)
+    print()
 
-        missing_methods = [m for m in REQUIRED_METHODS if m not in content]
-        if missing_methods:
-            log_fail(f"缺失方法: {missing_methods}")
-            sys.exit(1)
-
-        log_success(f"所有方法已实现: {REQUIRED_METHODS}")
-    except Exception as e:
-        log_fail(f"方法检查出错: {e}")
-        sys.exit(1)
+    # ---------------------------------------------------------
+    # 4. 验证 MT5Service 包含核心方法
+    # ---------------------------------------------------------
+    print("[检查4] MT5Service 核心方法...")
+    MT5_KEYWORDS = [
+        "class MT5Service",
+        "def connect",
+        "def is_connected",
+        "MetaTrader5"
+    ]
+    check_keywords_in_file(MT5_SERVICE_FILE, MT5_KEYWORDS)
     print()
 
     # ---------------------------------------------------------
     # 5. 最终放行
     # ---------------------------------------------------------
     print("-" * 50)
-    log_success("✨ 审计通过！Task #014.1 完全符合技术规范。")
+    log_success("✨ 审计通过！Task #014.2 符合技术规范。")
     log_success("允许 Gemini Review Bridge 提交代码。")
     print("-" * 50)
-    sys.exit(0)  # Exit 0 会触发 Git Commit
-
+    sys.exit(0)
 
 if __name__ == "__main__":
     main()
