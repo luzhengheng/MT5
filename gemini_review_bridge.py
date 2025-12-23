@@ -1,147 +1,142 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""
-Gemini Pro Review Bridge v3.0 (Titanium Shield)
-核心特性: 使用 curl_cffi 模拟 Chrome 110 指纹，穿透 Cloudflare 五秒盾。
-"""
-
 import os
 import sys
 import subprocess
-import json
-import time
-from dotenv import load_dotenv
+import datetime
 
-# 🔥 引入核武器库
-try:
-    from curl_cffi import requests
-except ImportError:
-    print("❌ 缺少核心库 curl_cffi，请运行: pip install curl_cffi")
-    sys.exit(1)
+# --- 核心配置 ---
+# 这是唯一的验收标准入口
+AUDIT_SCRIPT = "scripts/audit_current_task.py"
 
-load_dotenv()
-PROJECT_ROOT = os.path.dirname(os.path.abspath(__file__))
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GEMINI_BASE_URL = os.getenv("GEMINI_BASE_URL", "https://api.yyds168.net/v1")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-pro")
+# --- ANSI 颜色配置 (让 CLI 日志更清晰) ---
+GREEN = "\033[92m"
+RED = "\033[91m"
+YELLOW = "\033[93m"
+CYAN = "\033[96m"
+RESET = "\033[0m"
 
-class GeminiCloser:
-    def __init__(self):
-        # 这里的 headers 已经不重要了，impersonate 会接管一切
-        self.headers = {
-            "Authorization": f"Bearer {GEMINI_API_KEY}",
-            "Content-Type": "application/json"
-        }
+def log(msg, level="INFO"):
+    timestamp = datetime.datetime.now().strftime("%H:%M:%S")
+    if level == "SUCCESS":
+        print(f"[{timestamp}] {GREEN}✅ {msg}{RESET}")
+    elif level == "ERROR":
+        print(f"[{timestamp}] {RED}⛔ {msg}{RESET}")
+    elif level == "WARN":
+        print(f"[{timestamp}] {YELLOW}⚠️  {msg}{RESET}")
+    elif level == "PHASE":
+        print(f"\n[{timestamp}] {CYAN}🔹 {msg}{RESET}")
+    else:
+        print(f"[{timestamp}] ℹ️  {msg}")
 
-    def run_command(self, command):
-        try:
-            result = subprocess.run(
-                command, 
-                shell=True, 
-                check=True, 
-                text=True, 
-                stdout=subprocess.PIPE, 
-                stderr=subprocess.PIPE,
-                cwd=PROJECT_ROOT
-            )
-            return result.stdout.strip()
-        except subprocess.CalledProcessError as e:
-            print(f"❌ 命令失败: {command}\n{e.stderr}")
-            return None
+def run_cmd(cmd, shell=True):
+    """
+    运行系统命令并捕获所有输出。
+    返回: (exit_code, stdout, stderr)
+    """
+    try:
+        result = subprocess.run(
+            cmd, 
+            shell=shell, 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE, 
+            text=True
+        )
+        return result.returncode, result.stdout.strip(), result.stderr.strip()
+    except Exception as e:
+        return 1, "", str(e)
 
-    def get_git_diff(self):
-        return self.run_command("git diff HEAD")
+def phase_audit():
+    """
+    第一阶段：审计 (Quality Gate)
+    """
+    log("启动审计程序...", "PHASE")
+    
+    if not os.path.exists(AUDIT_SCRIPT):
+        log(f"未找到审计脚本: {AUDIT_SCRIPT}", "WARN")
+        log("跳过逻辑验证 (仅在没有特定审计要求时允许)", "INFO")
+        return True
+    
+    log(f"发现审计脚本，正在执行验收: {AUDIT_SCRIPT}", "INFO")
+    code, out, err = run_cmd(f"python3 {AUDIT_SCRIPT}")
+    
+    if code == 0:
+        log("审计通过！业务逻辑验证成功。", "SUCCESS")
+        if out: 
+            print(f"{GREEN}--- 审计日志 ---{RESET}")
+            print(out)
+            print(f"{GREEN}----------------{RESET}")
+        return True
+    else:
+        log("审计失败！拦截提交。", "ERROR")
+        print(f"\n{RED}================ 错误详情 (CLAUDE ATTENTION) ================{RESET}")
+        print(f"{YELLOW}Exit Code:{RESET} {code}")
+        if out: 
+            print(f"{YELLOW}STDOUT:{RESET}\n{out}")
+        if err: 
+            print(f"{YELLOW}STDERR (Bug Location):{RESET}\n{err}")
+        print(f"{RED}============================================================={RESET}")
+        print(f"💡 指导: 请阅读上面的报错信息，修复 'src/' 代码或 'scripts/' 逻辑，然后重试。")
+        return False
 
-    def generate_review_and_commit_msg(self, diff_content):
-        if not diff_content:
-            print("✨ 没有检测到代码变更 (Working tree clean)")
-            return None
+def phase_commit():
+    """
+    第二阶段：提交 (Auto Commit)
+    """
+    log("准备提交代码...", "PHASE")
+    
+    # 1. 获取变更文件列表用于 Commit Message
+    _, out, _ = run_cmd("git diff --cached --name-only")
+    files = [f.split('/')[-1] for f in out.splitlines() if f]
+    
+    if not files:
+        # 如果缓存区为空，先 add . 再看一遍
+        run_cmd("git add .")
+        _, out, _ = run_cmd("git diff --cached --name-only")
+        files = [f.split('/')[-1] for f in out.splitlines() if f]
+    
+    # 2. 生成 Commit Message
+    timestamp = datetime.datetime.now().strftime("%H:%M")
+    if not files:
+        commit_msg = f"feat(auto): general update (audit passed at {timestamp})"
+    else:
+        file_str = ", ".join(files[:3])
+        if len(files) > 3: file_str += f" (+{len(files)-3} files)"
+        commit_msg = f"feat(auto): update {file_str} (audit passed)"
 
-        prompt = f"""
-你是一位资深的量化系统架构师。请审查以下 Git Diff 代码变更：
+    # 3. 执行 Git Commit
+    log(f"执行 Git Commit: '{commit_msg}'", "INFO")
+    code, out, err = run_cmd(f'git commit -m "{commit_msg}"')
+    
+    if code == 0:
+        log("代码提交成功！", "SUCCESS")
+        print(out)
+        return True
+    else:
+        log("Git 提交失败！", "ERROR")
+        print(err)
+        return False
 
-{diff_content[:30000]} 
+def main():
+    print(f"{CYAN}🚀 Gemini Review Bridge (Iron Judge Edition) 启动...{RESET}")
+    
+    # 0. 预检查
+    code, out, _ = run_cmd("git status --porcelain")
+    if not out:
+        log("工作区干净，无事可做。", "WARN")
+        sys.exit(0)
 
-任务：
-1. 审查代码逻辑。
-2. 生成符合 Conventional Commits 的 Commit Message。
+    # 1. 必须通过审计，否则直接死刑 (Exit 1)
+    if not phase_audit():
+        sys.exit(1)
 
-**输出 JSON 格式**:
-{{
-    "status": "PASS" | "FAIL",
-    "review_summary": "...",
-    "commit_message": "feat(scope): ..."
-}}
-"""
-        print("🚀 启动 curl_cffi 引擎，正在穿透防火墙...")
+    # 2. 只有审计通过，才执行提交
+    # 确保所有变更都加入暂存区
+    run_cmd("git add .")
+    
+    if not phase_commit():
+        sys.exit(1)
         
-        try:
-            # 🔥 核心魔法: impersonate="chrome110"
-            # 这会让服务器认为我们是一个真实的 Chrome 浏览器
-            resp = requests.post(
-                f"{GEMINI_BASE_URL}/chat/completions",
-                headers=self.headers,
-                json={
-                    "model": GEMINI_MODEL,
-                    "messages": [{"role": "user", "content": prompt}],
-                    "temperature": 0.2
-                },
-                timeout=60,
-                impersonate="chrome110" 
-            )
-            
-            if resp.status_code == 200:
-                content = resp.json()['choices'][0]['message']['content']
-                clean_content = content.replace("```json", "").replace("```", "").strip()
-                return json.loads(clean_content)
-            else:
-                print(f"❌ API 依然拒绝: {resp.status_code}")
-                # 打印前200字符看看是不是还是盾
-                print(f"响应内容: {resp.text[:200]}")
-                return None
-                
-        except Exception as e:
-            print(f"❌ 穿透失败: {e}")
-            return None
-
-    def execute_closure(self, commit_msg):
-        print("\n🚀 启动闭环流程...")
-        print(f"📦 Git 提交: {commit_msg}")
-        self.run_command("git add .")
-        if self.run_command(f'git commit -m "{commit_msg}"'):
-            print("✅ 代码已提交")
-        else:
-            return
-
-    def main(self):
-        print("="*60)
-        print("🛡️ Gemini Review Bridge v3.0 (Titanium Shield)")
-        print("="*60)
-
-        diff = self.get_git_diff()
-        # 如果刚才手动提交了，现在 diff 为空，为了测试 API，我们可以伪造一个 diff
-        if not diff:
-            print("⚠️ 当前没有代码变更。")
-            confirm = input("🧪 是否发送测试请求以验证连通性？(y/n): ").lower()
-            if confirm == 'y':
-                diff = "User: Testing Connection. No real code changes."
-            else:
-                return
-
-        result = self.generate_review_and_commit_msg(diff)
-        if not result:
-            return
-
-        print(f"\n📊 审查状态: {result.get('status')}")
-        print(f"📝 摘要: {result.get('review_summary')}")
-        
-        if "Testing" not in diff:
-            print(f"💡 建议提交信息: {result.get('commit_message')}")
-            confirm = input("\n🤔 是否执行提交？(y/n): ").lower()
-            if confirm == 'y':
-                self.execute_closure(result.get('commit_message'))
-        else:
-            print("\n✅ 测试成功！Cloudflare 防火墙已击穿。")
+    sys.exit(0)
 
 if __name__ == "__main__":
-    GeminiCloser().main()
+    main()
