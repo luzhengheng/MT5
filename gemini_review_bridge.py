@@ -132,10 +132,20 @@ def external_ai_review(diff_content):
                 # 清理 JSON 包装
                 clean_content = content.replace("```json", "").replace("```", "").strip()
 
-                # 尝试提取 JSON 块
+                # 智能提取 JSON 块（处理 JSON 后的额外文字）
                 if '{' in clean_content:
                     start = clean_content.index('{')
-                    end = clean_content.rindex('}') + 1
+                    # 从起始位置开始，找到完整的 JSON 对象
+                    brace_count = 0
+                    end = start
+                    for i in range(start, len(clean_content)):
+                        if clean_content[i] == '{':
+                            brace_count += 1
+                        elif clean_content[i] == '}':
+                            brace_count -= 1
+                            if brace_count == 0:
+                                end = i + 1
+                                break
                     clean_content = clean_content[start:end]
 
                 try:
