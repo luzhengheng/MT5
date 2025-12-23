@@ -67,6 +67,8 @@ MT5_SERVER=MetaQuotes-Demo
 
 **Purpose**: Automated code quality gate with AI-powered architectural review
 
+**Current Version**: **v3.3 (Insightful Edition)** - Latest production version with intelligent JSON extraction and AI feedback display
+
 **Architecture**: Three-Phase Validation Pipeline
 
 #### Phase 1: Local Audit (Hard Requirement)
@@ -85,13 +87,25 @@ MT5_SERVER=MetaQuotes-Demo
 - Falls back to file-count based commit message
 - **Guarantee**: Development never blocked by external dependencies
 
-**Advanced Feature - Intelligent JSON Extraction**:
+**Advanced Feature - Intelligent JSON Extraction** (v3.3 Signature Feature):
 ```python
 def extract_json_and_comments(text):
     """Separate JSON (for machine) from AI commentary (for humans)"""
     # Uses stack-based algorithm to find complete JSON object
     # Preserves AI feedback for Claude to read and learn from
     # Returns: (parsed_json, comment_text)
+```
+
+**v3.3 Enhancement: Blue AI Feedback Display**
+- Displays AI architectural insights in BLUE text
+- Separates machine-readable JSON from human-readable commentary
+- Shows detailed analysis after code decision (PASS/FAIL)
+- Example output:
+```
+🧠 架构师点评 (AI Feedback) ════════════════════════════════
+Excellent separation of concerns! The singleton pattern
+ensures thread-safety while maintaining simplicity...
+══════════════════════════════════════════════════════════
 ```
 
 **Output Example**:
@@ -409,6 +423,8 @@ dde8d16 feat(auto): update 3 files (audit passed)
 30a0911 feat(auto): update 2 files (audit passed)
 e342d9a feat(gateway): 工单 #014.1 完成 - MT5 Service 核心实现
 ```
+
+**Note**: Some historical commits reference "v3.1" - this reflects the testing phase. The **production code is v3.3 (Insightful Edition)** with enhanced JSON extraction and blue AI feedback display features.
 
 ---
 
