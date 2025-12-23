@@ -244,7 +244,7 @@ class NotionNexusSeeder:
             existing = {}
             for page in data.get("results", []):
                 # 获取标题 (支持中英文标题属性名)
-                title_prop = page["properties"].get("标题") or page["properties"].get("Name")
+                title_prop = page["properties"].get("名称") or page["properties"].get("Name")
                 if title_prop and title_prop.get("title"):
                     title_text = title_prop["title"][0]["plain_text"]
                     existing[title_text] = page["id"]
@@ -272,7 +272,7 @@ class NotionNexusSeeder:
             "parent": {"database_id": self.wiki_db_id},
             "icon": {"type": "emoji", "emoji": page_data["icon"]},
             "properties": {
-                "标题": {  # 使用中文属性名
+                "名称": {  # 使用中文属性名
                     "title": [{"text": {"content": page_data["title"]}}]
                 }
             },
