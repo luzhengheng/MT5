@@ -13,7 +13,12 @@
 
 import socket
 import ipaddress
+import os
 from typing import Dict, Tuple, Optional
+from dotenv import load_dotenv
+
+# 加载环境变量
+load_dotenv()
 
 # ========================================
 # 网络拓扑定义
@@ -106,6 +111,29 @@ class ServerAssets:
             "gpu": "NVIDIA A10",
         }
     }
+
+
+class MT5Config:
+    """
+    MT5 交易配置
+    Gemini P1 修复: Magic Number 配置化
+    """
+
+    # 魔法数字 (Magic Number) - 用于标识订单来源
+    # 从环境变量读取，默认 123456
+    MAGIC_NUMBER = int(os.getenv("MT5_MAGIC_NUMBER", "123456"))
+
+    # 策略基数 (可选) - 用于给不同策略分配不同 magic
+    # 例如: 趋势策略 = 120001, 震荡策略 = 120002
+    STRATEGY_MAGIC_BASE = int(os.getenv("MT5_STRATEGY_MAGIC_BASE", "120000"))
+
+    # 交易超时配置
+    ORDER_TIMEOUT = float(os.getenv("MT5_ORDER_TIMEOUT", "10.0"))  # 订单超时 (秒)
+    INQUIRY_TIMEOUT = float(os.getenv("MT5_INQUIRY_TIMEOUT", "5.0"))  # 查单超时 (秒)
+
+    # 订单重试配置
+    MAX_RETRIES = int(os.getenv("MT5_MAX_RETRIES", "3"))  # 最大重试次数
+    RETRY_DELAY = float(os.getenv("MT5_RETRY_DELAY", "1.0"))  # 重试延迟 (秒)
 
 
 class ZeroMQConfig:
