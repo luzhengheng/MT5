@@ -107,8 +107,15 @@ def external_ai_review(diff_content):
                 "temperature": 0.2
             },
             timeout=60,
-            impersonate="chrome110" 
+            impersonate="chrome110"
         )
+
+        # 调试：记录原始响应
+        import os
+        if os.getenv("DEBUG_BRIDGE") == "1":
+            log(f"[DEBUG] API Status: {resp.status_code}", "INFO")
+            if hasattr(resp, 'text'):
+                log(f"[DEBUG] Raw Response: {resp.text[:500]}...", "INFO")
         
         if resp.status_code == 200:
             try:
