@@ -111,22 +111,47 @@ def external_ai_review(diff_content):
         )
         
         if resp.status_code == 200:
-            content = resp.json()['choices'][0]['message']['content']
-            clean_content = content.replace("```json", "").replace("```", "").strip()
             try:
-                result = json.loads(clean_content)
-                if result.get("status") == "PASS":
-                    log(f"AI 审查通过: {result.get('reason')}", "SUCCESS")
-                    return result.get("commit_message_suggestion")
+                data = resp.json()
+                # 处理多种可能的响应格式
+                if 'choices' in data:
+                    content = data['choices'][0]['message']['content']
+                elif 'content' in data:
+                    content = data['content']
                 else:
-                    log(f"AI 拒绝提交: {result.get('reason')}", "ERROR")
+                    log(f"未知的 API 响应格式: {data}", "WARN")
                     return None
-            except json.JSONDecodeError:
-                log("AI 返回格式错误，强制通过 (Fail-open)", "WARN")
+
+                # 清理 JSON 包装
+                clean_content = content.replace("```json", "").replace("```", "").strip()
+
+                # 尝试提取 JSON 块
+                if '{' in clean_content:
+                    start = clean_content.index('{')
+                    end = clean_content.rindex('}') + 1
+                    clean_content = clean_content[start:end]
+
+                try:
+                    result = json.loads(clean_content)
+                    if result.get("status") == "PASS":
+                        log(f"AI 审查通过: {result.get('reason')}", "SUCCESS")
+                        return result.get("commit_message_suggestion")
+                    else:
+                        log(f"AI 拒绝提交: {result.get('reason')}", "ERROR")
+                        return None
+                except json.JSONDecodeError as je:
+                    log(f"JSON 解析失败: {str(je)[:80]}", "WARN")
+                    log(f"原始内容: {clean_content[:200]}...", "WARN")
+                    log("强制通过 (Fail-open)", "WARN")
+                    return None
+            except Exception as e:
+                log(f"API 响应处理异常: {str(e)[:80]}", "ERROR")
                 return None
         else:
             log(f"API 请求失败: {resp.status_code}", "ERROR")
-            return None # API 挂了不阻断开发，返回 None
+            if hasattr(resp, 'text'):
+                log(f"响应内容: {resp.text[:200]}", "WARN")
+            return None
 
     except Exception as e:
         log(f"穿透失败: {e}", "ERROR")
