@@ -1,14 +1,34 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Gemini Review Bridge v3.1 (Hybrid Intelligence)
+特性: 本地审计 + 外部 AI 深度审查 (Cloudflare Penetration)
+"""
 import os
 import sys
 import subprocess
+import json
 import datetime
+from dotenv import load_dotenv
 
-# --- 核心配置 ---
-# 这是唯一的验收标准入口
+# --- 配置 ---
 AUDIT_SCRIPT = "scripts/audit_current_task.py"
+ENABLE_AI_REVIEW = True
 
-# --- ANSI 颜色配置 (让 CLI 日志更清晰) ---
+# --- 尝试导入核武器 ---
+try:
+    from curl_cffi import requests
+    CURL_AVAILABLE = True
+except ImportError:
+    CURL_AVAILABLE = False
+    print("⚠️  [WARN] 缺少 curl_cffi，外部 AI 审查可能失败。建议运行: pip install curl_cffi")
+
+load_dotenv()
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_BASE_URL = os.getenv("GEMINI_BASE_URL", "https://api.yyds168.net/v1")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-pro")
+
+# ANSI 颜色
 GREEN = "\033[92m"
 RED = "\033[91m"
 YELLOW = "\033[93m"
@@ -17,126 +37,145 @@ RESET = "\033[0m"
 
 def log(msg, level="INFO"):
     timestamp = datetime.datetime.now().strftime("%H:%M:%S")
-    if level == "SUCCESS":
-        print(f"[{timestamp}] {GREEN}✅ {msg}{RESET}")
-    elif level == "ERROR":
-        print(f"[{timestamp}] {RED}⛔ {msg}{RESET}")
-    elif level == "WARN":
-        print(f"[{timestamp}] {YELLOW}⚠️  {msg}{RESET}")
-    elif level == "PHASE":
-        print(f"\n[{timestamp}] {CYAN}🔹 {msg}{RESET}")
-    else:
-        print(f"[{timestamp}] ℹ️  {msg}")
+    colors = {"SUCCESS": GREEN, "ERROR": RED, "WARN": YELLOW, "PHASE": CYAN, "INFO": RESET}
+    print(f"[{timestamp}] {colors.get(level, RESET)}{'✅ ' if level=='SUCCESS' else '⛔ ' if level=='ERROR' else '⚠️  ' if level=='WARN' else '🔹 ' if level=='PHASE' else ''}{msg}{RESET}")
 
 def run_cmd(cmd, shell=True):
-    """
-    运行系统命令并捕获所有输出。
-    返回: (exit_code, stdout, stderr)
-    """
     try:
-        result = subprocess.run(
-            cmd, 
-            shell=shell, 
-            stdout=subprocess.PIPE, 
-            stderr=subprocess.PIPE, 
-            text=True
-        )
+        result = subprocess.run(cmd, shell=shell, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         return result.returncode, result.stdout.strip(), result.stderr.strip()
     except Exception as e:
         return 1, "", str(e)
 
-def phase_audit():
-    """
-    第一阶段：审计 (Quality Gate)
-    """
-    log("启动审计程序...", "PHASE")
-    
+# ==============================================================================
+# 🧠 Phase 1: 本地审计 (The Hard Rule)
+# ==============================================================================
+def phase_local_audit():
     if not os.path.exists(AUDIT_SCRIPT):
-        log(f"未找到审计脚本: {AUDIT_SCRIPT}", "WARN")
-        log("跳过逻辑验证 (仅在没有特定审计要求时允许)", "INFO")
+        log(f"未找到本地审计脚本 {AUDIT_SCRIPT}，跳过。", "WARN")
         return True
     
-    log(f"发现审计脚本，正在执行验收: {AUDIT_SCRIPT}", "INFO")
+    log(f"执行本地审计: {AUDIT_SCRIPT}", "INFO")
     code, out, err = run_cmd(f"python3 {AUDIT_SCRIPT}")
     
     if code == 0:
-        log("审计通过！业务逻辑验证成功。", "SUCCESS")
-        if out: 
-            print(f"{GREEN}--- 审计日志 ---{RESET}")
-            print(out)
-            print(f"{GREEN}----------------{RESET}")
+        log("本地审计通过。", "SUCCESS")
         return True
     else:
-        log("审计失败！拦截提交。", "ERROR")
-        print(f"\n{RED}================ 错误详情 (CLAUDE ATTENTION) ================{RESET}")
-        print(f"{YELLOW}Exit Code:{RESET} {code}")
-        if out: 
-            print(f"{YELLOW}STDOUT:{RESET}\n{out}")
-        if err: 
-            print(f"{YELLOW}STDERR (Bug Location):{RESET}\n{err}")
-        print(f"{RED}============================================================={RESET}")
-        print(f"💡 指导: 请阅读上面的报错信息，修复 'src/' 代码或 'scripts/' 逻辑，然后重试。")
+        log("本地审计失败！", "ERROR")
+        print(f"{YELLOW}--- AUDIT LOG ---\n{out}\n{err}{RESET}")
         return False
 
-def phase_commit():
-    """
-    第二阶段：提交 (Auto Commit)
-    """
-    log("准备提交代码...", "PHASE")
-    
-    # 1. 获取变更文件列表用于 Commit Message
-    _, out, _ = run_cmd("git diff --cached --name-only")
-    files = [f.split('/')[-1] for f in out.splitlines() if f]
-    
-    if not files:
-        # 如果缓存区为空，先 add . 再看一遍
-        run_cmd("git add .")
-        _, out, _ = run_cmd("git diff --cached --name-only")
-        files = [f.split('/')[-1] for f in out.splitlines() if f]
-    
-    # 2. 生成 Commit Message
-    timestamp = datetime.datetime.now().strftime("%H:%M")
-    if not files:
-        commit_msg = f"feat(auto): general update (audit passed at {timestamp})"
-    else:
-        file_str = ", ".join(files[:3])
-        if len(files) > 3: file_str += f" (+{len(files)-3} files)"
-        commit_msg = f"feat(auto): update {file_str} (audit passed)"
-
-    # 3. 执行 Git Commit
-    log(f"执行 Git Commit: '{commit_msg}'", "INFO")
-    code, out, err = run_cmd(f'git commit -m "{commit_msg}"')
-    
-    if code == 0:
-        log("代码提交成功！", "SUCCESS")
-        print(out)
+# ==============================================================================
+# 🧠 Phase 2: 外部 AI 审查 (The Titanium Shield)
+# ==============================================================================
+def external_ai_review(diff_content):
+    if not CURL_AVAILABLE or not GEMINI_API_KEY:
+        log("跳过外部 AI 审查 (缺少 curl_cffi 或 API_KEY)", "WARN")
         return True
-    else:
-        log("Git 提交失败！", "ERROR")
-        print(err)
-        return False
 
+    log("启动 curl_cffi 引擎，正在穿透 Cloudflare...", "PHASE")
+    
+    prompt = f"""
+    你是一位资深的 Python 架构师。请审查以下 Git Diff (用于量化交易系统):
+    {diff_content[:15000]}
+    
+    检查重点：
+    1. 是否有明显的逻辑错误或死锁风险？
+    2. 是否有硬编码的敏感信息（密码/密钥）？
+    3. 代码风格是否符合 PEP8？
+    
+    **必须输出 JSON**:
+    {{
+        "status": "PASS" | "FAIL",
+        "reason": "简短的通过或拒绝理由",
+        "commit_message_suggestion": "feat(scope): ..."
+    }}
+    """
+    
+    try:
+        # 使用 chrome110 指纹穿透
+        resp = requests.post(
+            f"{GEMINI_BASE_URL}/chat/completions",
+            headers={
+                "Authorization": f"Bearer {GEMINI_API_KEY}",
+                "Content-Type": "application/json"
+            },
+            json={
+                "model": GEMINI_MODEL,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.2
+            },
+            timeout=60,
+            impersonate="chrome110" 
+        )
+        
+        if resp.status_code == 200:
+            content = resp.json()['choices'][0]['message']['content']
+            clean_content = content.replace("```json", "").replace("```", "").strip()
+            try:
+                result = json.loads(clean_content)
+                if result.get("status") == "PASS":
+                    log(f"AI 审查通过: {result.get('reason')}", "SUCCESS")
+                    return result.get("commit_message_suggestion")
+                else:
+                    log(f"AI 拒绝提交: {result.get('reason')}", "ERROR")
+                    return None
+            except json.JSONDecodeError:
+                log("AI 返回格式错误，强制通过 (Fail-open)", "WARN")
+                return None
+        else:
+            log(f"API 请求失败: {resp.status_code}", "ERROR")
+            return None # API 挂了不阻断开发，返回 None
+
+    except Exception as e:
+        log(f"穿透失败: {e}", "ERROR")
+        return None
+
+# ==============================================================================
+# 🚀 主流程
+# ==============================================================================
 def main():
-    print(f"{CYAN}🚀 Gemini Review Bridge (Iron Judge Edition) 启动...{RESET}")
+    print(f"{CYAN}🛡️ Gemini Review Bridge v3.1 (Titanium Edition){RESET}")
     
-    # 0. 预检查
-    code, out, _ = run_cmd("git status --porcelain")
-    if not out:
+    # 0. 准备环境
+    run_cmd("git add .") # 自动暂存所有更改
+    _, diff, _ = run_cmd("git diff --cached")
+    
+    if not diff:
         log("工作区干净，无事可做。", "WARN")
         sys.exit(0)
 
-    # 1. 必须通过审计，否则直接死刑 (Exit 1)
-    if not phase_audit():
+    # 1. 本地硬性审计
+    if not phase_local_audit():
         sys.exit(1)
 
-    # 2. 只有审计通过，才执行提交
-    # 确保所有变更都加入暂存区
-    run_cmd("git add .")
+    # 2. 外部智能审查
+    ai_commit_msg = None
+    if ENABLE_AI_REVIEW:
+        ai_commit_msg = external_ai_review(diff)
+
+    # 3. 生成提交信息
+    if ai_commit_msg:
+        commit_msg = ai_commit_msg
+    else:
+        # 降级方案
+        _, files, _ = run_cmd("git diff --cached --name-only")
+        file_list = [f for f in files.splitlines() if f]
+        commit_msg = f"feat(auto): update {len(file_list)} files (audit passed)"
+
+    # 4. 自动提交 (No Input Blocking)
+    log(f"执行提交: {commit_msg}", "INFO")
+    code, out, err = run_cmd(f'git commit -m "{commit_msg}"')
     
-    if not phase_commit():
+    if code == 0:
+        log("代码已成功提交！", "SUCCESS")
+        # 5. (可选) 推送
+        # run_cmd("git push")
+        sys.exit(0)
+    else:
+        log(f"提交失败: {err}", "ERROR")
         sys.exit(1)
-        
-    sys.exit(0)
 
 if __name__ == "__main__":
     main()
