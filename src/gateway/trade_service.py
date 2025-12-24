@@ -13,6 +13,7 @@ Trade Service - 交易执行服务
 - get_positions() - 获取当前持仓
 """
 
+import os
 import logging
 from typing import Optional, Dict, Any, List
 from src.gateway.mt5_service import MT5Service, get_mt5_service
@@ -46,7 +47,73 @@ class TradeService:
         if not hasattr(self, '_initialized'):
             self._initialized = True
             self._mt5_service = get_mt5_service()
-            logger.info("TradeService 初始化完成")
+
+            # 从环境变量读取填充模式配置
+            # 选项: 'FOK' (Fill-or-Kill), 'IOC' (Immediate-or-Cancel), 'AUTO' (自动重试)
+            self.filling_mode = os.getenv('MT5_FILLING_MODE', 'AUTO').upper()
+
+            logger.info(
+                f"TradeService 初始化完成 - "
+                f"Filling Mode: {self.filling_mode}"
+            )
+
+    def _send_order_with_fallback(
+        self,
+        request: Dict[str, Any]
+    ) -> Optional[Any]:
+        """
+        智能订单发送：支持填充模式自动降级
+
+        如果首选模式失败（错误 10030: 不支持的填充模式），
+        自动尝试备选模式。
+
+        参数：
+            request (dict): MT5 订单请求字典
+
+        返回：
+            OrderSendResult 或 None
+        """
+        mt5 = self._mt5_service._mt5
+
+        # 确定填充模式优先级
+        if self.filling_mode == 'FOK':
+            filling_modes = [mt5.ORDER_FILLING_FOK, mt5.ORDER_FILLING_IOC]
+        elif self.filling_mode == 'IOC':
+            filling_modes = [mt5.ORDER_FILLING_IOC, mt5.ORDER_FILLING_FOK]
+        else:  # AUTO
+            # 默认优先级：FOK -> IOC
+            filling_modes = [mt5.ORDER_FILLING_FOK, mt5.ORDER_FILLING_IOC]
+
+        # 尝试每种填充模式
+        for idx, filling_mode in enumerate(filling_modes):
+            request["type_filling"] = filling_mode
+            mode_name = "FOK" if filling_mode == mt5.ORDER_FILLING_FOK else "IOC"
+
+            logger.info(
+                f"尝试订单发送 (模式: {mode_name}, "
+                f"尝试: {idx + 1}/{len(filling_modes)})"
+            )
+
+            result = mt5.order_send(request)
+
+            if result is None:
+                logger.warning(f"{mode_name} 模式: 未收到响应")
+                continue
+
+            # 检查是否因填充模式不支持而失败（错误 10030）
+            if result.retcode == 10030:  # TRADE_RETCODE_INVALID_FILL
+                logger.warning(
+                    f"{mode_name} 模式不被支持 (错误 10030), "
+                    f"尝试备选模式..."
+                )
+                continue
+
+            # 其他错误或成功，直接返回
+            return result
+
+        # 所有模式都失败
+        logger.error("所有填充模式均失败")
+        return None
 
     def buy(
         self,
@@ -96,7 +163,7 @@ class TradeService:
                     return None
                 price = tick.ask  # 买入使用卖价
 
-            # 构建订单请求
+            # 构建订单请求（不包含 type_filling，由智能发送函数处理）
             request = {
                 "action": mt5.TRADE_ACTION_DEAL,
                 "symbol": symbol,
@@ -107,7 +174,7 @@ class TradeService:
                 "magic": 234000,  # 策略标识符
                 "comment": comment,
                 "type_time": mt5.ORDER_TIME_GTC,  # 有效期：取消前一直有效
-                "type_filling": mt5.ORDER_FILLING_IOC,  # 立即成交或取消
+                # type_filling 将由 _send_order_with_fallback 动态设置
             }
 
             # 添加止损和止盈（如果指定）
@@ -116,11 +183,11 @@ class TradeService:
             if tp is not None:
                 request["tp"] = tp
 
-            # 发送订单
-            result = mt5.order_send(request)
+            # 使用智能发送（自动处理填充模式降级）
+            result = self._send_order_with_fallback(request)
 
             if result is None:
-                logger.error(f"订单发送失败: 未收到响应")
+                logger.error(f"订单发送失败: 所有填充模式均失败")
                 return None
 
             # 检查订单结果
@@ -192,7 +259,7 @@ class TradeService:
                     return None
                 price = tick.bid  # 卖出使用买价
 
-            # 构建订单请求
+            # 构建订单请求（不包含 type_filling，由智能发送函数处理）
             request = {
                 "action": mt5.TRADE_ACTION_DEAL,
                 "symbol": symbol,
@@ -203,7 +270,7 @@ class TradeService:
                 "magic": 234000,  # 策略标识符
                 "comment": comment,
                 "type_time": mt5.ORDER_TIME_GTC,
-                "type_filling": mt5.ORDER_FILLING_IOC,
+                # type_filling 将由 _send_order_with_fallback 动态设置
             }
 
             # 添加止损和止盈（如果指定）
@@ -212,11 +279,11 @@ class TradeService:
             if tp is not None:
                 request["tp"] = tp
 
-            # 发送订单
-            result = mt5.order_send(request)
+            # 使用智能发送（自动处理填充模式降级）
+            result = self._send_order_with_fallback(request)
 
             if result is None:
-                logger.error(f"订单发送失败: 未收到响应")
+                logger.error(f"订单发送失败: 所有填充模式均失败")
                 return None
 
             # 检查订单结果
@@ -289,7 +356,7 @@ class TradeService:
                 order_type = mt5.ORDER_TYPE_BUY
                 price = mt5.symbol_info_tick(position.symbol).ask
 
-            # 构建平仓请求
+            # 构建平仓请求（不包含 type_filling，由智能发送函数处理）
             request = {
                 "action": mt5.TRADE_ACTION_DEAL,
                 "symbol": position.symbol,
@@ -301,11 +368,11 @@ class TradeService:
                 "magic": 234000,
                 "comment": comment,
                 "type_time": mt5.ORDER_TIME_GTC,
-                "type_filling": mt5.ORDER_FILLING_IOC,
+                # type_filling 将由 _send_order_with_fallback 动态设置
             }
 
-            # 发送平仓订单
-            result = mt5.order_send(request)
+            # 使用智能发送（自动处理填充模式降级）
+            result = self._send_order_with_fallback(request)
 
             if result is None:
                 logger.error(f"平仓请求发送失败: Ticket {ticket}")

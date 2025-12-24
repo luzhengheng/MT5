@@ -1,20 +1,33 @@
 #!/usr/bin/env python3
 """
-MT5 Trade Verification Script
-===============================
+MT5 Trade Verification Script (Smart Fallback Version)
+=======================================================
 
 验证 TradeService 的交易执行功能。
 
+🎯 CRITICAL: 此脚本使用 TradeService 的 Smart Fallback 逻辑。
+
+智能降级机制说明：
+- TradeService 通过 MT5_FILLING_MODE 环境变量读取首选填充模式
+- 支持的模式：'FOK' (Fill-or-Kill), 'IOC' (Immediate-or-Cancel), 'AUTO'
+- 如果首选模式失败（错误 10030: 不支持的填充模式），自动尝试备选模式
+- 这确保代码能在 JustMarkets Demo (FOK) 和 Real (IOC) 账户间无缝切换
+- 无需修改代码，只需在 .env 中设置 MT5_FILLING_MODE
+
 测试流程：
 1. 连接到 MT5 Terminal
-2. 开立一个小额买单（0.01 手）
+2. 开立一个小额买单（0.01 手）- 使用智能填充模式
 3. 验证订单成功开立
 4. 查询当前持仓
-5. 平仓刚才的订单
+5. 平仓刚才的订单 - 使用智能填充模式
 6. 验证平仓成功
 
 环境变量：
 - MT5_SYMBOL: 交易品种代码（默认 "EURUSD"）
+- MT5_FILLING_MODE: 填充模式选择（可选）
+    * 'FOK': 首选 FOK，备选 IOC (JustMarkets Demo)
+    * 'IOC': 首选 IOC，备选 FOK (Real Account)
+    * 'AUTO': 自动尝试（默认：FOK -> IOC）
 
 注意：
 - 此脚本在 Linux 上将失败（预期行为）

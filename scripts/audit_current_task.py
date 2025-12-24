@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-Task #016 Audit Script - Basic Order Execution Service
-========================================================
+Task #017 Audit Script - Market Data Service & Secure Config
+==============================================================
 
-验证 Task #016 的完成情况：
-- .env 自动加载修复（MT5Service）
-- src/gateway/trade_service.py 文件存在
-- TradeService 类已实现
-- buy(), sell(), close_position() 方法已实现
-- scripts/verify_trade.py 验证脚本存在
+验证 Task #017 的完成情况：
+- TradeService 智能填充模式（Smart Fallback）
+- MarketDataService get_candles() 方法
+- MT5Service robust .env loading（已在 Task #016 完成）
+- scripts/verify_candles.py 验证脚本
+- scripts/verify_trade.py 更新（Smart Fallback说明）
 """
 
 import sys
@@ -106,9 +106,9 @@ def check_method_exists(module_path, class_name, method_name):
 
 
 def main():
-    """主函数：执行 Task #016 的审计"""
+    """主函数：执行 Task #017 的审计"""
     print("=" * 70)
-    print("🕵️‍♂️ Task #016 审计程序启动")
+    print("🕵️‍♂️ Task #017 审计程序启动")
     print("=" * 70)
     print()
 
@@ -119,130 +119,146 @@ def main():
     print()
 
     check_file_exists("src/gateway/trade_service.py")
+    check_file_exists("src/gateway/market_data.py")
     check_file_exists("src/gateway/mt5_service.py")
+    check_file_exists("scripts/verify_candles.py")
     check_file_exists("scripts/verify_trade.py")
     print()
 
     # ---------------------------------------------------------
-    # 2. 检查 .env 自动加载修复（MT5Service）
+    # 2. 检查 TradeService 智能填充模式
     # ---------------------------------------------------------
-    log_info("检查 .env 自动加载修复...")
+    log_info("检查 TradeService 智能填充模式...")
     print()
 
-    MT5_KEYWORDS = [
+    TRADE_FALLBACK_KEYWORDS = [
+        "import os",  # os 导入
+        'os.getenv(\'MT5_FILLING_MODE\'',  # 环境变量读取
+        "def _send_order_with_fallback",  # 智能发送方法
+        "ORDER_FILLING_FOK",  # FOK 模式
+        "ORDER_FILLING_IOC",  # IOC 模式
+        "10030",  # 错误代码 TRADE_RETCODE_INVALID_FILL
+        "filling_modes",  # 填充模式列表
+        "自动尝试备选模式",  # 降级逻辑注释
+    ]
+
+    check_keywords_in_file("src/gateway/trade_service.py", TRADE_FALLBACK_KEYWORDS)
+    print()
+
+    # ---------------------------------------------------------
+    # 3. 检查 buy/sell/close_position 使用智能发送
+    # ---------------------------------------------------------
+    log_info("检查 buy/sell/close_position 使用智能发送...")
+    print()
+
+    SMART_SEND_KEYWORDS = [
+        "_send_order_with_fallback(request)",  # buy 方法使用
+    ]
+
+    check_keywords_in_file("src/gateway/trade_service.py", SMART_SEND_KEYWORDS)
+    print()
+
+    # ---------------------------------------------------------
+    # 4. 检查 MarketDataService get_candles 方法
+    # ---------------------------------------------------------
+    log_info("检查 MarketDataService get_candles 方法...")
+    print()
+
+    check_method_exists("src.gateway.market_data", "MarketDataService", "get_candles")
+    print()
+
+    # ---------------------------------------------------------
+    # 5. 检查 get_candles 核心逻辑
+    # ---------------------------------------------------------
+    log_info("检查 get_candles 核心逻辑...")
+    print()
+
+    CANDLES_KEYWORDS = [
+        "def get_candles",  # 方法定义
+        "import pandas as pd",  # pandas 导入
+        "copy_rates_from_pos",  # MT5 K线获取
+        "pd.DataFrame",  # DataFrame 创建
+        "pd.to_datetime",  # 时间转换
+        "TIMEFRAME_M1",  # 支持 M1
+        "TIMEFRAME_M5",  # 支持 M5
+        "TIMEFRAME_H1",  # 支持 H1
+        "['time', 'open', 'high', 'low', 'close', 'volume']",  # 标准列
+    ]
+
+    check_keywords_in_file("src/gateway/market_data.py", CANDLES_KEYWORDS)
+    print()
+
+    # ---------------------------------------------------------
+    # 6. 检查 verify_candles.py 验证逻辑
+    # ---------------------------------------------------------
+    log_info("检查 verify_candles.py 验证逻辑...")
+    print()
+
+    VERIFY_CANDLES_KEYWORDS = [
+        "MarketDataService",  # 导入服务
+        "get_candles",  # 调用 get_candles
+        "df.head(3)",  # 显示前3行
+        "df.tail(3)",  # 显示后3行
+        "datetime",  # 时间类型检查
+        "df.isnull()",  # 空值检查
+        "len(df)",  # 数据量检查
+    ]
+
+    check_keywords_in_file("scripts/verify_candles.py", VERIFY_CANDLES_KEYWORDS)
+    print()
+
+    # ---------------------------------------------------------
+    # 7. 检查 verify_trade.py Smart Fallback 说明
+    # ---------------------------------------------------------
+    log_info("检查 verify_trade.py Smart Fallback 说明...")
+    print()
+
+    VERIFY_TRADE_KEYWORDS = [
+        "Smart Fallback",  # 智能降级标题
+        "MT5_FILLING_MODE",  # 环境变量说明
+        "自动尝试备选模式",  # 降级机制说明
+        "FOK",  # FOK 模式说明
+        "IOC",  # IOC 模式说明
+        "AUTO",  # AUTO 模式说明
+    ]
+
+    check_keywords_in_file("scripts/verify_trade.py", VERIFY_TRADE_KEYWORDS)
+    print()
+
+    # ---------------------------------------------------------
+    # 8. 检查 MT5Service robust .env loading（Task #016已完成）
+    # ---------------------------------------------------------
+    log_info("检查 MT5Service robust .env loading...")
+    print()
+
+    ENV_LOADING_KEYWORDS = [
         "from pathlib import Path",  # Path 导入
-        "project_root = Path(__file__).resolve().parent.parent.parent",  # 项目根目录
+        "project_root = Path(__file__).resolve().parent.parent.parent",  # 项目根
         "env_path = project_root / '.env'",  # .env 路径
         "load_dotenv(dotenv_path=env_path, override=True)",  # 强制加载
     ]
 
-    check_keywords_in_file("src/gateway/mt5_service.py", MT5_KEYWORDS)
+    check_keywords_in_file("src/gateway/mt5_service.py", ENV_LOADING_KEYWORDS)
     print()
 
     # ---------------------------------------------------------
-    # 3. 检查 TradeService 类存在
-    # ---------------------------------------------------------
-    log_info("检查 TradeService 类...")
-    print()
-
-    check_class_exists("src.gateway.trade_service", "TradeService")
-    print()
-
-    # ---------------------------------------------------------
-    # 4. 检查 buy 方法存在
-    # ---------------------------------------------------------
-    log_info("检查 buy 方法...")
-    print()
-
-    check_method_exists("src.gateway.trade_service", "TradeService", "buy")
-    print()
-
-    # ---------------------------------------------------------
-    # 5. 检查 sell 方法存在
-    # ---------------------------------------------------------
-    log_info("检查 sell 方法...")
-    print()
-
-    check_method_exists("src.gateway.trade_service", "TradeService", "sell")
-    print()
-
-    # ---------------------------------------------------------
-    # 6. 检查 close_position 方法存在
-    # ---------------------------------------------------------
-    log_info("检查 close_position 方法...")
-    print()
-
-    check_method_exists("src.gateway.trade_service", "TradeService", "close_position")
-    print()
-
-    # ---------------------------------------------------------
-    # 7. 检查 get_positions 方法存在
-    # ---------------------------------------------------------
-    log_info("检查 get_positions 方法...")
-    print()
-
-    check_method_exists("src.gateway.trade_service", "TradeService", "get_positions")
-    print()
-
-    # ---------------------------------------------------------
-    # 8. 检查 trade_service.py 中的核心业务逻辑关键字
-    # ---------------------------------------------------------
-    log_info("检查核心业务逻辑关键字...")
-    print()
-
-    TRADE_KEYWORDS = [
-        "class TradeService",  # 类定义
-        "def buy",  # buy 方法
-        "def sell",  # sell 方法
-        "def close_position",  # close_position 方法
-        "def get_positions",  # get_positions 方法
-        "TRADE_ACTION_DEAL",  # 交易动作
-        "ORDER_TYPE_BUY",  # 买单类型
-        "ORDER_TYPE_SELL",  # 卖单类型
-        "order_send",  # 订单发送
-        "positions_get",  # 获取持仓
-        "def __init__",  # 初始化方法
-        "def __new__",  # 单例模式
-        "_instance",  # 单例实例
-    ]
-
-    check_keywords_in_file("src/gateway/trade_service.py", TRADE_KEYWORDS)
-    print()
-
-    # ---------------------------------------------------------
-    # 9. 检查 verify_trade.py 中的测试逻辑关键字
-    # ---------------------------------------------------------
-    log_info("检查验证脚本的测试逻辑...")
-    print()
-
-    VERIFY_KEYWORDS = [
-        "TradeService",  # 导入服务
-        "trade_service.buy",  # 调用 buy 方法
-        "trade_service.close_position",  # 调用 close_position 方法
-        "trade_service.get_positions",  # 调用 get_positions 方法
-        "TEST_VOLUME = 0.01",  # 测试手数
-        "import os",  # 导入 os 模块
-        'os.getenv("MT5_SYMBOL"',  # 从环境变量读取品种
-    ]
-
-    check_keywords_in_file("scripts/verify_trade.py", VERIFY_KEYWORDS)
-    print()
-
-    # ---------------------------------------------------------
-    # 10. 最终审计通过
+    # 9. 最终审计通过
     # ---------------------------------------------------------
     print("=" * 70)
-    log_success("Task #016 审计通过！")
+    log_success("Task #017 审计通过！")
     print("=" * 70)
     print()
     log_info("已完成的核心功能：")
-    print("  ✅ .env 自动加载修复（MT5Service）")
-    print("  ✅ TradeService 单例类")
-    print("  ✅ buy(symbol, volume, ...) 方法实现")
-    print("  ✅ sell(symbol, volume, ...) 方法实现")
-    print("  ✅ close_position(ticket) 方法实现")
-    print("  ✅ get_positions() 方法实现")
-    print("  ✅ verify_trade.py 验证脚本")
+    print("  ✅ TradeService 智能填充模式（Smart Fallback）")
+    print("  ✅ _send_order_with_fallback() 方法实现")
+    print("  ✅ MT5_FILLING_MODE 环境变量支持")
+    print("  ✅ 错误 10030 自动降级逻辑")
+    print("  ✅ MarketDataService.get_candles() 方法")
+    print("  ✅ 支持 M1/M5/M15/M30/H1/H4/D1 时间周期")
+    print("  ✅ pandas DataFrame 返回格式")
+    print("  ✅ verify_candles.py 数据完整性验证")
+    print("  ✅ verify_trade.py Smart Fallback 说明")
+    print("  ✅ MT5Service robust .env loading")
     print()
 
     sys.exit(0)  # 返回 0 表示审计通过

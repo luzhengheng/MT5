@@ -3,17 +3,25 @@
 Market Data Service - 实时行情数据获取
 ========================================
 
-提供 MarketDataService 类，用于从 MetaTrader 5 获取实时 tick 数据。
+提供 MarketDataService 类，用于从 MetaTrader 5 获取实时 tick 数据和 OHLCV K线数据。
 
 功能：
 - 单例模式确保全局只有一个市场数据服务
 - get_tick(symbol) 方法获取指定品种的最新 tick 数据
+- get_candles(symbol, timeframe, count) 方法获取 OHLCV K线数据
 - 自动处理 Market Watch 中的符号可见性问题
+- 支持多个时间周期：M1, M5, M15, M30, H1, H4, D1
 """
 
 import logging
-from typing import Optional, Dict, Any
+from datetime import datetime
+from typing import Optional, Dict, Any, List
 from src.gateway.mt5_service import MT5Service, get_mt5_service
+
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
 
 # 配置日志
 logger = logging.getLogger(__name__)
@@ -118,6 +126,110 @@ class MarketDataService:
         except Exception as e:
             logger.error(
                 f"获取 {symbol} tick 数据时出异常: {str(e)}"
+            )
+            return None
+
+    def get_candles(
+        self,
+        symbol: str,
+        timeframe: str = "M1",
+        count: int = 100
+    ) -> Optional['pd.DataFrame']:
+        """
+        获取 OHLCV K线数据
+
+        参数：
+            symbol (str): 品种代码，如 "EURUSD.s"
+            timeframe (str): 时间周期，可选：
+                - "M1": 1分钟
+                - "M5": 5分钟
+                - "M15": 15分钟
+                - "M30": 30分钟
+                - "H1": 1小时
+                - "H4": 4小时
+                - "D1": 日线
+            count (int): 获取K线根数（默认 100）
+
+        返回：
+            pandas.DataFrame 或 None:
+                成功：DataFrame，列包括：
+                    - time: 时间（Python datetime）
+                    - open: 开盘价
+                    - high: 最高价
+                    - low: 最低价
+                    - close: 收盘价
+                    - volume: 成交量
+                失败：None
+        """
+        # 检查 pandas 是否可用
+        if pd is None:
+            logger.error("pandas 库未安装，无法返回 DataFrame")
+            return None
+
+        # 检查连接状态
+        if not self._mt5_service.is_connected():
+            logger.error(f"MT5 未连接，无法获取 {symbol} 的K线数据")
+            return None
+
+        try:
+            mt5 = self._mt5_service._mt5
+
+            # 将时间周期字符串映射到 MT5 常量
+            timeframe_map = {
+                "M1": mt5.TIMEFRAME_M1,
+                "M5": mt5.TIMEFRAME_M5,
+                "M15": mt5.TIMEFRAME_M15,
+                "M30": mt5.TIMEFRAME_M30,
+                "H1": mt5.TIMEFRAME_H1,
+                "H4": mt5.TIMEFRAME_H4,
+                "D1": mt5.TIMEFRAME_D1,
+            }
+
+            mt5_timeframe = timeframe_map.get(timeframe.upper())
+            if mt5_timeframe is None:
+                logger.error(
+                    f"不支持的时间周期: {timeframe}. "
+                    f"支持的选项: {list(timeframe_map.keys())}"
+                )
+                return None
+
+            # 确保符号在 Market Watch 中可见
+            mt5.symbol_select(symbol, True)
+
+            # 获取K线数据（从最新的K线开始，向前取 count 根）
+            rates = mt5.copy_rates_from_pos(symbol, mt5_timeframe, 0, count)
+
+            if rates is None or len(rates) == 0:
+                logger.error(
+                    f"无法获取 {symbol} 的K线数据 "
+                    f"(时间周期: {timeframe})"
+                )
+                return None
+
+            # 转换为 pandas DataFrame
+            df = pd.DataFrame(rates)
+
+            # 将时间戳转换为 Python datetime
+            df['time'] = pd.to_datetime(df['time'], unit='s')
+
+            # 重命名列（使用标准名称）
+            df = df.rename(columns={
+                'tick_volume': 'volume'  # MT5 使用 tick_volume
+            })
+
+            # 选择标准列
+            df = df[['time', 'open', 'high', 'low', 'close', 'volume']]
+
+            logger.info(
+                f"成功获取 {symbol} K线数据 - "
+                f"时间周期: {timeframe}, 根数: {len(df)}"
+            )
+
+            return df
+
+        except Exception as e:
+            logger.error(
+                f"获取 {symbol} K线数据时出异常: {str(e)}"
             )
             return None
 
