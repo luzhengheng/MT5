@@ -16,6 +16,7 @@ MT5 Gateway Service - MetaTrader 5 连接管理
 import os
 import logging
 from typing import Optional
+from pathlib import Path
 from dotenv import load_dotenv
 
 # 导入 MetaTrader5 库（生产环境需要）
@@ -54,7 +55,13 @@ class MT5Service:
         """初始化 MT5Service（单例，仅执行一次）"""
         # 仅在首次创建时初始化
         if not hasattr(self, '_initialized'):
-            load_dotenv()
+            # 确定项目根目录（src/gateway 的上两级）
+            project_root = Path(__file__).resolve().parent.parent.parent
+            env_path = project_root / '.env'
+
+            # 强制加载 .env 文件，override=True 确保覆盖已有的环境变量
+            load_dotenv(dotenv_path=env_path, override=True)
+
             self._initialized = True
             self._mt5 = None
             self._connected = False
@@ -68,7 +75,8 @@ class MT5Service:
             logger.info(
                 f"MT5Service 初始化完成 - "
                 f"Path: {self.mt5_path}, "
-                f"Server: {self.mt5_server}"
+                f"Server: {self.mt5_server}, "
+                f"ENV Loaded: {env_path.exists()}"
             )
 
     def connect(self) -> bool:

@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """
-Task #015 Audit Script - Windows Deployment & MT5 Stream
-==========================================================
+Task #016 Audit Script - Basic Order Execution Service
+========================================================
 
-验证 Task #015 的完成情况：
-- src/gateway/market_data.py 文件存在
-- MarketDataService 类已实现
-- get_tick() 方法已实现
-- scripts/verify_stream.py 验证脚本存在
+验证 Task #016 的完成情况：
+- .env 自动加载修复（MT5Service）
+- src/gateway/trade_service.py 文件存在
+- TradeService 类已实现
+- buy(), sell(), close_position() 方法已实现
+- scripts/verify_trade.py 验证脚本存在
 """
 
 import sys
@@ -105,9 +106,9 @@ def check_method_exists(module_path, class_name, method_name):
 
 
 def main():
-    """主函数：执行 Task #015 的审计"""
+    """主函数：执行 Task #016 的审计"""
     print("=" * 70)
-    print("🕵️‍♂️ Task #015 审计程序启动")
+    print("🕵️‍♂️ Task #016 审计程序启动")
     print("=" * 70)
     print()
 
@@ -117,81 +118,131 @@ def main():
     log_info("检查核心文件...")
     print()
 
-    check_file_exists("src/gateway/market_data.py")
-    check_file_exists("scripts/verify_stream.py")
+    check_file_exists("src/gateway/trade_service.py")
+    check_file_exists("src/gateway/mt5_service.py")
+    check_file_exists("scripts/verify_trade.py")
     print()
 
     # ---------------------------------------------------------
-    # 2. 检查 MarketDataService 类存在
+    # 2. 检查 .env 自动加载修复（MT5Service）
     # ---------------------------------------------------------
-    log_info("检查 MarketDataService 类...")
+    log_info("检查 .env 自动加载修复...")
     print()
 
-    check_class_exists("src.gateway.market_data", "MarketDataService")
-    print()
+    MT5_KEYWORDS = [
+        "from pathlib import Path",  # Path 导入
+        "project_root = Path(__file__).resolve().parent.parent.parent",  # 项目根目录
+        "env_path = project_root / '.env'",  # .env 路径
+        "load_dotenv(dotenv_path=env_path, override=True)",  # 强制加载
+    ]
 
-    # ---------------------------------------------------------
-    # 3. 检查 get_tick 方法存在
-    # ---------------------------------------------------------
-    log_info("检查 get_tick 方法...")
-    print()
-
-    check_method_exists("src.gateway.market_data", "MarketDataService", "get_tick")
+    check_keywords_in_file("src/gateway/mt5_service.py", MT5_KEYWORDS)
     print()
 
     # ---------------------------------------------------------
-    # 4. 检查 market_data.py 中的核心业务逻辑关键字
+    # 3. 检查 TradeService 类存在
+    # ---------------------------------------------------------
+    log_info("检查 TradeService 类...")
+    print()
+
+    check_class_exists("src.gateway.trade_service", "TradeService")
+    print()
+
+    # ---------------------------------------------------------
+    # 4. 检查 buy 方法存在
+    # ---------------------------------------------------------
+    log_info("检查 buy 方法...")
+    print()
+
+    check_method_exists("src.gateway.trade_service", "TradeService", "buy")
+    print()
+
+    # ---------------------------------------------------------
+    # 5. 检查 sell 方法存在
+    # ---------------------------------------------------------
+    log_info("检查 sell 方法...")
+    print()
+
+    check_method_exists("src.gateway.trade_service", "TradeService", "sell")
+    print()
+
+    # ---------------------------------------------------------
+    # 6. 检查 close_position 方法存在
+    # ---------------------------------------------------------
+    log_info("检查 close_position 方法...")
+    print()
+
+    check_method_exists("src.gateway.trade_service", "TradeService", "close_position")
+    print()
+
+    # ---------------------------------------------------------
+    # 7. 检查 get_positions 方法存在
+    # ---------------------------------------------------------
+    log_info("检查 get_positions 方法...")
+    print()
+
+    check_method_exists("src.gateway.trade_service", "TradeService", "get_positions")
+    print()
+
+    # ---------------------------------------------------------
+    # 8. 检查 trade_service.py 中的核心业务逻辑关键字
     # ---------------------------------------------------------
     log_info("检查核心业务逻辑关键字...")
     print()
 
-    REQUIRED_KEYWORDS = [
-        "class MarketDataService",  # 类定义
-        "def get_tick",  # get_tick 方法
-        "symbol_info_tick",  # 核心调用：获取 tick 数据
-        "symbol_select",  # 核心调用：确保符号可见性
-        "is_connected",  # 连接检查
-        "MT5Service",  # MT5 服务引用
+    TRADE_KEYWORDS = [
+        "class TradeService",  # 类定义
+        "def buy",  # buy 方法
+        "def sell",  # sell 方法
+        "def close_position",  # close_position 方法
+        "def get_positions",  # get_positions 方法
+        "TRADE_ACTION_DEAL",  # 交易动作
+        "ORDER_TYPE_BUY",  # 买单类型
+        "ORDER_TYPE_SELL",  # 卖单类型
+        "order_send",  # 订单发送
+        "positions_get",  # 获取持仓
         "def __init__",  # 初始化方法
         "def __new__",  # 单例模式
         "_instance",  # 单例实例
     ]
 
-    check_keywords_in_file("src/gateway/market_data.py", REQUIRED_KEYWORDS)
+    check_keywords_in_file("src/gateway/trade_service.py", TRADE_KEYWORDS)
     print()
 
     # ---------------------------------------------------------
-    # 5. 检查 verify_stream.py 中的测试逻辑关键字
+    # 9. 检查 verify_trade.py 中的测试逻辑关键字
     # ---------------------------------------------------------
     log_info("检查验证脚本的测试逻辑...")
     print()
 
     VERIFY_KEYWORDS = [
-        "MarketDataService",  # 导入服务
-        "get_tick",  # 调用 get_tick 方法
+        "TradeService",  # 导入服务
+        "trade_service.buy",  # 调用 buy 方法
+        "trade_service.close_position",  # 调用 close_position 方法
+        "trade_service.get_positions",  # 调用 get_positions 方法
+        "TEST_VOLUME = 0.01",  # 测试手数
         "import os",  # 导入 os 模块
         'os.getenv("MT5_SYMBOL"',  # 从环境变量读取品种
-        "EURUSD",  # 默认品种
-        "loop_count = 5",  # 循环次数
-        "time.sleep",  # 延迟 1 秒
     ]
 
-    check_keywords_in_file("scripts/verify_stream.py", VERIFY_KEYWORDS)
+    check_keywords_in_file("scripts/verify_trade.py", VERIFY_KEYWORDS)
     print()
 
     # ---------------------------------------------------------
-    # 6. 最终审计通过
+    # 10. 最终审计通过
     # ---------------------------------------------------------
     print("=" * 70)
-    log_success("Task #015 审计通过！")
+    log_success("Task #016 审计通过！")
     print("=" * 70)
     print()
     log_info("已完成的核心功能：")
-    print("  ✅ MarketDataService 单例类")
-    print("  ✅ get_tick(symbol) 方法实现")
-    print("  ✅ Market Watch 符号可见性处理")
-    print("  ✅ verify_stream.py 验证脚本")
-    print("  ✅ MT5_SYMBOL 环境变量支持（可配置品种代码）")
+    print("  ✅ .env 自动加载修复（MT5Service）")
+    print("  ✅ TradeService 单例类")
+    print("  ✅ buy(symbol, volume, ...) 方法实现")
+    print("  ✅ sell(symbol, volume, ...) 方法实现")
+    print("  ✅ close_position(ticket) 方法实现")
+    print("  ✅ get_positions() 方法实现")
+    print("  ✅ verify_trade.py 验证脚本")
     print()
 
     sys.exit(0)  # 返回 0 表示审计通过
