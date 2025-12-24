@@ -1,17 +1,36 @@
 #!/usr/bin/env python3
 """
-审计脚本 - Task #014.2: Verify MT5 Connectivity
-验证 MT5 连接验证脚本是否正确实现
+Task #015 Audit Script - Windows Deployment & MT5 Stream
+==========================================================
+
+验证 Task #015 的完成情况：
+- src/gateway/market_data.py 文件存在
+- MarketDataService 类已实现
+- get_tick() 方法已实现
+- scripts/verify_stream.py 验证脚本存在
 """
+
 import sys
 import os
+import inspect
+from pathlib import Path
 
-# --- 辅助函数 ---
+# 添加项目根目录到 Python 路径（确保审计脚本在任何目录下都能运行）
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+
+# --- 辅助函数：带颜色的输出 ---
 def log_success(msg):
     print(f"\033[92m✅ {msg}\033[0m")
 
+
 def log_fail(msg):
     print(f"\033[91m❌ {msg}\033[0m")
+
+
+def log_info(msg):
+    print(f"\033[94mℹ️  {msg}\033[0m")
+
 
 def check_file_exists(filepath):
     """检查文件是否存在"""
@@ -20,8 +39,9 @@ def check_file_exists(filepath):
         sys.exit(1)
     log_success(f"文件存在: {filepath}")
 
+
 def check_keywords_in_file(filepath, keywords):
-    """检查文件中是否包含核心关键字"""
+    """检查文件中是否包含核心业务逻辑关键字"""
     try:
         with open(filepath, 'r', encoding='utf-8') as f:
             content = f.read()
@@ -32,70 +52,153 @@ def check_keywords_in_file(filepath, keywords):
                 missing.append(kw)
 
         if missing:
-            log_fail(f"完整性校验失败: {filepath}")
+            log_fail(f"内容校验失败: {filepath}")
             log_fail(f"    -> 缺失关键字: {missing}")
             sys.exit(1)
 
-        log_success(f"内容校验通过 (包含: {keywords})")
+        log_success(f"内容校验通过 (包含必需关键字)")
 
     except Exception as e:
         log_fail(f"读取文件出错: {e}")
         sys.exit(1)
 
+
+def check_class_exists(module_path, class_name):
+    """检查模块中是否存在指定的类"""
+    try:
+        # 动态导入模块
+        spec = __import__(module_path, fromlist=[class_name])
+        if not hasattr(spec, class_name):
+            log_fail(f"类 {class_name} 不存在于 {module_path}")
+            sys.exit(1)
+        log_success(f"类存在: {module_path}.{class_name}")
+    except ImportError as e:
+        log_fail(f"模块导入失败: {module_path} - {str(e)}")
+        sys.exit(1)
+    except Exception as e:
+        log_fail(f"检查类时发生异常: {str(e)}")
+        sys.exit(1)
+
+
+def check_method_exists(module_path, class_name, method_name):
+    """检查类中是否存在指定的方法"""
+    try:
+        # 动态导入模块和类
+        module = __import__(module_path, fromlist=[class_name])
+        cls = getattr(module, class_name)
+
+        if not hasattr(cls, method_name):
+            log_fail(f"方法 {method_name} 不存在于 {class_name}")
+            sys.exit(1)
+
+        # 检查是否真的是方法
+        method = getattr(cls, method_name)
+        if not callable(method):
+            log_fail(f"{method_name} 不是可调用的方法")
+            sys.exit(1)
+
+        log_success(f"方法存在: {class_name}.{method_name}()")
+
+    except Exception as e:
+        log_fail(f"检查方法失败: {str(e)}")
+        sys.exit(1)
+
+
 def main():
-    print("🕵️‍♂️ 启动任务审计程序 (Task #014.2 - Verify MT5 Connectivity)...")
+    """主函数：执行 Task #015 的审计"""
+    print("=" * 70)
+    print("🕵️‍♂️ Task #015 审计程序启动")
+    print("=" * 70)
     print()
 
     # ---------------------------------------------------------
-    # 1. 验证 MT5 连接验证脚本存在
+    # 1. 检查核心文件存在性
     # ---------------------------------------------------------
-    print("[检查1] 验证脚本存在性...")
-    TARGET_FILE = "scripts/verify_mt5_connection.py"
-    check_file_exists(TARGET_FILE)
+    log_info("检查核心文件...")
+    print()
+
+    check_file_exists("src/gateway/market_data.py")
+    check_file_exists("scripts/verify_stream.py")
     print()
 
     # ---------------------------------------------------------
-    # 2. 验证脚本包含必要的导入和逻辑
+    # 2. 检查 MarketDataService 类存在
     # ---------------------------------------------------------
-    print("[检查2] 验证脚本内容完整性...")
+    log_info("检查 MarketDataService 类...")
+    print()
+
+    check_class_exists("src.gateway.market_data", "MarketDataService")
+    print()
+
+    # ---------------------------------------------------------
+    # 3. 检查 get_tick 方法存在
+    # ---------------------------------------------------------
+    log_info("检查 get_tick 方法...")
+    print()
+
+    check_method_exists("src.gateway.market_data", "MarketDataService", "get_tick")
+    print()
+
+    # ---------------------------------------------------------
+    # 4. 检查 market_data.py 中的核心业务逻辑关键字
+    # ---------------------------------------------------------
+    log_info("检查核心业务逻辑关键字...")
+    print()
+
     REQUIRED_KEYWORDS = [
-        "from src.gateway.mt5_service import MT5Service",  # 正确导入
-        "MT5Service()",                                     # 实例化
-        "connect()",                                        # 连接方法
-        "is_connected()",                                   # 状态检查
+        "class MarketDataService",  # 类定义
+        "def get_tick",  # get_tick 方法
+        "symbol_info_tick",  # 核心调用：获取 tick 数据
+        "symbol_select",  # 核心调用：确保符号可见性
+        "is_connected",  # 连接检查
+        "MT5Service",  # MT5 服务引用
+        "def __init__",  # 初始化方法
+        "def __new__",  # 单例模式
+        "_instance",  # 单例实例
     ]
-    check_keywords_in_file(TARGET_FILE, REQUIRED_KEYWORDS)
+
+    check_keywords_in_file("src/gateway/market_data.py", REQUIRED_KEYWORDS)
     print()
 
     # ---------------------------------------------------------
-    # 3. 验证 MT5Service 源文件存在
+    # 5. 检查 verify_stream.py 中的测试逻辑关键字
     # ---------------------------------------------------------
-    print("[检查3] MT5Service 源文件...")
-    MT5_SERVICE_FILE = "src/gateway/mt5_service.py"
-    check_file_exists(MT5_SERVICE_FILE)
+    log_info("检查验证脚本的测试逻辑...")
     print()
 
-    # ---------------------------------------------------------
-    # 4. 验证 MT5Service 包含核心方法
-    # ---------------------------------------------------------
-    print("[检查4] MT5Service 核心方法...")
-    MT5_KEYWORDS = [
-        "class MT5Service",
-        "def connect",
-        "def is_connected",
-        "MetaTrader5"
+    VERIFY_KEYWORDS = [
+        "MarketDataService",  # 导入服务
+        "get_tick",  # 调用 get_tick 方法
+        "EURUSD",  # 目标品种
+        "loop_count = 5",  # 循环次数
+        "time.sleep",  # 延迟 1 秒
     ]
-    check_keywords_in_file(MT5_SERVICE_FILE, MT5_KEYWORDS)
+
+    check_keywords_in_file("scripts/verify_stream.py", VERIFY_KEYWORDS)
     print()
 
     # ---------------------------------------------------------
-    # 5. 最终放行
+    # 6. 最终审计通过
     # ---------------------------------------------------------
-    print("-" * 50)
-    log_success("✨ 审计通过！Task #014.2 符合技术规范。")
-    log_success("允许 Gemini Review Bridge 提交代码。")
-    print("-" * 50)
-    sys.exit(0)
+    print("=" * 70)
+    log_success("Task #015 审计通过！")
+    print("=" * 70)
+    print()
+    log_info("已完成的核心功能：")
+    print("  ✅ MarketDataService 单例类")
+    print("  ✅ get_tick(symbol) 方法实现")
+    print("  ✅ Market Watch 符号可见性处理")
+    print("  ✅ verify_stream.py 验证脚本")
+    print()
+
+    sys.exit(0)  # 返回 0 表示审计通过
+
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        log_fail(f"审计程序异常: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        sys.exit(1)
