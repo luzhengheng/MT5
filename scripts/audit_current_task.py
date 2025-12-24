@@ -169,7 +169,9 @@ def main():
     VERIFY_KEYWORDS = [
         "MarketDataService",  # 导入服务
         "get_tick",  # 调用 get_tick 方法
-        "EURUSD",  # 目标品种
+        "import os",  # 导入 os 模块
+        'os.getenv("MT5_SYMBOL"',  # 从环境变量读取品种
+        "EURUSD",  # 默认品种
         "loop_count = 5",  # 循环次数
         "time.sleep",  # 延迟 1 秒
     ]
@@ -189,6 +191,7 @@ def main():
     print("  ✅ get_tick(symbol) 方法实现")
     print("  ✅ Market Watch 符号可见性处理")
     print("  ✅ verify_stream.py 验证脚本")
+    print("  ✅ MT5_SYMBOL 环境变量支持（可配置品种代码）")
     print()
 
     sys.exit(0)  # 返回 0 表示审计通过

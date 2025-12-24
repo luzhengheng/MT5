@@ -6,9 +6,12 @@ MT5 Stream Verification Script
 验证 MarketDataService 的实时 tick 数据获取功能。
 
 测试目标：
-- 品种：EURUSD
+- 品种：默认 EURUSD（可通过环境变量 MT5_SYMBOL 自定义，如 "EURUSD.s"）
 - 循环次数：5 次
 - 间隔时间：1 秒
+
+环境变量：
+- MT5_SYMBOL: 自定义品种代码（可选，默认 "EURUSD"）
 
 注意：
 - 此脚本在 Linux 上将失败（预期行为，因为 MetaTrader5 库不可用）
@@ -16,6 +19,7 @@ MT5 Stream Verification Script
 """
 
 import sys
+import os
 import time
 import logging
 from pathlib import Path
@@ -37,8 +41,11 @@ logger = logging.getLogger(__name__)
 
 def main():
     """主函数：验证 MT5 实时数据流"""
+    # 从环境变量读取品种代码，默认为 "EURUSD"
+    SYMBOL = os.getenv("MT5_SYMBOL", "EURUSD")
+
     print("=" * 70)
-    print("🔍 MT5 Stream Verification - EURUSD Tick Data")
+    print(f"🔍 MT5 Stream Verification - {SYMBOL} Tick Data")
     print("=" * 70)
     print()
 
@@ -61,11 +68,11 @@ def main():
     logger.info("初始化 Market Data Service...")
     market_data = MarketDataService()
 
-    # 步骤 4: 目标品种
-    symbol = "EURUSD"
+    # 步骤 4: 目标品种配置
     loop_count = 5
 
-    print(f"\n📊 开始监控 {symbol} 的实时 tick 数据")
+    print(f"\n📊 开始监控 {SYMBOL} 的实时 tick 数据")
+    print(f"品种来源: {'环境变量 MT5_SYMBOL' if 'MT5_SYMBOL' in os.environ else '默认值'}")
     print(f"循环次数: {loop_count} 次")
     print(f"间隔时间: 1 秒")
     print("-" * 70)
@@ -73,10 +80,10 @@ def main():
 
     # 步骤 5: 循环获取 tick 数据
     for i in range(1, loop_count + 1):
-        logger.info(f"[{i}/{loop_count}] 获取 {symbol} tick 数据...")
+        logger.info(f"[{i}/{loop_count}] 获取 {SYMBOL} tick 数据...")
 
         # 获取 tick 数据
-        tick_data = market_data.get_tick(symbol)
+        tick_data = market_data.get_tick(SYMBOL)
 
         if tick_data:
             print(f"📈 Tick #{i}: {tick_data}")
@@ -86,7 +93,7 @@ def main():
             print(f"   成交量: {tick_data['volume']}")
             print()
         else:
-            logger.error(f"❌ 无法获取 {symbol} 的 tick 数据")
+            logger.error(f"❌ 无法获取 {SYMBOL} 的 tick 数据")
             print(f"❌ Tick #{i}: 数据获取失败")
             print()
 
