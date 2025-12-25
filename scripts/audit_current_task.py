@@ -1,19 +1,19 @@
 #!/usr/bin/env python3
 """
-Task #020 Audit Script - Integrated Trading Bot Loop
-======================================================
+Task #021 Audit Script - Live Trading Runner
+==============================================
 
-验证 Task #020 的完成情况：
-- TradingBot 类实现（src/bot/trading_bot.py）
-- run_cycle() 方法
-- 依赖注入（MT5Service, MarketDataService, TradeService, TechnicalIndicators, SignalEngine）
-- 完整工作流：数据获取 → 指标计算 → 信号生成 → 交易执行
-- verify_bot_cycle.py 验证脚本
+验证 Task #021 的完成情况：
+- src/main.py 主入口文件
+- 连续交易循环（while True）
+- 配置加载（环境变量）
+- KeyboardInterrupt 处理（优雅退出）
+- Exception 处理（错误重试）
+- MT5 断开连接逻辑
 """
 
 import sys
 import os
-import inspect
 from pathlib import Path
 
 # 添加项目根目录到 Python 路径（确保审计脚本在任何目录下都能运行）
@@ -64,51 +64,10 @@ def check_keywords_in_file(filepath, keywords):
         sys.exit(1)
 
 
-def check_class_exists(module_path, class_name):
-    """检查模块中是否存在指定的类"""
-    try:
-        # 动态导入模块
-        spec = __import__(module_path, fromlist=[class_name])
-        if not hasattr(spec, class_name):
-            log_fail(f"类 {class_name} 不存在于 {module_path}")
-            sys.exit(1)
-        log_success(f"类存在: {module_path}.{class_name}")
-    except ImportError as e:
-        log_fail(f"模块导入失败: {module_path} - {str(e)}")
-        sys.exit(1)
-    except Exception as e:
-        log_fail(f"检查类时发生异常: {str(e)}")
-        sys.exit(1)
-
-
-def check_method_exists(module_path, class_name, method_name):
-    """检查类中是否存在指定的方法"""
-    try:
-        # 动态导入模块和类
-        module = __import__(module_path, fromlist=[class_name])
-        cls = getattr(module, class_name)
-
-        if not hasattr(cls, method_name):
-            log_fail(f"方法 {method_name} 不存在于 {class_name}")
-            sys.exit(1)
-
-        # 检查是否真的是方法
-        method = getattr(cls, method_name)
-        if not callable(method):
-            log_fail(f"{method_name} 不是可调用的方法")
-            sys.exit(1)
-
-        log_success(f"方法存在: {class_name}.{method_name}()")
-
-    except Exception as e:
-        log_fail(f"检查方法失败: {str(e)}")
-        sys.exit(1)
-
-
 def main():
-    """主函数：执行 Task #020 的审计"""
+    """主函数：执行 Task #021 的审计"""
     print("=" * 70)
-    print("🕵️‍♂️ Task #020 审计程序启动")
+    print("🕵️‍♂️ Task #021 审计程序启动")
     print("=" * 70)
     print()
 
@@ -118,148 +77,160 @@ def main():
     log_info("检查核心文件...")
     print()
 
-    check_file_exists("src/bot/trading_bot.py")
-    check_file_exists("scripts/verify_bot_cycle.py")
+    check_file_exists("src/main.py")
     print()
 
     # ---------------------------------------------------------
-    # 2. 检查 TradingBot 类存在
+    # 2. 检查导入依赖
     # ---------------------------------------------------------
-    log_info("检查 TradingBot 类...")
+    log_info("检查导入依赖...")
     print()
 
-    check_class_exists("src.bot.trading_bot", "TradingBot")
-    print()
-
-    # ---------------------------------------------------------
-    # 3. 检查 run_cycle 方法存在
-    # ---------------------------------------------------------
-    log_info("检查核心方法...")
-    print()
-
-    check_method_exists("src.bot.trading_bot", "TradingBot", "run_cycle")
-    print()
-
-    # ---------------------------------------------------------
-    # 4. 检查依赖注入
-    # ---------------------------------------------------------
-    log_info("检查依赖注入...")
-    print()
-
-    DEPENDENCY_KEYWORDS = [
+    IMPORT_KEYWORDS = [
+        "from src.bot.trading_bot import TradingBot",
         "from src.gateway.mt5_service import MT5Service",
-        "from src.gateway.market_data import MarketDataService",
-        "from src.gateway.trade_service import TradeService",
-        "from src.strategy.indicators import TechnicalIndicators",
-        "from src.strategy.signal_engine import SignalEngine",
-        "def __init__",
-        "mt5_service: Optional[MT5Service]",
-        "market_data: Optional[MarketDataService]",
-        "trade_service: Optional[TradeService]",
-        "indicators: Optional[TechnicalIndicators]",
-        "signal_engine: Optional[SignalEngine]"
+        "import time",
+        "import logging"
     ]
 
-    check_keywords_in_file("src/bot/trading_bot.py", DEPENDENCY_KEYWORDS)
+    check_keywords_in_file("src/main.py", IMPORT_KEYWORDS)
     print()
 
     # ---------------------------------------------------------
-    # 5. 检查 run_cycle 工作流
+    # 3. 检查配置加载逻辑
     # ---------------------------------------------------------
-    log_info("检查 run_cycle 工作流...")
+    log_info("检查配置加载逻辑...")
     print()
 
-    WORKFLOW_KEYWORDS = [
-        "def run_cycle",
-        "symbol: str",
-        "timeframe: str",
-        "strategy_name: str",
-        "self.market_data.get_candles",
-        "self.indicators.calculate_sma",
-        "self.signal_engine.apply_strategy",
-        "latest_signal",
-        "if latest_signal == 1:",
-        "self.trade_service.buy",
-        "elif latest_signal == -1:",
-        "self.trade_service.sell"
+    CONFIG_KEYWORDS = [
+        "def load_config",
+        "os.getenv('MT5_SYMBOL'",
+        "os.getenv('MT5_TIMEFRAME'",
+        "os.getenv('TRADING_STRATEGY'",
+        "os.getenv('TRADING_VOLUME'",
+        "os.getenv('TRADING_INTERVAL'"
     ]
 
-    check_keywords_in_file("src/bot/trading_bot.py", WORKFLOW_KEYWORDS)
+    check_keywords_in_file("src/main.py", CONFIG_KEYWORDS)
     print()
 
     # ---------------------------------------------------------
-    # 6. 检查返回值结构
+    # 4. 检查 MT5 连接初始化
     # ---------------------------------------------------------
-    log_info("检查返回值结构...")
+    log_info("检查 MT5 连接初始化...")
     print()
 
-    RETURN_KEYWORDS = [
-        "'success':",
-        "'step':",
-        "'data_fetched':",
-        "'indicators_calculated':",
-        "'signal_generated':",
-        "'signal_value':",
-        "'trade_executed':",
-        "'trade_result':",
-        "'message':"
+    MT5_KEYWORDS = [
+        "mt5_service = MT5Service()",
+        "mt5_service.connect()",
+        "if not mt5_service.connect():"
     ]
 
-    check_keywords_in_file("src/bot/trading_bot.py", RETURN_KEYWORDS)
+    check_keywords_in_file("src/main.py", MT5_KEYWORDS)
     print()
 
     # ---------------------------------------------------------
-    # 7. 检查错误处理
+    # 5. 检查 TradingBot 初始化
     # ---------------------------------------------------------
-    log_info("检查错误处理...")
+    log_info("检查 TradingBot 初始化...")
     print()
 
-    ERROR_HANDLING_KEYWORDS = [
+    BOT_KEYWORDS = [
+        "bot = TradingBot()"
+    ]
+
+    check_keywords_in_file("src/main.py", BOT_KEYWORDS)
+    print()
+
+    # ---------------------------------------------------------
+    # 6. 检查无限循环
+    # ---------------------------------------------------------
+    log_info("检查无限循环...")
+    print()
+
+    LOOP_KEYWORDS = [
+        "while True:",
+        "bot.run_cycle"
+    ]
+
+    check_keywords_in_file("src/main.py", LOOP_KEYWORDS)
+    print()
+
+    # ---------------------------------------------------------
+    # 7. 检查 KeyboardInterrupt 处理
+    # ---------------------------------------------------------
+    log_info("检查 KeyboardInterrupt 处理...")
+    print()
+
+    KEYBOARD_KEYWORDS = [
+        "except KeyboardInterrupt:",
+        "mt5_service.disconnect()"
+    ]
+
+    check_keywords_in_file("src/main.py", KEYBOARD_KEYWORDS)
+    print()
+
+    # ---------------------------------------------------------
+    # 8. 检查异常处理
+    # ---------------------------------------------------------
+    log_info("检查异常处理...")
+    print()
+
+    EXCEPTION_KEYWORDS = [
         "try:",
         "except Exception as e:",
-        "logger.error",
-        "if df is None",
-        "if not self.mt5_service.is_connected()"
+        "logger.error"
     ]
 
-    check_keywords_in_file("src/bot/trading_bot.py", ERROR_HANDLING_KEYWORDS)
+    check_keywords_in_file("src/main.py", EXCEPTION_KEYWORDS)
     print()
 
     # ---------------------------------------------------------
-    # 8. 检查 verify_bot_cycle.py 验证逻辑
+    # 9. 检查循环间隔
     # ---------------------------------------------------------
-    log_info("检查 verify_bot_cycle.py 验证逻辑...")
+    log_info("检查循环间隔...")
     print()
 
-    VERIFY_KEYWORDS = [
-        "from src.bot.trading_bot import TradingBot",
-        "bot = TradingBot()",
-        "bot.run_cycle",
-        "result['data_fetched']",
-        "result['indicators_calculated']",
-        "result['signal_generated']",
-        "result['success']"
+    SLEEP_KEYWORDS = [
+        "time.sleep"
     ]
 
-    check_keywords_in_file("scripts/verify_bot_cycle.py", VERIFY_KEYWORDS)
+    check_keywords_in_file("src/main.py", SLEEP_KEYWORDS)
     print()
 
     # ---------------------------------------------------------
-    # 9. 最终审计通过
+    # 10. 检查日志配置
+    # ---------------------------------------------------------
+    log_info("检查日志配置...")
+    print()
+
+    LOGGING_KEYWORDS = [
+        "logging.basicConfig",
+        "logging.FileHandler",
+        "logger = logging.getLogger(__name__)"
+    ]
+
+    check_keywords_in_file("src/main.py", LOGGING_KEYWORDS)
+    print()
+
+    # ---------------------------------------------------------
+    # 11. 最终审计通过
     # ---------------------------------------------------------
     print("=" * 70)
-    log_success("Task #020 审计通过！")
+    log_success("Task #021 审计通过！")
     print("=" * 70)
     print()
     log_info("已完成的核心功能：")
-    print("  ✅ TradingBot 类实现")
-    print("  ✅ run_cycle(symbol, timeframe, strategy_name) 方法")
-    print("  ✅ 依赖注入（5个服务组件）")
-    print("  ✅ 完整工作流：数据 → 指标 → 信号 → 交易")
-    print("  ✅ 信号处理逻辑（1:买入, -1:卖出, 0:持有）")
-    print("  ✅ 错误处理和日志记录")
-    print("  ✅ 结构化返回值（9个字段）")
-    print("  ✅ verify_bot_cycle.py 单周期验证脚本")
+    print("  ✅ src/main.py 主入口文件")
+    print("  ✅ 配置加载（6个环境变量）")
+    print("  ✅ MT5Service 初始化和连接")
+    print("  ✅ TradingBot 初始化")
+    print("  ✅ 无限交易循环（while True）")
+    print("  ✅ bot.run_cycle() 调用")
+    print("  ✅ KeyboardInterrupt 优雅退出")
+    print("  ✅ Exception 错误重试")
+    print("  ✅ 循环间隔（time.sleep）")
+    print("  ✅ 日志配置（文件 + 控制台）")
     print()
 
     sys.exit(0)  # 返回 0 表示审计通过
