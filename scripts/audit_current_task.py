@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 """
-Task #018 Audit Script - Technical Analysis Engine
-====================================================
+Task #019 Audit Script - Signal Generation Engine
+===================================================
 
-验证 Task #018 的完成情况：
-- TechnicalIndicators 类实现（src/strategy/indicators.py）
-- 5 个核心方法：calculate_sma, calculate_ema, calculate_rsi, calculate_atr, calculate_bollinger_bands
-- 严格向量化：使用 pandas/numpy，无 for 循环
-- verify_indicators.py 验证脚本
+验证 Task #019 的完成情况：
+- SignalEngine 类实现（src/strategy/signal_engine.py）
+- apply_strategy() 方法
+- MA Crossover 策略逻辑
+- RSI Reversion 策略逻辑
+- 严格向量化：无行迭代
+- verify_signals.py 验证脚本
 """
 
 import sys
@@ -105,9 +107,9 @@ def check_method_exists(module_path, class_name, method_name):
 
 
 def main():
-    """主函数：执行 Task #018 的审计"""
+    """主函数：执行 Task #019 的审计"""
     print("=" * 70)
-    print("🕵️‍♂️ Task #018 审计程序启动")
+    print("🕵️‍♂️ Task #019 审计程序启动")
     print("=" * 70)
     print()
 
@@ -117,159 +119,109 @@ def main():
     log_info("检查核心文件...")
     print()
 
-    check_file_exists("src/strategy/indicators.py")
-    check_file_exists("scripts/verify_indicators.py")
+    check_file_exists("src/strategy/signal_engine.py")
+    check_file_exists("scripts/verify_signals.py")
     print()
 
     # ---------------------------------------------------------
-    # 2. 检查 TechnicalIndicators 类存在
+    # 2. 检查 SignalEngine 类存在
     # ---------------------------------------------------------
-    log_info("检查 TechnicalIndicators 类...")
+    log_info("检查 SignalEngine 类...")
     print()
 
-    check_class_exists("src.strategy.indicators", "TechnicalIndicators")
+    check_class_exists("src.strategy.signal_engine", "SignalEngine")
     print()
 
     # ---------------------------------------------------------
-    # 3. 检查 5 个核心方法存在
+    # 3. 检查 apply_strategy 方法存在
     # ---------------------------------------------------------
     log_info("检查核心方法...")
     print()
 
-    required_methods = [
-        "calculate_sma",
-        "calculate_ema",
-        "calculate_rsi",
-        "calculate_atr",
-        "calculate_bollinger_bands"
+    check_method_exists("src.strategy.signal_engine", "SignalEngine", "apply_strategy")
+    print()
+
+    # ---------------------------------------------------------
+    # 4. 检查 MA Crossover 策略实现
+    # ---------------------------------------------------------
+    log_info("检查 MA Crossover 策略实现...")
+    print()
+
+    MA_CROSSOVER_KEYWORDS = [
+        "def _ma_crossover_strategy",
+        ".shift(1)",
+        "golden_cross",
+        "death_cross",
+        "df['signal'] = 0",
+        "df.loc[golden_cross, 'signal'] = 1",
+        "df.loc[death_cross, 'signal'] = -1"
     ]
 
-    for method in required_methods:
-        check_method_exists("src.strategy.indicators", "TechnicalIndicators", method)
-
+    check_keywords_in_file("src/strategy/signal_engine.py", MA_CROSSOVER_KEYWORDS)
     print()
 
     # ---------------------------------------------------------
-    # 4. 检查 SMA 实现（向量化）
+    # 5. 检查 RSI Reversion 策略实现
     # ---------------------------------------------------------
-    log_info("检查 SMA 向量化实现...")
+    log_info("检查 RSI Reversion 策略实现...")
     print()
 
-    SMA_KEYWORDS = [
-        "def calculate_sma",
-        "pd.DataFrame",
-        ".rolling(window=period",
-        ".mean()",
-        "price_col",
-        "return df"
+    RSI_REVERSION_KEYWORDS = [
+        "def _rsi_reversion_strategy",
+        "OVERBOUGHT = 70",
+        "OVERSOLD = 30",
+        "df['signal'] = 0",
+        "df.loc[df[rsi_col] > OVERBOUGHT, 'signal'] = -1",
+        "df.loc[df[rsi_col] < OVERSOLD, 'signal'] = 1"
     ]
 
-    check_keywords_in_file("src/strategy/indicators.py", SMA_KEYWORDS)
+    check_keywords_in_file("src/strategy/signal_engine.py", RSI_REVERSION_KEYWORDS)
     print()
 
     # ---------------------------------------------------------
-    # 5. 检查 EMA 实现（向量化）
+    # 6. 检查信号值约束（1, -1, 0）
     # ---------------------------------------------------------
-    log_info("检查 EMA 向量化实现...")
+    log_info("检查信号值约束...")
     print()
 
-    EMA_KEYWORDS = [
-        "def calculate_ema",
-        ".ewm(span=period",
-        ".mean()",
-        "adjust=False"
+    SIGNAL_VALUES_KEYWORDS = [
+        "'signal'] = 0",
+        "'signal'] = 1",
+        "'signal'] = -1"
     ]
 
-    check_keywords_in_file("src/strategy/indicators.py", EMA_KEYWORDS)
+    check_keywords_in_file("src/strategy/signal_engine.py", SIGNAL_VALUES_KEYWORDS)
     print()
 
     # ---------------------------------------------------------
-    # 6. 检查 RSI 实现（向量化 + 0-100 范围）
+    # 7. 检查向量化约束（禁止行迭代）
     # ---------------------------------------------------------
-    log_info("检查 RSI 向量化实现...")
-    print()
-
-    RSI_KEYWORDS = [
-        "def calculate_rsi",
-        ".diff()",
-        ".where(",
-        ".ewm(span=period",
-        "100 -",
-        "1 + rs"
-    ]
-
-    check_keywords_in_file("src/strategy/indicators.py", RSI_KEYWORDS)
-    print()
-
-    # ---------------------------------------------------------
-    # 7. 检查 ATR 实现（向量化）
-    # ---------------------------------------------------------
-    log_info("检查 ATR 向量化实现...")
-    print()
-
-    ATR_KEYWORDS = [
-        "def calculate_atr",
-        "'high'",
-        "'low'",
-        "'close'",
-        ".shift()",
-        ".abs()",
-        ".max(axis=1)",
-        ".ewm(span=period"
-    ]
-
-    check_keywords_in_file("src/strategy/indicators.py", ATR_KEYWORDS)
-    print()
-
-    # ---------------------------------------------------------
-    # 8. 检查 Bollinger Bands 实现（向量化）
-    # ---------------------------------------------------------
-    log_info("检查 Bollinger Bands 向量化实现...")
-    print()
-
-    BB_KEYWORDS = [
-        "def calculate_bollinger_bands",
-        ".rolling(window=period",
-        ".std()",
-        "bb_upper",
-        "bb_middle",
-        "bb_lower",
-        "std_dev *"
-    ]
-
-    check_keywords_in_file("src/strategy/indicators.py", BB_KEYWORDS)
-    print()
-
-    # ---------------------------------------------------------
-    # 9. 检查向量化约束（禁止 for 循环）
-    # ---------------------------------------------------------
-    log_info("检查向量化约束（禁止 for 循环）...")
+    log_info("检查向量化约束（禁止行迭代）...")
     print()
 
     try:
-        with open("src/strategy/indicators.py", 'r', encoding='utf-8') as f:
+        with open("src/strategy/signal_engine.py", 'r', encoding='utf-8') as f:
             content = f.read()
 
-        # 检查是否包含 Python for 循环（排除注释和字符串）
-        # 简化检查：如果 "for i in" 或 "for idx in" 出现在非注释行
+        # 检查是否包含 iterrows 或 for 循环（排除注释）
         lines = content.split('\n')
-        for_loop_found = False
+        iteration_found = False
         for line in lines:
             stripped = line.strip()
             # 跳过注释行
             if stripped.startswith('#') or stripped.startswith('"""') or stripped.startswith("'''"):
                 continue
-            # 检查 for 循环（排除 "for col in" 这种合理的列迭代）
-            if 'for i in' in line or 'for idx in' in line or 'for j in' in line:
-                log_fail(f"发现 Python for 循环: {line.strip()}")
-                for_loop_found = True
+            # 检查行迭代
+            if 'iterrows' in line or 'for i in' in line or 'for idx in' in line:
+                log_fail(f"发现行迭代: {line.strip()}")
+                iteration_found = True
                 break
 
-        if for_loop_found:
-            log_fail("违反向量化约束：发现 Python for 循环")
+        if iteration_found:
+            log_fail("违反向量化约束：发现行迭代")
             sys.exit(1)
 
-        log_success("向量化约束检查通过（未发现 for 循环）")
+        log_success("向量化约束检查通过（未发现行迭代）")
 
     except Exception as e:
         log_fail(f"检查向量化约束失败: {str(e)}")
@@ -278,43 +230,43 @@ def main():
     print()
 
     # ---------------------------------------------------------
-    # 10. 检查 verify_indicators.py 验证逻辑
+    # 8. 检查 verify_signals.py 验证逻辑
     # ---------------------------------------------------------
-    log_info("检查 verify_indicators.py 验证逻辑...")
+    log_info("检查 verify_signals.py 验证逻辑...")
     print()
 
     VERIFY_KEYWORDS = [
         "MarketDataService",
         "TechnicalIndicators",
+        "SignalEngine",
         "get_candles",
         "calculate_sma",
-        "calculate_ema",
         "calculate_rsi",
-        "calculate_atr",
-        "calculate_bollinger_bands",
-        "df.tail(5)",
-        "expected_columns"
+        "apply_strategy",
+        "strategy_name='ma_crossover'",
+        "strategy_name='rsi_reversion'",
+        "['signal'] != 0",
+        ".tail("
     ]
 
-    check_keywords_in_file("scripts/verify_indicators.py", VERIFY_KEYWORDS)
+    check_keywords_in_file("scripts/verify_signals.py", VERIFY_KEYWORDS)
     print()
 
     # ---------------------------------------------------------
-    # 11. 最终审计通过
+    # 9. 最终审计通过
     # ---------------------------------------------------------
     print("=" * 70)
-    log_success("Task #018 审计通过！")
+    log_success("Task #019 审计通过！")
     print("=" * 70)
     print()
     log_info("已完成的核心功能：")
-    print("  ✅ TechnicalIndicators 类实现")
-    print("  ✅ calculate_sma(df, period, price_col) - 向量化")
-    print("  ✅ calculate_ema(df, period, price_col) - 向量化")
-    print("  ✅ calculate_rsi(df, period, price_col) - 向量化，0-100 范围")
-    print("  ✅ calculate_atr(df, period) - 向量化，动态止损")
-    print("  ✅ calculate_bollinger_bands(df, period, std_dev) - 向量化，3条带")
-    print("  ✅ 严格向量化约束（无 for 循环）")
-    print("  ✅ verify_indicators.py 功能验证脚本")
+    print("  ✅ SignalEngine 类实现")
+    print("  ✅ apply_strategy(df, strategy_name) 方法")
+    print("  ✅ MA Crossover 策略（金叉买入，死叉卖出）")
+    print("  ✅ RSI Reversion 策略（超买卖出，超卖买入）")
+    print("  ✅ 信号值约束（1, -1, 0）")
+    print("  ✅ 严格向量化（无行迭代）")
+    print("  ✅ verify_signals.py 功能验证脚本")
     print()
 
     sys.exit(0)  # 返回 0 表示审计通过
