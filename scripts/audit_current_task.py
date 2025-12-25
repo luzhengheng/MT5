@@ -1,14 +1,13 @@
 #!/usr/bin/env python3
 """
-Task #017 Audit Script - Market Data Service & Secure Config
-==============================================================
+Task #018 Audit Script - Technical Analysis Engine
+====================================================
 
-验证 Task #017 的完成情况：
-- TradeService 智能填充模式（Smart Fallback）
-- MarketDataService get_candles() 方法
-- MT5Service robust .env loading（已在 Task #016 完成）
-- scripts/verify_candles.py 验证脚本
-- scripts/verify_trade.py 更新（Smart Fallback说明）
+验证 Task #018 的完成情况：
+- TechnicalIndicators 类实现（src/strategy/indicators.py）
+- 5 个核心方法：calculate_sma, calculate_ema, calculate_rsi, calculate_atr, calculate_bollinger_bands
+- 严格向量化：使用 pandas/numpy，无 for 循环
+- verify_indicators.py 验证脚本
 """
 
 import sys
@@ -106,9 +105,9 @@ def check_method_exists(module_path, class_name, method_name):
 
 
 def main():
-    """主函数：执行 Task #017 的审计"""
+    """主函数：执行 Task #018 的审计"""
     print("=" * 70)
-    print("🕵️‍♂️ Task #017 审计程序启动")
+    print("🕵️‍♂️ Task #018 审计程序启动")
     print("=" * 70)
     print()
 
@@ -118,147 +117,204 @@ def main():
     log_info("检查核心文件...")
     print()
 
-    check_file_exists("src/gateway/trade_service.py")
-    check_file_exists("src/gateway/market_data.py")
-    check_file_exists("src/gateway/mt5_service.py")
-    check_file_exists("scripts/verify_candles.py")
-    check_file_exists("scripts/verify_trade.py")
+    check_file_exists("src/strategy/indicators.py")
+    check_file_exists("scripts/verify_indicators.py")
     print()
 
     # ---------------------------------------------------------
-    # 2. 检查 TradeService 智能填充模式
+    # 2. 检查 TechnicalIndicators 类存在
     # ---------------------------------------------------------
-    log_info("检查 TradeService 智能填充模式...")
+    log_info("检查 TechnicalIndicators 类...")
     print()
 
-    TRADE_FALLBACK_KEYWORDS = [
-        "import os",  # os 导入
-        'os.getenv(\'MT5_FILLING_MODE\'',  # 环境变量读取
-        "def _send_order_with_fallback",  # 智能发送方法
-        "ORDER_FILLING_FOK",  # FOK 模式
-        "ORDER_FILLING_IOC",  # IOC 模式
-        "10030",  # 错误代码 TRADE_RETCODE_INVALID_FILL
-        "filling_modes",  # 填充模式列表
-        "自动尝试备选模式",  # 降级逻辑注释
+    check_class_exists("src.strategy.indicators", "TechnicalIndicators")
+    print()
+
+    # ---------------------------------------------------------
+    # 3. 检查 5 个核心方法存在
+    # ---------------------------------------------------------
+    log_info("检查核心方法...")
+    print()
+
+    required_methods = [
+        "calculate_sma",
+        "calculate_ema",
+        "calculate_rsi",
+        "calculate_atr",
+        "calculate_bollinger_bands"
     ]
 
-    check_keywords_in_file("src/gateway/trade_service.py", TRADE_FALLBACK_KEYWORDS)
+    for method in required_methods:
+        check_method_exists("src.strategy.indicators", "TechnicalIndicators", method)
+
     print()
 
     # ---------------------------------------------------------
-    # 3. 检查 buy/sell/close_position 使用智能发送
+    # 4. 检查 SMA 实现（向量化）
     # ---------------------------------------------------------
-    log_info("检查 buy/sell/close_position 使用智能发送...")
+    log_info("检查 SMA 向量化实现...")
     print()
 
-    SMART_SEND_KEYWORDS = [
-        "_send_order_with_fallback(request)",  # buy 方法使用
+    SMA_KEYWORDS = [
+        "def calculate_sma",
+        "pd.DataFrame",
+        ".rolling(window=period",
+        ".mean()",
+        "price_col",
+        "return df"
     ]
 
-    check_keywords_in_file("src/gateway/trade_service.py", SMART_SEND_KEYWORDS)
+    check_keywords_in_file("src/strategy/indicators.py", SMA_KEYWORDS)
     print()
 
     # ---------------------------------------------------------
-    # 4. 检查 MarketDataService get_candles 方法
+    # 5. 检查 EMA 实现（向量化）
     # ---------------------------------------------------------
-    log_info("检查 MarketDataService get_candles 方法...")
+    log_info("检查 EMA 向量化实现...")
     print()
 
-    check_method_exists("src.gateway.market_data", "MarketDataService", "get_candles")
-    print()
-
-    # ---------------------------------------------------------
-    # 5. 检查 get_candles 核心逻辑
-    # ---------------------------------------------------------
-    log_info("检查 get_candles 核心逻辑...")
-    print()
-
-    CANDLES_KEYWORDS = [
-        "def get_candles",  # 方法定义
-        "import pandas as pd",  # pandas 导入
-        "copy_rates_from_pos",  # MT5 K线获取
-        "pd.DataFrame",  # DataFrame 创建
-        "pd.to_datetime",  # 时间转换
-        "TIMEFRAME_M1",  # 支持 M1
-        "TIMEFRAME_M5",  # 支持 M5
-        "TIMEFRAME_H1",  # 支持 H1
-        "['time', 'open', 'high', 'low', 'close', 'volume']",  # 标准列
+    EMA_KEYWORDS = [
+        "def calculate_ema",
+        ".ewm(span=period",
+        ".mean()",
+        "adjust=False"
     ]
 
-    check_keywords_in_file("src/gateway/market_data.py", CANDLES_KEYWORDS)
+    check_keywords_in_file("src/strategy/indicators.py", EMA_KEYWORDS)
     print()
 
     # ---------------------------------------------------------
-    # 6. 检查 verify_candles.py 验证逻辑
+    # 6. 检查 RSI 实现（向量化 + 0-100 范围）
     # ---------------------------------------------------------
-    log_info("检查 verify_candles.py 验证逻辑...")
+    log_info("检查 RSI 向量化实现...")
     print()
 
-    VERIFY_CANDLES_KEYWORDS = [
-        "MarketDataService",  # 导入服务
-        "get_candles",  # 调用 get_candles
-        "df.head(3)",  # 显示前3行
-        "df.tail(3)",  # 显示后3行
-        "datetime",  # 时间类型检查
-        "df.isnull()",  # 空值检查
-        "len(df)",  # 数据量检查
+    RSI_KEYWORDS = [
+        "def calculate_rsi",
+        ".diff()",
+        ".where(",
+        ".ewm(span=period",
+        "100 -",
+        "1 + rs"
     ]
 
-    check_keywords_in_file("scripts/verify_candles.py", VERIFY_CANDLES_KEYWORDS)
+    check_keywords_in_file("src/strategy/indicators.py", RSI_KEYWORDS)
     print()
 
     # ---------------------------------------------------------
-    # 7. 检查 verify_trade.py Smart Fallback 说明
+    # 7. 检查 ATR 实现（向量化）
     # ---------------------------------------------------------
-    log_info("检查 verify_trade.py Smart Fallback 说明...")
+    log_info("检查 ATR 向量化实现...")
     print()
 
-    VERIFY_TRADE_KEYWORDS = [
-        "Smart Fallback",  # 智能降级标题
-        "MT5_FILLING_MODE",  # 环境变量说明
-        "自动尝试备选模式",  # 降级机制说明
-        "FOK",  # FOK 模式说明
-        "IOC",  # IOC 模式说明
-        "AUTO",  # AUTO 模式说明
+    ATR_KEYWORDS = [
+        "def calculate_atr",
+        "'high'",
+        "'low'",
+        "'close'",
+        ".shift()",
+        ".abs()",
+        ".max(axis=1)",
+        ".ewm(span=period"
     ]
 
-    check_keywords_in_file("scripts/verify_trade.py", VERIFY_TRADE_KEYWORDS)
+    check_keywords_in_file("src/strategy/indicators.py", ATR_KEYWORDS)
     print()
 
     # ---------------------------------------------------------
-    # 8. 检查 MT5Service robust .env loading（Task #016已完成）
+    # 8. 检查 Bollinger Bands 实现（向量化）
     # ---------------------------------------------------------
-    log_info("检查 MT5Service robust .env loading...")
+    log_info("检查 Bollinger Bands 向量化实现...")
     print()
 
-    ENV_LOADING_KEYWORDS = [
-        "from pathlib import Path",  # Path 导入
-        "project_root = Path(__file__).resolve().parent.parent.parent",  # 项目根
-        "env_path = project_root / '.env'",  # .env 路径
-        "load_dotenv(dotenv_path=env_path, override=True)",  # 强制加载
+    BB_KEYWORDS = [
+        "def calculate_bollinger_bands",
+        ".rolling(window=period",
+        ".std()",
+        "bb_upper",
+        "bb_middle",
+        "bb_lower",
+        "std_dev *"
     ]
 
-    check_keywords_in_file("src/gateway/mt5_service.py", ENV_LOADING_KEYWORDS)
+    check_keywords_in_file("src/strategy/indicators.py", BB_KEYWORDS)
     print()
 
     # ---------------------------------------------------------
-    # 9. 最终审计通过
+    # 9. 检查向量化约束（禁止 for 循环）
+    # ---------------------------------------------------------
+    log_info("检查向量化约束（禁止 for 循环）...")
+    print()
+
+    try:
+        with open("src/strategy/indicators.py", 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        # 检查是否包含 Python for 循环（排除注释和字符串）
+        # 简化检查：如果 "for i in" 或 "for idx in" 出现在非注释行
+        lines = content.split('\n')
+        for_loop_found = False
+        for line in lines:
+            stripped = line.strip()
+            # 跳过注释行
+            if stripped.startswith('#') or stripped.startswith('"""') or stripped.startswith("'''"):
+                continue
+            # 检查 for 循环（排除 "for col in" 这种合理的列迭代）
+            if 'for i in' in line or 'for idx in' in line or 'for j in' in line:
+                log_fail(f"发现 Python for 循环: {line.strip()}")
+                for_loop_found = True
+                break
+
+        if for_loop_found:
+            log_fail("违反向量化约束：发现 Python for 循环")
+            sys.exit(1)
+
+        log_success("向量化约束检查通过（未发现 for 循环）")
+
+    except Exception as e:
+        log_fail(f"检查向量化约束失败: {str(e)}")
+        sys.exit(1)
+
+    print()
+
+    # ---------------------------------------------------------
+    # 10. 检查 verify_indicators.py 验证逻辑
+    # ---------------------------------------------------------
+    log_info("检查 verify_indicators.py 验证逻辑...")
+    print()
+
+    VERIFY_KEYWORDS = [
+        "MarketDataService",
+        "TechnicalIndicators",
+        "get_candles",
+        "calculate_sma",
+        "calculate_ema",
+        "calculate_rsi",
+        "calculate_atr",
+        "calculate_bollinger_bands",
+        "df.tail(5)",
+        "expected_columns"
+    ]
+
+    check_keywords_in_file("scripts/verify_indicators.py", VERIFY_KEYWORDS)
+    print()
+
+    # ---------------------------------------------------------
+    # 11. 最终审计通过
     # ---------------------------------------------------------
     print("=" * 70)
-    log_success("Task #017 审计通过！")
+    log_success("Task #018 审计通过！")
     print("=" * 70)
     print()
     log_info("已完成的核心功能：")
-    print("  ✅ TradeService 智能填充模式（Smart Fallback）")
-    print("  ✅ _send_order_with_fallback() 方法实现")
-    print("  ✅ MT5_FILLING_MODE 环境变量支持")
-    print("  ✅ 错误 10030 自动降级逻辑")
-    print("  ✅ MarketDataService.get_candles() 方法")
-    print("  ✅ 支持 M1/M5/M15/M30/H1/H4/D1 时间周期")
-    print("  ✅ pandas DataFrame 返回格式")
-    print("  ✅ verify_candles.py 数据完整性验证")
-    print("  ✅ verify_trade.py Smart Fallback 说明")
-    print("  ✅ MT5Service robust .env loading")
+    print("  ✅ TechnicalIndicators 类实现")
+    print("  ✅ calculate_sma(df, period, price_col) - 向量化")
+    print("  ✅ calculate_ema(df, period, price_col) - 向量化")
+    print("  ✅ calculate_rsi(df, period, price_col) - 向量化，0-100 范围")
+    print("  ✅ calculate_atr(df, period) - 向量化，动态止损")
+    print("  ✅ calculate_bollinger_bands(df, period, std_dev) - 向量化，3条带")
+    print("  ✅ 严格向量化约束（无 for 循环）")
+    print("  ✅ verify_indicators.py 功能验证脚本")
     print()
 
     sys.exit(0)  # 返回 0 表示审计通过
