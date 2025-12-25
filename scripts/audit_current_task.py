@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
 """
-Task #019 Audit Script - Signal Generation Engine
-===================================================
+Task #020 Audit Script - Integrated Trading Bot Loop
+======================================================
 
-验证 Task #019 的完成情况：
-- SignalEngine 类实现（src/strategy/signal_engine.py）
-- apply_strategy() 方法
-- MA Crossover 策略逻辑
-- RSI Reversion 策略逻辑
-- 严格向量化：无行迭代
-- verify_signals.py 验证脚本
+验证 Task #020 的完成情况：
+- TradingBot 类实现（src/bot/trading_bot.py）
+- run_cycle() 方法
+- 依赖注入（MT5Service, MarketDataService, TradeService, TechnicalIndicators, SignalEngine）
+- 完整工作流：数据获取 → 指标计算 → 信号生成 → 交易执行
+- verify_bot_cycle.py 验证脚本
 """
 
 import sys
@@ -107,9 +106,9 @@ def check_method_exists(module_path, class_name, method_name):
 
 
 def main():
-    """主函数：执行 Task #019 的审计"""
+    """主函数：执行 Task #020 的审计"""
     print("=" * 70)
-    print("🕵️‍♂️ Task #019 审计程序启动")
+    print("🕵️‍♂️ Task #020 审计程序启动")
     print("=" * 70)
     print()
 
@@ -119,154 +118,148 @@ def main():
     log_info("检查核心文件...")
     print()
 
-    check_file_exists("src/strategy/signal_engine.py")
-    check_file_exists("scripts/verify_signals.py")
+    check_file_exists("src/bot/trading_bot.py")
+    check_file_exists("scripts/verify_bot_cycle.py")
     print()
 
     # ---------------------------------------------------------
-    # 2. 检查 SignalEngine 类存在
+    # 2. 检查 TradingBot 类存在
     # ---------------------------------------------------------
-    log_info("检查 SignalEngine 类...")
+    log_info("检查 TradingBot 类...")
     print()
 
-    check_class_exists("src.strategy.signal_engine", "SignalEngine")
+    check_class_exists("src.bot.trading_bot", "TradingBot")
     print()
 
     # ---------------------------------------------------------
-    # 3. 检查 apply_strategy 方法存在
+    # 3. 检查 run_cycle 方法存在
     # ---------------------------------------------------------
     log_info("检查核心方法...")
     print()
 
-    check_method_exists("src.strategy.signal_engine", "SignalEngine", "apply_strategy")
+    check_method_exists("src.bot.trading_bot", "TradingBot", "run_cycle")
     print()
 
     # ---------------------------------------------------------
-    # 4. 检查 MA Crossover 策略实现
+    # 4. 检查依赖注入
     # ---------------------------------------------------------
-    log_info("检查 MA Crossover 策略实现...")
+    log_info("检查依赖注入...")
     print()
 
-    MA_CROSSOVER_KEYWORDS = [
-        "def _ma_crossover_strategy",
-        ".shift(1)",
-        "golden_cross",
-        "death_cross",
-        "df['signal'] = 0",
-        "df.loc[golden_cross, 'signal'] = 1",
-        "df.loc[death_cross, 'signal'] = -1"
+    DEPENDENCY_KEYWORDS = [
+        "from src.gateway.mt5_service import MT5Service",
+        "from src.gateway.market_data import MarketDataService",
+        "from src.gateway.trade_service import TradeService",
+        "from src.strategy.indicators import TechnicalIndicators",
+        "from src.strategy.signal_engine import SignalEngine",
+        "def __init__",
+        "mt5_service: Optional[MT5Service]",
+        "market_data: Optional[MarketDataService]",
+        "trade_service: Optional[TradeService]",
+        "indicators: Optional[TechnicalIndicators]",
+        "signal_engine: Optional[SignalEngine]"
     ]
 
-    check_keywords_in_file("src/strategy/signal_engine.py", MA_CROSSOVER_KEYWORDS)
+    check_keywords_in_file("src/bot/trading_bot.py", DEPENDENCY_KEYWORDS)
     print()
 
     # ---------------------------------------------------------
-    # 5. 检查 RSI Reversion 策略实现
+    # 5. 检查 run_cycle 工作流
     # ---------------------------------------------------------
-    log_info("检查 RSI Reversion 策略实现...")
+    log_info("检查 run_cycle 工作流...")
     print()
 
-    RSI_REVERSION_KEYWORDS = [
-        "def _rsi_reversion_strategy",
-        "OVERBOUGHT = 70",
-        "OVERSOLD = 30",
-        "df['signal'] = 0",
-        "df.loc[df[rsi_col] > OVERBOUGHT, 'signal'] = -1",
-        "df.loc[df[rsi_col] < OVERSOLD, 'signal'] = 1"
+    WORKFLOW_KEYWORDS = [
+        "def run_cycle",
+        "symbol: str",
+        "timeframe: str",
+        "strategy_name: str",
+        "self.market_data.get_candles",
+        "self.indicators.calculate_sma",
+        "self.signal_engine.apply_strategy",
+        "latest_signal",
+        "if latest_signal == 1:",
+        "self.trade_service.buy",
+        "elif latest_signal == -1:",
+        "self.trade_service.sell"
     ]
 
-    check_keywords_in_file("src/strategy/signal_engine.py", RSI_REVERSION_KEYWORDS)
+    check_keywords_in_file("src/bot/trading_bot.py", WORKFLOW_KEYWORDS)
     print()
 
     # ---------------------------------------------------------
-    # 6. 检查信号值约束（1, -1, 0）
+    # 6. 检查返回值结构
     # ---------------------------------------------------------
-    log_info("检查信号值约束...")
+    log_info("检查返回值结构...")
     print()
 
-    SIGNAL_VALUES_KEYWORDS = [
-        "'signal'] = 0",
-        "'signal'] = 1",
-        "'signal'] = -1"
+    RETURN_KEYWORDS = [
+        "'success':",
+        "'step':",
+        "'data_fetched':",
+        "'indicators_calculated':",
+        "'signal_generated':",
+        "'signal_value':",
+        "'trade_executed':",
+        "'trade_result':",
+        "'message':"
     ]
 
-    check_keywords_in_file("src/strategy/signal_engine.py", SIGNAL_VALUES_KEYWORDS)
+    check_keywords_in_file("src/bot/trading_bot.py", RETURN_KEYWORDS)
     print()
 
     # ---------------------------------------------------------
-    # 7. 检查向量化约束（禁止行迭代）
+    # 7. 检查错误处理
     # ---------------------------------------------------------
-    log_info("检查向量化约束（禁止行迭代）...")
+    log_info("检查错误处理...")
     print()
 
-    try:
-        with open("src/strategy/signal_engine.py", 'r', encoding='utf-8') as f:
-            content = f.read()
+    ERROR_HANDLING_KEYWORDS = [
+        "try:",
+        "except Exception as e:",
+        "logger.error",
+        "if df is None",
+        "if not self.mt5_service.is_connected()"
+    ]
 
-        # 检查是否包含 iterrows 或 for 循环（排除注释）
-        lines = content.split('\n')
-        iteration_found = False
-        for line in lines:
-            stripped = line.strip()
-            # 跳过注释行
-            if stripped.startswith('#') or stripped.startswith('"""') or stripped.startswith("'''"):
-                continue
-            # 检查行迭代
-            if 'iterrows' in line or 'for i in' in line or 'for idx in' in line:
-                log_fail(f"发现行迭代: {line.strip()}")
-                iteration_found = True
-                break
-
-        if iteration_found:
-            log_fail("违反向量化约束：发现行迭代")
-            sys.exit(1)
-
-        log_success("向量化约束检查通过（未发现行迭代）")
-
-    except Exception as e:
-        log_fail(f"检查向量化约束失败: {str(e)}")
-        sys.exit(1)
-
+    check_keywords_in_file("src/bot/trading_bot.py", ERROR_HANDLING_KEYWORDS)
     print()
 
     # ---------------------------------------------------------
-    # 8. 检查 verify_signals.py 验证逻辑
+    # 8. 检查 verify_bot_cycle.py 验证逻辑
     # ---------------------------------------------------------
-    log_info("检查 verify_signals.py 验证逻辑...")
+    log_info("检查 verify_bot_cycle.py 验证逻辑...")
     print()
 
     VERIFY_KEYWORDS = [
-        "MarketDataService",
-        "TechnicalIndicators",
-        "SignalEngine",
-        "get_candles",
-        "calculate_sma",
-        "calculate_rsi",
-        "apply_strategy",
-        "strategy_name='ma_crossover'",
-        "strategy_name='rsi_reversion'",
-        "['signal'] != 0",
-        ".tail("
+        "from src.bot.trading_bot import TradingBot",
+        "bot = TradingBot()",
+        "bot.run_cycle",
+        "result['data_fetched']",
+        "result['indicators_calculated']",
+        "result['signal_generated']",
+        "result['success']"
     ]
 
-    check_keywords_in_file("scripts/verify_signals.py", VERIFY_KEYWORDS)
+    check_keywords_in_file("scripts/verify_bot_cycle.py", VERIFY_KEYWORDS)
     print()
 
     # ---------------------------------------------------------
     # 9. 最终审计通过
     # ---------------------------------------------------------
     print("=" * 70)
-    log_success("Task #019 审计通过！")
+    log_success("Task #020 审计通过！")
     print("=" * 70)
     print()
     log_info("已完成的核心功能：")
-    print("  ✅ SignalEngine 类实现")
-    print("  ✅ apply_strategy(df, strategy_name) 方法")
-    print("  ✅ MA Crossover 策略（金叉买入，死叉卖出）")
-    print("  ✅ RSI Reversion 策略（超买卖出，超卖买入）")
-    print("  ✅ 信号值约束（1, -1, 0）")
-    print("  ✅ 严格向量化（无行迭代）")
-    print("  ✅ verify_signals.py 功能验证脚本")
+    print("  ✅ TradingBot 类实现")
+    print("  ✅ run_cycle(symbol, timeframe, strategy_name) 方法")
+    print("  ✅ 依赖注入（5个服务组件）")
+    print("  ✅ 完整工作流：数据 → 指标 → 信号 → 交易")
+    print("  ✅ 信号处理逻辑（1:买入, -1:卖出, 0:持有）")
+    print("  ✅ 错误处理和日志记录")
+    print("  ✅ 结构化返回值（9个字段）")
+    print("  ✅ verify_bot_cycle.py 单周期验证脚本")
     print()
 
     sys.exit(0)  # 返回 0 表示审计通过
