@@ -2,7 +2,7 @@
 # MT5-CRS Bridge Package
 # ========================================
 # 用途: MT5 网关桥接层，管理网络通信和基础设施配置
-# 最后更新: 2025-12-21 (工单 #011 Phase 1)
+# 最后更新: 2025-12-27 (工单 #022 - ZeroMQ Fabric)
 # ========================================
 
 from .config import (
@@ -35,6 +35,24 @@ from .mt5_heartbeat import (
     get_heartbeat_monitor,
 )
 
+# Work Order #022: ZeroMQ High-Performance Fabric
+from .protocol import (
+    Action,
+    ResponseStatus,
+    ZMQ_PORT_CMD,
+    ZMQ_PORT_DATA,
+    GATEWAY_IP_INTERNAL,
+    create_request,
+    create_response,
+    validate_request,
+    validate_response,
+)
+
+from .zmq_client import (
+    ZmqClient,
+    get_zmq_client,
+)
+
 __all__ = [
     "NetworkTopology",
     "ServerAssets",
@@ -52,6 +70,18 @@ __all__ = [
     "HeartbeatEvent",
     "ConnectionStatus",
     "get_heartbeat_monitor",
+    # Work Order #022
+    "Action",
+    "ResponseStatus",
+    "ZMQ_PORT_CMD",
+    "ZMQ_PORT_DATA",
+    "GATEWAY_IP_INTERNAL",
+    "create_request",
+    "create_response",
+    "validate_request",
+    "validate_response",
+    "ZmqClient",
+    "get_zmq_client",
 ]
 
 __version__ = "1.0.0"
