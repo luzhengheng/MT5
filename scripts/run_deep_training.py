@@ -60,8 +60,16 @@ def run_deep_training():
         print("Data fetching complete:")
         for symbol, data in results.items():
             print(f"  {symbol}:")
-            print(f"    Daily:  {len(data['daily'])} rows ({data['daily']['Date'].min()} - {data['daily']['Date'].max()})")
-            print(f"    Hourly: {len(data['hourly'])} rows ({data['hourly']['Date'].min()} - {data['hourly']['Date'].max()})")
+            daily_rows = len(data['daily'])
+            hourly_rows = len(data['hourly'])
+            if daily_rows > 0:
+                print(f"    Daily:  {daily_rows} rows ({data['daily']['Date'].min()} - {data['daily']['Date'].max()})")
+            else:
+                print(f"    Daily:  {daily_rows} rows (no data)")
+            if hourly_rows > 0:
+                print(f"    Hourly: {hourly_rows} rows ({data['hourly']['Date'].min()} - {data['hourly']['Date'].max()})")
+            else:
+                print(f"    Hourly: {hourly_rows} rows (no data)")
 
         print()
 
