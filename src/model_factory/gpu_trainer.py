@@ -147,8 +147,15 @@ class GPUProductionTrainer:
         # Compute all basic features
         df_features = self.feature_engineer.compute_all_basic_features(df_renamed)
 
-        # Drop NaN rows
-        df_features = df_features.dropna()
+        # Drop volume-related columns (NaN for Forex)
+        volume_cols = ['volume', 'volume_sma20', 'volume_ratio']
+        for col in volume_cols:
+            if col in df_features.columns:
+                df_features = df_features.drop(columns=[col])
+
+        # Fill NaN values (forward fill then backward fill to handle missing values)
+        # This handles warmup period for indicators
+        df_features = df_features.ffill().bfill()
 
         logger.info(f"✅ Features computed: {len(df_features)} rows, {len(df_features.columns)} columns")
 
