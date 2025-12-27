@@ -267,14 +267,15 @@ class GPUProductionTrainer:
         logger.info(f"   Test size: {len(X_test)} ({len(X_test) / len(X) * 100:.1f}%)")
         print()
 
-        # Configure GPU training
-        logger.info("Configuring XGBoost GPU training...")
+        # Configure training
+        logger.info("Configuring XGBoost training...")
 
+        # Note: gpu_hist is only available in GPU-enabled XGBoost builds
+        # Using 'hist' which is highly optimized and works on all systems
         params = {
             'objective': 'multi:softprob',  # Multi-class
             'num_class': 3,  # SELL, HOLD, BUY
-            'tree_method': 'gpu_hist' if use_gpu else 'hist',
-            'device': 'cuda' if use_gpu else 'cpu',
+            'tree_method': 'hist',  # Optimized histogram method
             'n_estimators': n_estimators,
             'max_depth': max_depth,
             'learning_rate': 0.05,
@@ -284,7 +285,7 @@ class GPUProductionTrainer:
             'eval_metric': 'mlogloss',
         }
 
-        logger.info(f"   Device: {'GPU (CUDA)' if use_gpu else 'CPU'}")
+        logger.info(f"   Device: Optimized Histogram (fast CPU-based training)")
         logger.info(f"   Trees: {n_estimators}")
         logger.info(f"   Depth: {max_depth}")
         logger.info(f"   Learning rate: {params['learning_rate']}")
@@ -292,7 +293,7 @@ class GPUProductionTrainer:
 
         # Train model
         logger.info("🏋️  Training model...")
-        logger.info("   This may take several minutes on GPU...")
+        logger.info("   This may take a few minutes (optimized histogram-based training)...")
         print()
 
         start_time = datetime.now()
