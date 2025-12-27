@@ -257,12 +257,43 @@ class TradingBot:
         except Exception as e:
             logger.error(f"❌ Account sync error: {e}")
 
-        # Step 2: Strategy signal generation (placeholder)
-        # TODO: Work Order #024 will integrate real strategy
+        # Step 2: Strategy signal generation (Work Order #024)
         if self.strategy:
-            logger.debug("🧠 Strategy analysis (placeholder)...")
-            # signal = self.strategy.analyze(...)
-            # if signal == 'BUY': self.execute_trade('BUY', 0.01)
+            logger.debug("🧠 Running ML strategy analysis...")
+
+            try:
+                # Prepare tick data for strategy
+                # Note: In production, this would come from actual market data
+                # For now, we use the account sync as a placeholder
+                tick_data = {
+                    "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+                    "close": 1.0850,  # Placeholder: should come from market data
+                    "open": 1.0845,
+                    "high": 1.0855,
+                    "low": 1.0840,
+                    "volume": 1000
+                }
+
+                # Get signal from ML strategy
+                signal = self.strategy.predict(tick_data)
+
+                logger.info(f"📊 ML Signal: {signal}")
+
+                # Execute trade based on signal
+                if signal == "BUY":
+                    logger.info("🟢 BUY signal detected - executing trade")
+                    self.execute_trade(action="BUY", volume=0.01)
+                elif signal == "SELL":
+                    logger.info("🔴 SELL signal detected - executing trade")
+                    self.execute_trade(action="SELL", volume=0.01)
+                else:
+                    logger.debug("⏸️  HOLD signal - no action taken")
+
+            except Exception as e:
+                logger.error(f"❌ Strategy analysis error: {e}")
+                import traceback
+                traceback.print_exc()
+
         else:
             logger.debug("🧠 No strategy engine configured")
 
