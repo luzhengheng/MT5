@@ -45,15 +45,22 @@ logger = logging.getLogger(__name__)
 # ============================================================================
 
 class EODHDFetcher:
-    """Fetches historical OHLCV data from EODHD API."""
+    """Fetches historical OHLCV data from EODHD API using correct endpoints."""
 
-    # EODHD API endpoint
-    BASE_URL = "https://eodhd.com/api/eod"
+    # EODHD API endpoints (v2.0 Protocol)
+    # Use /api/intraday/ for hourly/minute data
+    INTRADAY_URL = "https://eodhd.com/api/intraday/"
+    EOD_URL = "https://eodhd.com/api/eod/"
 
-    # Supported symbols (add .FOREX or .CRYPTO as needed)
+    # Supported symbols - FOREX pairs
     FOREX_SYMBOLS = {
         'EURUSD': 'EURUSD.FOREX',
         'XAUUSD': 'XAUUSD.FOREX',
+    }
+
+    # Commodities mapping
+    COMMODITY_SYMBOLS = {
+        'XAUUSD': 'XAUUSD.COMM',  # Gold as commodity
     }
 
     # Data directory
@@ -248,36 +255,68 @@ class EODHDFetcher:
         to_date: str
     ) -> Optional[pd.DataFrame]:
         """
-        Internal API call handler.
+        Internal API call handler using EODHD v2.0 Protocol.
 
         Args:
-            symbol: Full symbol (e.g., 'EURUSD.FOREX')
-            period: 'd', '1h', '5m'
-            from_date: Start date
-            to_date: End date
+            symbol: Full symbol (e.g., 'EURUSD.FOREX', 'XAUUSD.COMM')
+            period: '1h' (hourly), '5m' (5-minute), 'd' (daily)
+            from_date: Start date (YYYY-MM-DD)
+            to_date: End date (YYYY-MM-DD)
 
         Returns:
-            DataFrame or None if API call fails
+            DataFrame with OHLCV data or None if API call fails
         """
-        # EODHD API parameters
-        params = {
-            'api_token': self.api_key,
-            'from': from_date,
-            'to': to_date,
-            'period': period,
-            'fmt': 'json',
-        }
+        # Select endpoint based on period
+        if period in ['1h', '5m', '15m', '30m']:
+            # Use intraday endpoint for hourly and sub-hourly
+            endpoint = self.INTRADAY_URL
+            interval_param = period
+        else:
+            # Use EOD endpoint for daily
+            endpoint = self.EOD_URL
+            interval_param = None
+
+        # Build parameters
+        # NOTE: Intraday endpoint requires Unix timestamps, not date strings
+        if interval_param:
+            # Convert date strings to Unix timestamps for intraday
+            from datetime import timezone
+            from_ts = int(datetime.strptime(from_date, '%Y-%m-%d').replace(tzinfo=timezone.utc).timestamp())
+            to_ts = int(datetime.strptime(to_date, '%Y-%m-%d').replace(tzinfo=timezone.utc).timestamp()) + 86400
+
+            params = {
+                'api_token': self.api_key,
+                'from': from_ts,
+                'to': to_ts,
+                'interval': interval_param,
+                'fmt': 'json',
+            }
+        else:
+            # For daily, use date strings
+            params = {
+                'api_token': self.api_key,
+                'from': from_date,
+                'to': to_date,
+                'period': period,
+                'fmt': 'json',
+            }
+
+        # Build full URL (without query string for logging)
+        url_with_symbol = endpoint + symbol
 
         try:
-            logger.info(f"Making API request to EODHD...")
-            logger.info(f"   URL: {self.BASE_URL}")
+            logger.info(f"Making EODHD API request (v2.0 Protocol)...")
+            logger.info(f"   Endpoint: {endpoint}")
             logger.info(f"   Symbol: {symbol}")
             logger.info(f"   Period: {period}")
-            logger.info(f"   Params: {list(params.keys())}")
+            logger.info(f"   Date range: {from_date} to {to_date}")
+            if interval_param:
+                logger.info(f"   Using Unix timestamps for intraday")
+            logger.info(f"   Full URL (masked): {url_with_symbol}?api_token=****...")
 
             response = requests.get(
-                self.BASE_URL,
-                params={**params, 'symbols': symbol},
+                url_with_symbol,
+                params=params,
                 timeout=30
             )
 
@@ -287,11 +326,13 @@ class EODHDFetcher:
                 logger.error(f"   Status: {response.reason}")
                 logger.error(f"   Content-Type: {response.headers.get('Content-Type', 'unknown')}")
                 logger.error(f"   Response (first 500 chars):\n{response.text[:500]}")
+                logger.error(f"   URL: {url_with_symbol}?api_token=****&from={from_date}&to={to_date}&interval={interval_param}")
 
                 # Don't silently fail - raise exception
                 raise RuntimeError(
                     f"EODHD API returned {response.status_code} {response.reason}\n"
-                    f"URL: {self.BASE_URL}?symbols={symbol}&period={period}&from={from_date}&to={to_date}\n"
+                    f"Endpoint: {endpoint}{symbol}\n"
+                    f"Interval: {interval_param}\n"
                     f"Response: {response.text[:300]}"
                 )
 
@@ -324,8 +365,10 @@ class EODHDFetcher:
             df = pd.DataFrame(rows)
 
             # Rename columns to match expected format
+            # Handle both EOD (date) and Intraday (datetime) formats
             column_mapping = {
                 'date': 'Date',
+                'datetime': 'Date',  # Intraday endpoint uses 'datetime'
                 'open': 'Open',
                 'high': 'High',
                 'low': 'Low',
@@ -338,13 +381,19 @@ class EODHDFetcher:
                 if old_col in df.columns:
                     df = df.rename(columns={old_col: new_col})
 
+            # Remove rows with NaN prices (common in intraday data for gaps)
+            if all(col in df.columns for col in ['Open', 'Close']):
+                df = df.dropna(subset=['Open', 'Close'])
+                logger.info(f"   Removed {len(rows) - len(df)} rows with missing prices")
+
             # Ensure Date is datetime
             if 'Date' in df.columns:
                 df['Date'] = pd.to_datetime(df['Date'])
 
-            # Sort by date
+            # Sort by date and remove duplicates
             if 'Date' in df.columns:
                 df = df.sort_values('Date').reset_index(drop=True)
+                logger.info(f"   Final rows after cleaning: {len(df)}")
 
             logger.info(f"✅ Received {len(df)} rows from API")
             return df
