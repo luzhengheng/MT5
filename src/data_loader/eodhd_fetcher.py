@@ -68,11 +68,15 @@ class EODHDFetcher:
         """
         self.api_key = api_key or os.environ.get("EODHD_API_KEY")
 
-        # Note: API key is optional - will fall back to synthetic data if not available
-        if self.api_key:
-            logger.info(f"EODHD API key loaded: {self.api_key[:10]}...")
-        else:
-            logger.warning("EODHD API key not found - will use synthetic data fallback")
+        if not self.api_key:
+            raise ValueError(
+                "❌ FATAL: EODHD API key not found!\n"
+                "   EODHD data is REQUIRED for production training.\n"
+                "   Export: export EODHD_API_KEY='your_key_here'\n"
+                "   Synthetic data fallback is DISABLED by design."
+            )
+
+        logger.info(f"✅ EODHD API key loaded: {self.api_key[:10]}...")
 
         # Ensure data directory exists
         self.DATA_DIR.mkdir(parents=True, exist_ok=True)
@@ -123,34 +127,28 @@ class EODHDFetcher:
             df['Date'] = pd.to_datetime(df['Date'])
             return df
 
-        # Fetch from API
-        try:
-            if not self.api_key:
-                logger.warning(f"No API key - using synthetic data fallback")
-                return self._get_synthetic_fallback(symbol, period)
+        # Fetch from API (NO FALLBACK - REAL DATA ONLY)
+        logger.info(f"Fetching from EODHD API...")
+        df = self._fetch_from_api(
+            full_symbol,
+            period=period,
+            from_date=from_date,
+            to_date=to_date
+        )
 
-            logger.info(f"Fetching from EODHD API...")
-            df = self._fetch_from_api(
-                full_symbol,
-                period=period,
-                from_date=from_date,
-                to_date=to_date
+        if df is None or df.empty:
+            raise RuntimeError(
+                f"❌ FATAL: No data returned from EODHD API for {symbol}\n"
+                f"   Cannot proceed without REAL data.\n"
+                f"   Check API key, symbol format, and subscription tier."
             )
 
-            if df is None or df.empty:
-                logger.warning(f"No data returned from API - using synthetic fallback")
-                return self._get_synthetic_fallback(symbol, period)
+        # Save to cache
+        logger.info(f"Saving to cache: {cache_file}")
+        df.to_csv(cache_file, index=False)
 
-            # Save to cache
-            logger.info(f"Saving to cache: {cache_file}")
-            df.to_csv(cache_file, index=False)
-
-            logger.info(f"✅ Fetched {len(df)} rows for {symbol} {period}")
-            return df
-
-        except Exception as e:
-            logger.warning(f"API fetch failed ({e}) - using synthetic fallback")
-            return self._get_synthetic_fallback(symbol, period)
+        logger.info(f"✅ Fetched {len(df)} rows for {symbol} {period}")
+        return df
 
     def _get_synthetic_fallback(self, symbol: str, period: str) -> pd.DataFrame:
         """
@@ -272,6 +270,11 @@ class EODHDFetcher:
 
         try:
             logger.info(f"Making API request to EODHD...")
+            logger.info(f"   URL: {self.BASE_URL}")
+            logger.info(f"   Symbol: {symbol}")
+            logger.info(f"   Period: {period}")
+            logger.info(f"   Params: {list(params.keys())}")
+
             response = requests.get(
                 self.BASE_URL,
                 params={**params, 'symbols': symbol},
@@ -279,8 +282,20 @@ class EODHDFetcher:
             )
 
             if response.status_code != 200:
-                logger.error(f"API error {response.status_code}: {response.text[:200]}")
-                return None
+                # PRINT THE ACTUAL ERROR FOR DEBUGGING
+                logger.error(f"❌ API ERROR {response.status_code}")
+                logger.error(f"   Status: {response.reason}")
+                logger.error(f"   Content-Type: {response.headers.get('Content-Type', 'unknown')}")
+                logger.error(f"   Response (first 500 chars):\n{response.text[:500]}")
+
+                # Don't silently fail - raise exception
+                raise RuntimeError(
+                    f"EODHD API returned {response.status_code} {response.reason}\n"
+                    f"URL: {self.BASE_URL}?symbols={symbol}&period={period}&from={from_date}&to={to_date}\n"
+                    f"Response: {response.text[:300]}"
+                )
+
+            logger.info(f"✅ HTTP 200 OK received")
 
             data = response.json()
 
