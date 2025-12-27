@@ -58,6 +58,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.mt5_bridge.zmq_client import ZmqClient
 from src.bot.trading_bot import TradingBot
+from src.strategy.live_adapter import LiveStrategyAdapter
 
 
 # ============================================================================
@@ -140,11 +141,16 @@ def main():
         logger.info("✅ ZmqClient initialized")
         print()
 
-        # Step 3: Initialize TradingBot (The Brain)
+        # Step 3a: Initialize ML Strategy Adapter (Work Order #024)
+        logger.info("Initializing ML Strategy Adapter...")
+        strategy = LiveStrategyAdapter()
+        logger.info("✅ ML Strategy Adapter initialized")
+
+        # Step 3b: Initialize TradingBot (The Brain)
         logger.info("Initializing TradingBot (The Conscious Loop)...")
         bot = TradingBot(
             zmq_client=client,
-            strategy_engine=None,  # Placeholder for Work Order #024
+            strategy_engine=strategy,  # Work Order #024: Real ML strategy
             symbol=config['symbol'],
             interval=config['interval']
         )
