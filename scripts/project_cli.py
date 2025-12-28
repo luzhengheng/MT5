@@ -355,16 +355,18 @@ def show_help():
 
 {CYAN}COMMANDS:{RESET}
 
-  {GREEN}start <task_name>{RESET}
+  {GREEN}start <task_name> [--plan <file>]{RESET}
     Create a new ticket and start development
 
     • Auto-generates next ticket number (e.g., #015)
     • Creates ticket in Notion database
     • Sets status to "未开始" (Not Started)
     • Displays ticket URL for access
+    • Optionally injects implementation plan from file
 
-    Example:
+    Examples:
       python3 scripts/project_cli.py start "Order Placement Service"
+      python3 scripts/project_cli.py start "API Refactor" --plan plan.md
 
   {GREEN}finish{RESET}
     Complete current task and sync everything
@@ -461,10 +463,23 @@ def main():
     elif command == "start":
         if len(sys.argv) < 3:
             log("Error: task_name required", "ERROR")
-            print("Usage: python3 scripts/project_cli.py start <task_name>")
+            print("Usage: python3 scripts/project_cli.py start <task_name> [--plan <file>]")
             sys.exit(1)
 
-        task_name = " ".join(sys.argv[2:])
+        # Parse arguments
+        task_name_parts = []
+        plan_file = None
+
+        i = 2
+        while i < len(sys.argv):
+            if sys.argv[i] == "--plan" and i + 1 < len(sys.argv):
+                plan_file = sys.argv[i + 1]
+                i += 2
+            else:
+                task_name_parts.append(sys.argv[i])
+                i += 1
+
+        task_name = " ".join(task_name_parts)
 
         print()
         print("=" * 80)
@@ -482,8 +497,35 @@ def main():
         if not page_id:
             sys.exit(1)
 
+        # If plan file provided, inject it into the Notion page
+        if plan_file:
+            log(f"Injecting plan from: {plan_file}", "PHASE")
+            try:
+                # Import notion_updater utility
+                sys.path.insert(0, os.path.join(PROJECT_ROOT, "scripts"))
+                from utils.notion_updater import update_page_with_plan
+
+                # Read plan file
+                with open(plan_file, 'r', encoding='utf-8') as f:
+                    plan_content = f.read()
+
+                # Update Notion page
+                if update_page_with_plan(page_id, plan_content, prepend_callout=True):
+                    log("✅ Plan injected successfully!", "SUCCESS")
+                else:
+                    log("⚠️  Failed to inject plan (continuing anyway)", "WARN")
+            except FileNotFoundError:
+                log(f"⚠️  Plan file not found: {plan_file}", "WARN")
+            except Exception as e:
+                log(f"⚠️  Error injecting plan: {str(e)}", "WARN")
+        else:
+            # Warn if no plan provided
+            log("⚠️  Starting task without a spec/plan", "WARN")
+            print(f"{YELLOW}   Consider documenting implementation plan in Notion{RESET}")
+            print(f"{YELLOW}   or run with: --plan <file>{RESET}")
+
         print("=" * 80)
-        log(f"✅ Task #0{ticket_num} is ready to start!", "SUCCESS")
+        log(f"✅ Task #{ticket_num:03d} is ready to start!", "SUCCESS")
         print("=" * 80)
         print()
         print(f"{GREEN}Next steps:{RESET}")
