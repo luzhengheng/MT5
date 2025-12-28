@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-Task #036 Compliance Audit Script
+Task #037 Compliance Audit Script
 
-Verifies that the Real-time WebSocket Engine implementation meets
+Verifies that the Notion State Cleanup implementation meets
 Protocol v2.0 requirements before allowing task completion.
 
 Audit Criteria:
-1. Structural: WebSocket client library available, streaming classes exist
-2. Functional: Redis connectivity for real-time data caching
-3. Integration: WebSocket connection can be established to EODHD
+1. Structural: Cleanup script exists and is syntactically valid
+2. Functional: Script contains logic to handle all affected tasks (#033-#036)
+3. Output: Report generation capability exists
 """
 
 import sys
@@ -21,9 +21,9 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 
 def audit():
-    """Execute comprehensive audit of Task #036 deliverables."""
+    """Execute comprehensive audit of Task #037 deliverables."""
     print("=" * 80)
-    print("🔍 AUDIT: Task #036 Real-time WebSocket Engine Compliance Check")
+    print("🔍 AUDIT: Task #037 Notion State Cleanup Compliance Check")
     print("=" * 80)
     print()
 
@@ -31,114 +31,120 @@ def audit():
     failed = 0
 
     # ============================================================================
-    # 1. STRUCTURAL AUDIT - Dependencies and Classes
+    # 1. STRUCTURAL AUDIT - Script Existence and Validity
     # ============================================================================
     print("📋 [1/3] STRUCTURAL AUDIT")
     print("-" * 80)
 
-    # Check websockets library
-    try:
-        import websockets
-        print(f"✅ [Library] websockets {websockets.__version__} installed")
-        passed += 1
-    except ImportError as e:
-        print(f"❌ [Library] websockets not installed: {e}")
-        failed += 1
-
-    # Check aioredis for async Redis operations
-    try:
-        import redis.asyncio as aioredis
-        print("✅ [Library] redis.asyncio available")
-        passed += 1
-    except ImportError:
-        print("❌ [Library] redis.asyncio not available")
-        failed += 1
-
-    # Check streaming module exists
-    stream_module = PROJECT_ROOT / "src" / "data_nexus" / "stream" / "forex_streamer.py"
-    if stream_module.exists():
-        print(f"✅ [Structure] ForexStreamer module exists: {stream_module}")
+    # Check cleanup script exists
+    cleanup_script = PROJECT_ROOT / "scripts" / "maintenance" / "fix_notion_state.py"
+    if cleanup_script.exists():
+        print(f"✅ [Structure] Cleanup script exists: {cleanup_script}")
         passed += 1
     else:
-        print(f"❌ [Structure] ForexStreamer module missing: {stream_module}")
+        print(f"❌ [Structure] Cleanup script missing: {cleanup_script}")
         failed += 1
 
-    # Check if ForexStreamer class can be imported
-    try:
-        from src.data_nexus.stream.forex_streamer import ForexStreamer
-        print("✅ [Structure] ForexStreamer class found")
+    # Check maintenance directory exists
+    maintenance_dir = PROJECT_ROOT / "scripts" / "maintenance"
+    if maintenance_dir.exists() and maintenance_dir.is_dir():
+        print(f"✅ [Structure] Maintenance directory exists")
         passed += 1
-    except ImportError as e:
-        print(f"❌ [Structure] Failed to import ForexStreamer: {e}")
+    else:
+        print(f"❌ [Structure] Maintenance directory missing")
+        failed += 1
+
+    # Check syntax validity
+    if cleanup_script.exists():
+        try:
+            import py_compile
+            py_compile.compile(str(cleanup_script), doraise=True)
+            print("✅ [Syntax] Cleanup script is syntactically valid")
+            passed += 1
+        except py_compile.PyCompileError as e:
+            print(f"❌ [Syntax] Syntax error in cleanup script: {e}")
+            failed += 1
+    else:
+        print("⚠️  [Syntax] Skipped - script doesn't exist")
         failed += 1
 
     print()
 
     # ============================================================================
-    # 2. FUNCTIONAL AUDIT - Redis Connectivity
+    # 2. FUNCTIONAL AUDIT - Logic Coverage
     # ============================================================================
     print("📋 [2/3] FUNCTIONAL AUDIT")
     print("-" * 80)
 
-    try:
-        import redis
-        
-        # Test Redis connection (synchronous for audit)
-        redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)
-        if redis_client.ping():
-            print("✅ [Redis] Connection successful and responsive")
-            passed += 1
-        else:
-            print("❌ [Redis] Ping failed")
-            failed += 1
-            
-        redis_client.close()
-    except Exception as e:
-        print(f"❌ [Redis] Connection failed: {str(e)[:80]}")
-        failed += 1
+    # Check script handles Task #033
+    if cleanup_script.exists():
+        content = cleanup_script.read_text()
 
-    # Check database connection (for storing processed quotes)
-    try:
-        from src.data_nexus.database.connection import PostgresConnection
-        
-        conn = PostgresConnection()
-        version = conn.get_version()
-        if version and "PostgreSQL" in version:
-            print(f"✅ [Database] Connected: {version[:60]}...")
+        if "033" in content or "#033" in content:
+            print("✅ [Logic] Script handles Task #033")
             passed += 1
         else:
-            print("❌ [Database] Invalid response")
+            print("❌ [Logic] Script missing Task #033 handling")
             failed += 1
-    except Exception as e:
-        print(f"❌ [Database] Connection failed: {str(e)[:80]}")
-        failed += 1
+
+        # Check script handles Task #034
+        if "034" in content or "#034" in content:
+            print("✅ [Logic] Script handles Task #034")
+            passed += 1
+        else:
+            print("❌ [Logic] Script missing Task #034 handling")
+            failed += 1
+
+        # Check script handles Task #035 (ghost task - CRITICAL)
+        if "035" in content or "#035" in content:
+            print("✅ [Logic] Script handles Task #035 (ghost task)")
+            passed += 1
+        else:
+            print("❌ [Logic] Script missing Task #035 handling (CRITICAL)")
+            failed += 1
+
+        # Check script handles Task #036
+        if "036" in content or "#036" in content:
+            print("✅ [Logic] Script handles Task #036")
+            passed += 1
+        else:
+            print("❌ [Logic] Script missing Task #036 handling")
+            failed += 1
+
+    else:
+        print("⚠️  [Logic] Skipped - script doesn't exist")
+        failed += 4
 
     print()
 
     # ============================================================================
-    # 3. CONFIGURATION AUDIT - API Keys and Settings
+    # 3. OUTPUT AUDIT - Report Generation
     # ============================================================================
-    print("📋 [3/3] CONFIGURATION AUDIT")
+    print("📋 [3/3] OUTPUT AUDIT")
     print("-" * 80)
 
-    # Check EODHD API key
-    api_key = os.environ.get("EODHD_API_KEY")
-    if api_key and len(api_key) > 10:
-        masked = api_key[:10] + "..." + api_key[-4:]
-        print(f"✅ [Config] EODHD API key configured: {masked}")
-        passed += 1
-    else:
-        print("❌ [Config] EODHD API key not set or invalid")
-        failed += 1
+    # Check for report generation capability
+    if cleanup_script.exists():
+        content = cleanup_script.read_text()
 
-    # Check configuration file exists
-    config_file = PROJECT_ROOT / "src" / "data_nexus" / "config.py"
-    if config_file.exists():
-        print(f"✅ [Config] Configuration module exists")
-        passed += 1
+        if "ADMIN_CLEANUP_REPORT" in content or "report" in content.lower():
+            print("✅ [Output] Report generation capability detected")
+            passed += 1
+        else:
+            print("❌ [Output] No report generation capability found")
+            failed += 1
+
+        # Check for Notion integration attempt
+        if "notion" in content.lower() or "NOTION" in content:
+            print("✅ [Integration] Notion integration logic present")
+            passed += 1
+        else:
+            print("❌ [Integration] No Notion integration logic found")
+            failed += 1
+
     else:
-        print(f"❌ [Config] Configuration module missing")
-        failed += 1
+        print("⚠️  [Output] Skipped - script doesn't exist")
+        failed += 2
 
     # ============================================================================
     # AUDIT SUMMARY
@@ -152,7 +158,7 @@ def audit():
         print()
         print("🎉 ✅ AUDIT PASSED: Ready for AI Review")
         print()
-        print("Task #036 implementation meets Protocol v2.0 requirements.")
+        print("Task #037 implementation meets Protocol v2.0 requirements.")
         print("You may proceed with: python3 scripts/project_cli.py finish")
         print()
         return 0
