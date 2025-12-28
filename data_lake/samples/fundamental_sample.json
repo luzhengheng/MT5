@@ -1,0 +1,30 @@
+{
+  "General": {
+    "Code": "AAPL",
+    "Name": "Apple Inc.",
+    "Exchange": "NASDAQ",
+    "Currency": "USD",
+    "Sector": "Technology",
+    "Industry": "Computer Hardware",
+    "Website": "https://www.apple.com/",
+    "Description": "Apple Inc. is an American multinational technology company",
+    "CEO": "Tim Cook",
+    "Employees": 161000
+  },
+  "Highlights": {
+    "MarketCapitalization": 3500000000000,
+    "EBITDA": 130000000000,
+    "PE": 35.5,
+    "PEGRatio": 2.1,
+    "PriceToBookRatio": 45.2,
+    "DividendYield": 0.0044,
+    "RevenuePerShare": 96.5,
+    "ProfitMargin": 0.25
+  },
+  "Valuation": {
+    "TrailingPE": 35.5,
+    "ForwardPE": 28.3,
+    "PriceSales": 28.5,
+    "PriceBook": 45.2
+  }
+}

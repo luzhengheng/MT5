@@ -53,3 +53,11 @@ backup_*/
 # 数据文件（可选，根据需要调整）
 # data/
 # var/spool/
+
+# Data Nexus: Real sample data with potential PII
+data_lake/samples/user_profile.json
+data_lake/samples/eod_sample.csv
+data_lake/samples/*.json
+!data_lake/samples/*_mock.json
+!data_lake/samples/*.example
+
