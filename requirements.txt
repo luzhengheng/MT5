@@ -44,7 +44,7 @@ pytest-cov>=4.1.0          # Coverage reporting
 # ============================================================================
 sqlalchemy>=2.0.23         # ORM for TimescaleDB
 psycopg2-binary>=2.9.9    # PostgreSQL adapter
-redis>=5.0.1               # Redis client
+redis>=5.0.1               # Redis client (sync + async support via redis.asyncio)
 # python-dotenv>=1.0.0     # Already listed above
 
 # ============================================================================
@@ -53,6 +53,11 @@ redis>=5.0.1               # Redis client
 aiohttp>=3.9.0             # Async HTTP client
 aiodns>=3.1.0              # Async DNS resolution
 click>=8.1.0               # CLI argument parsing
+
+# ============================================================================
+# Work Order #036: Real-time WebSocket Engine
+# ============================================================================
+websockets>=15.0.0         # Async WebSocket client
 
 # ============================================================================
 # Notion Integration

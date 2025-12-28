@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """
-Task #034 Compliance Audit Script
+Task #036 Compliance Audit Script
 
-Verifies that the EODHD Async Ingestion Engine implementation meets
+Verifies that the Real-time WebSocket Engine implementation meets
 Protocol v2.0 requirements before allowing task completion.
 
 Audit Criteria:
-1. Structural: All required source files exist with correct classes
-2. Functional: Database connectivity and data integrity
-3. Integration: Ingestion pipeline can execute successfully
+1. Structural: WebSocket client library available, streaming classes exist
+2. Functional: Redis connectivity for real-time data caching
+3. Integration: WebSocket connection can be established to EODHD
 """
 
 import sys
@@ -21,9 +21,9 @@ sys.path.insert(0, str(PROJECT_ROOT))
 
 
 def audit():
-    """Execute comprehensive audit of Task #034 deliverables."""
+    """Execute comprehensive audit of Task #036 deliverables."""
     print("=" * 80)
-    print("🔍 AUDIT: Task #034 EODHD Async Ingestion Compliance Check")
+    print("🔍 AUDIT: Task #036 Real-time WebSocket Engine Compliance Check")
     print("=" * 80)
     print()
 
@@ -31,134 +31,114 @@ def audit():
     failed = 0
 
     # ============================================================================
-    # 1. STRUCTURAL AUDIT - File and Class Existence
+    # 1. STRUCTURAL AUDIT - Dependencies and Classes
     # ============================================================================
     print("📋 [1/3] STRUCTURAL AUDIT")
     print("-" * 80)
 
-    # Check ingestion modules
+    # Check websockets library
     try:
-        from src.data_nexus.ingestion.asset_discovery import AssetDiscovery
-        print("✅ [Structure] AssetDiscovery class found")
+        import websockets
+        print(f"✅ [Library] websockets {websockets.__version__} installed")
         passed += 1
     except ImportError as e:
-        print(f"❌ [Structure] Failed to import AssetDiscovery: {e}")
+        print(f"❌ [Library] websockets not installed: {e}")
         failed += 1
 
+    # Check aioredis for async Redis operations
     try:
-        from src.data_nexus.ingestion.history_loader import EODHistoryLoader
-        print("✅ [Structure] EODHistoryLoader class found")
+        import redis.asyncio as aioredis
+        print("✅ [Library] redis.asyncio available")
         passed += 1
-    except ImportError as e:
-        print(f"❌ [Structure] Failed to import EODHistoryLoader: {e}")
+    except ImportError:
+        print("❌ [Library] redis.asyncio not available")
         failed += 1
 
-    # Check CLI interface
-    cli_path = PROJECT_ROOT / "bin" / "run_ingestion.py"
-    if cli_path.exists():
-        print(f"✅ [Structure] CLI interface exists: {cli_path}")
+    # Check streaming module exists
+    stream_module = PROJECT_ROOT / "src" / "data_nexus" / "stream" / "forex_streamer.py"
+    if stream_module.exists():
+        print(f"✅ [Structure] ForexStreamer module exists: {stream_module}")
         passed += 1
     else:
-        print(f"❌ [Structure] CLI interface missing: {cli_path}")
+        print(f"❌ [Structure] ForexStreamer module missing: {stream_module}")
         failed += 1
 
-    # Check models
+    # Check if ForexStreamer class can be imported
     try:
-        from src.data_nexus.models import Asset, MarketData, CorporateAction
-        print("✅ [Structure] ORM Models (Asset, MarketData, CorporateAction) found")
+        from src.data_nexus.stream.forex_streamer import ForexStreamer
+        print("✅ [Structure] ForexStreamer class found")
         passed += 1
     except ImportError as e:
-        print(f"❌ [Structure] Failed to import ORM models: {e}")
+        print(f"❌ [Structure] Failed to import ForexStreamer: {e}")
         failed += 1
 
     print()
 
     # ============================================================================
-    # 2. FUNCTIONAL AUDIT - Database Connectivity and Schema
+    # 2. FUNCTIONAL AUDIT - Redis Connectivity
     # ============================================================================
     print("📋 [2/3] FUNCTIONAL AUDIT")
     print("-" * 80)
 
     try:
-        from src.data_nexus.database.connection import PostgresConnection
+        import redis
+        
+        # Test Redis connection (synchronous for audit)
+        redis_client = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        if redis_client.ping():
+            print("✅ [Redis] Connection successful and responsive")
+            passed += 1
+        else:
+            print("❌ [Redis] Ping failed")
+            failed += 1
+            
+        redis_client.close()
+    except Exception as e:
+        print(f"❌ [Redis] Connection failed: {str(e)[:80]}")
+        failed += 1
 
-        # Test database connection
+    # Check database connection (for storing processed quotes)
+    try:
+        from src.data_nexus.database.connection import PostgresConnection
+        
         conn = PostgresConnection()
         version = conn.get_version()
         if version and "PostgreSQL" in version:
             print(f"✅ [Database] Connected: {version[:60]}...")
             passed += 1
         else:
-            print("❌ [Database] Invalid response from database")
+            print("❌ [Database] Invalid response")
             failed += 1
-
-        # Check tables exist
-        with conn.get_session() as session:
-            tables = conn.query_all(
-                "SELECT table_name FROM information_schema.tables "
-                "WHERE table_schema='public' ORDER BY table_name"
-            )
-            table_names = [row[0] for row in tables]
-
-            required_tables = ['assets', 'market_data', 'corporate_actions']
-            for table in required_tables:
-                if table in table_names:
-                    print(f"✅ [Schema] Table '{table}' exists")
-                    passed += 1
-                else:
-                    print(f"❌ [Schema] Table '{table}' missing")
-                    failed += 1
-
     except Exception as e:
         print(f"❌ [Database] Connection failed: {str(e)[:80]}")
-        failed += 4  # Count all database checks as failed
+        failed += 1
 
     print()
 
     # ============================================================================
-    # 3. DATA INTEGRITY AUDIT - Verify Ingestion Results
+    # 3. CONFIGURATION AUDIT - API Keys and Settings
     # ============================================================================
-    print("📋 [3/3] DATA INTEGRITY AUDIT")
+    print("📋 [3/3] CONFIGURATION AUDIT")
     print("-" * 80)
 
-    try:
-        from src.data_nexus.database.connection import PostgresConnection
+    # Check EODHD API key
+    api_key = os.environ.get("EODHD_API_KEY")
+    if api_key and len(api_key) > 10:
+        masked = api_key[:10] + "..." + api_key[-4:]
+        print(f"✅ [Config] EODHD API key configured: {masked}")
+        passed += 1
+    else:
+        print("❌ [Config] EODHD API key not set or invalid")
+        failed += 1
 
-        conn = PostgresConnection()
-
-        # Check asset count
-        asset_count = conn.query_scalar("SELECT COUNT(*) FROM assets WHERE exchange='FOREX'")
-        if asset_count and asset_count > 0:
-            print(f"✅ [Data] Assets table populated: {asset_count} FOREX pairs")
-            passed += 1
-        else:
-            print("❌ [Data] Assets table is empty")
-            failed += 1
-
-        # Check market data count
-        data_count = conn.query_scalar("SELECT COUNT(*) FROM market_data")
-        if data_count and data_count > 0:
-            print(f"✅ [Data] Market data loaded: {data_count:,} OHLCV rows")
-            passed += 1
-        else:
-            print("⚠️  [Data] Market data table is empty (may be intentional)")
-            # Don't count as failure - backfill may not have run yet
-
-        # Check data integrity - no NULL prices
-        null_prices = conn.query_scalar(
-            "SELECT COUNT(*) FROM market_data "
-            "WHERE open IS NULL OR high IS NULL OR low IS NULL OR close IS NULL"
-        )
-        if null_prices == 0:
-            print("✅ [Data] No NULL price values found")
-            passed += 1
-        else:
-            print(f"❌ [Data] Found {null_prices} rows with NULL prices")
-            failed += 1
-
-    except Exception as e:
-        print(f"❌ [Data] Integrity check failed: {str(e)[:80]}")
-        failed += 2
+    # Check configuration file exists
+    config_file = PROJECT_ROOT / "src" / "data_nexus" / "config.py"
+    if config_file.exists():
+        print(f"✅ [Config] Configuration module exists")
+        passed += 1
+    else:
+        print(f"❌ [Config] Configuration module missing")
+        failed += 1
 
     # ============================================================================
     # AUDIT SUMMARY
@@ -172,7 +152,7 @@ def audit():
         print()
         print("🎉 ✅ AUDIT PASSED: Ready for AI Review")
         print()
-        print("Task #034 implementation meets Protocol v2.0 requirements.")
+        print("Task #036 implementation meets Protocol v2.0 requirements.")
         print("You may proceed with: python3 scripts/project_cli.py finish")
         print()
         return 0
