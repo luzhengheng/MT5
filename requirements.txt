@@ -48,6 +48,13 @@ redis>=5.0.1               # Redis client
 # python-dotenv>=1.0.0     # Already listed above
 
 # ============================================================================
+# Work Order #034: Async EODHD Ingestion Engine
+# ============================================================================
+aiohttp>=3.9.0             # Async HTTP client
+aiodns>=3.1.0              # Async DNS resolution
+click>=8.1.0               # CLI argument parsing
+
+# ============================================================================
 # Notion Integration
 # ============================================================================
 notion-client>=2.0.0       # Notion API client

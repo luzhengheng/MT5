@@ -17,9 +17,12 @@ Usage:
             print(row)
 """
 
+from contextlib import contextmanager
 from typing import Any, Optional
+
 from sqlalchemy import create_engine, text
 from sqlalchemy.engine import Engine
+from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import QueuePool
 
 from ..config import DatabaseConfig
@@ -66,6 +69,9 @@ class PostgresConnection:
             pool_pre_ping=True,  # Verify connections before using
             echo=echo,
         )
+
+        # Create sessionmaker for ORM operations
+        self.SessionLocal = sessionmaker(bind=self.engine, expire_on_commit=False)
 
     def query_scalar(self, sql: str) -> Any:
         """
@@ -138,6 +144,24 @@ class PostgresConnection:
             return True
         except Exception:
             return False
+
+    @contextmanager
+    def get_session(self):
+        """
+        Get a SQLAlchemy session as a context manager.
+
+        Usage:
+            with PostgresConnection().get_session() as session:
+                assets = session.query(Asset).all()
+
+        Yields:
+            SQLAlchemy session
+        """
+        session = self.SessionLocal()
+        try:
+            yield session
+        finally:
+            session.close()
 
     def get_version(self) -> str:
         """
