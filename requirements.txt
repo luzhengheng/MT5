@@ -40,6 +40,14 @@ pytest>=7.4.0              # Testing framework
 pytest-cov>=4.1.0          # Coverage reporting
 
 # ============================================================================
+# Work Order #032: Data Nexus Infrastructure
+# ============================================================================
+sqlalchemy>=2.0.23         # ORM for TimescaleDB
+psycopg2-binary>=2.9.9    # PostgreSQL adapter
+redis>=5.0.1               # Redis client
+# python-dotenv>=1.0.0     # Already listed above
+
+# ============================================================================
 # Notion Integration
 # ============================================================================
 notion-client>=2.0.0       # Notion API client

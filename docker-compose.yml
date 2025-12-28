@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  # TimescaleDB: Time-series optimized PostgreSQL for persistent storage
+  timescaledb:
+    image: timescale/timescaledb:latest-pg14
+    container_name: mt5-crs-timescaledb
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER:-trader}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB:-mt5_crs}
+    volumes:
+      - ./data/timescaledb:/var/lib/postgresql/data
+    networks:
+      - mt5-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-trader}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis: In-memory cache for real-time data
+  redis:
+    image: redis:7-alpine
+    container_name: mt5-crs-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - ./data/redis:/data
+    networks:
+      - mt5-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+networks:
+  mt5-network:
+    driver: bridge
+    name: mt5-network
+
+volumes:
+  timescaledb-data:
+  redis-data:
