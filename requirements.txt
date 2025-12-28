@@ -34,6 +34,8 @@ cloudpickle>=2.2.0         # Enhanced pickling
 
 # Feature Engineering
 statsmodels>=0.14.0        # Statistical models
+# Note: Technical indicators (RSI, MACD, Bollinger) implemented using pandas/numpy
+# pandas_ta requires Python 3.12+ (unavailable on Python 3.9)
 
 # Testing & Quality
 pytest>=7.4.0              # Testing framework
