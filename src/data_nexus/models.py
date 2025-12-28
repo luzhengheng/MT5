@@ -61,9 +61,10 @@ class Asset(Base):
         nullable=False,
     )
 
-    # Relationships
-    market_data = relationship("MarketData", back_populates="asset")
-    corporate_actions = relationship("CorporateAction", back_populates="asset")
+    # Relationships (without FK constraints for performance - denormalized design)
+    # Note: These are query conveniences only, no database-level FK constraints
+    market_data = relationship("MarketData", foreign_keys="[MarketData.symbol]", primaryjoin="Asset.symbol==MarketData.symbol", back_populates="asset")
+    corporate_actions = relationship("CorporateAction", foreign_keys="[CorporateAction.symbol]", primaryjoin="Asset.symbol==CorporateAction.symbol", back_populates="asset")
 
     def __repr__(self) -> str:
         return f"<Asset(symbol={self.symbol}, exchange={self.exchange}, is_active={self.is_active})>"
@@ -115,6 +116,7 @@ class MarketData(Base):
 
     # Relationship to asset (for query convenience)
     # Note: No FK constraint for performance; denormalized design
+    asset = relationship("Asset", foreign_keys=[symbol], primaryjoin="Asset.symbol==MarketData.symbol", back_populates="market_data")
 
     def __repr__(self) -> str:
         return f"<MarketData(symbol={self.symbol}, time={self.time}, close={self.close})>"
@@ -148,8 +150,8 @@ class CorporateAction(Base):
         Index("idx_corp_actions_symbol_date", "symbol", "date"),
     )
 
-    # Foreign key to asset
-    asset = relationship("Asset", back_populates="corporate_actions", foreign_keys=[symbol])
+    # Relationship to asset (for query convenience)
+    asset = relationship("Asset", foreign_keys=[symbol], primaryjoin="Asset.symbol==CorporateAction.symbol", back_populates="corporate_actions")
 
     def __repr__(self) -> str:
         return f"<CorporateAction(symbol={self.symbol}, date={self.date}, type={self.action_type}, value={self.value})>"
