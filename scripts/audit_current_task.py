@@ -470,13 +470,50 @@ class TestTask027RealDataValidation(unittest.TestCase):
 
 
 # ============================================================================
+# Task #029 Audit Suite - Precision Notion State Sync
+# ============================================================================
+
+class TestTask029NotionSync(unittest.TestCase):
+    """
+    Comprehensive audit for Task #029 (Precision Notion State Sync).
+    Validates sync and verification scripts existence.
+    """
+
+    def test_sync_script_exists(self):
+        """Verify precision sync script exists."""
+        print("\n[Task #029 - Test 1/2] Checking sync script...")
+
+        sync_script = PROJECT_ROOT / "scripts" / "ops_sync_completed_tickets.py"
+        self.assertTrue(sync_script.exists(), "ops_sync_completed_tickets.py must exist")
+        print(f"  ✅ {sync_script.name} exists")
+
+        # Check if executable
+        import os
+        self.assertTrue(os.access(sync_script, os.X_OK), "Script must be executable")
+        print(f"  ✅ Script is executable")
+
+    def test_verification_script_exists(self):
+        """Verify boundary verification script exists."""
+        print("\n[Task #029 - Test 2/2] Checking verification script...")
+
+        verify_script = PROJECT_ROOT / "scripts" / "verify_sync_boundary.py"
+        self.assertTrue(verify_script.exists(), "verify_sync_boundary.py must exist")
+        print(f"  ✅ {verify_script.name} exists")
+
+        # Check if executable
+        import os
+        self.assertTrue(os.access(verify_script, os.X_OK), "Script must be executable")
+        print(f"  ✅ Script is executable")
+
+
+# ============================================================================
 # Main Audit Execution
 # ============================================================================
 
 def main():
-    """Run the comprehensive audit suite for Tasks #025, #026, #026.9, and #027."""
+    """Run the comprehensive audit suite for Tasks #025, #026, #026.9, #027, and #029."""
     print("=" * 70)
-    print("🛡️  AUDIT: Work Order #025, #026, #026.9 & #027 - ML Training Pipeline")
+    print("🛡️  AUDIT: Work Orders #025-#029 - ML Training & Notion Sync")
     print("=" * 70)
     print()
 
@@ -508,12 +545,20 @@ def main():
     suite_027 = unittest.makeSuite(TestTask027RealDataValidation)
     result_027 = runner.run(suite_027)
 
+    # Run Task #029 tests
+    print()
+    print("Running Task #029 (Notion State Sync) Audit...")
+    print("-" * 70)
+    suite_029 = unittest.makeSuite(TestTask029NotionSync)
+    result_029 = runner.run(suite_029)
+
     # Summary
     print()
     print("=" * 70)
 
     all_passed = (result_025.wasSuccessful() and result_026.wasSuccessful() and
-                  result_026_9.wasSuccessful() and result_027.wasSuccessful())
+                  result_026_9.wasSuccessful() and result_027.wasSuccessful() and
+                  result_029.wasSuccessful())
 
     if all_passed:
         print("✅ AUDIT PASSED - All checks successful")
@@ -545,6 +590,11 @@ def main():
         print("  ✅ Real data fetch capability verified")
         print("  ✅ No synthetic fallback (real-data-only mode)")
         print()
+        print("Task #029 (Notion State Sync):")
+        print("  ✅ Precision sync script (ops_sync_completed_tickets.py)")
+        print("  ✅ Boundary verification script (verify_sync_boundary.py)")
+        print("  ✅ Both scripts executable")
+        print()
         print("Next Steps:")
         print("  1. → Execute H1 deep training: python3 scripts/run_deep_training_h1.py")
         print("  2. → Deploy models: python3 scripts/deploy_baseline.py")
@@ -564,6 +614,8 @@ def main():
             print(f"Task #026.9 failures: {len(result_026_9.failures)}, errors: {len(result_026_9.errors)}")
         if not result_027.wasSuccessful():
             print(f"Task #027 failures: {len(result_027.failures)}, errors: {len(result_027.errors)}")
+        if not result_029.wasSuccessful():
+            print(f"Task #029 failures: {len(result_029.failures)}, errors: {len(result_029.errors)}")
         print()
         print("Note: Some components may not exist yet, which is expected.")
         print("Run implementation scripts to create missing components:")
