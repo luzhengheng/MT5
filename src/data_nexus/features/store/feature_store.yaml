@@ -1,23 +1,18 @@
-# Feast Feature Store Configuration
-# Task #041: Feast Feature Store Infrastructure
-#
-# This configuration unifies offline (PostgreSQL) and online (Redis) feature paths
-# Environment variables are substituted at runtime
-
-project: "mt5_crs_features"
-registry: "registry.db"
-provider: "local"
+project: mt5_crs_features
+registry: registry.db
+provider: local
 
 offline_store:
-  type: "postgres"
-  host: "${POSTGRES_HOST:localhost}"
-  port: "${POSTGRES_PORT:5432}"
-  database: "${POSTGRES_DB:mt5_crs}"
-  user: "${POSTGRES_USER}"
-  password: "${POSTGRES_PASSWORD}"
+  type: postgres
+  host: ${POSTGRES_HOST}
+  port: ${POSTGRES_PORT}
+  user: ${POSTGRES_USER}
+  password: ${POSTGRES_PASSWORD}
+  database: ${POSTGRES_DB}
 
 online_store:
-  type: "redis"
-  connection_string: "redis://${REDIS_HOST:localhost}:${REDIS_PORT:6379}"
+  type: redis
+  host: ${REDIS_HOST:localhost}
+  port: ${REDIS_PORT:6379}
 
 entity_key_serialization_version: 2
