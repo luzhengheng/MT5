@@ -1,18 +1,20 @@
+# Feast Feature Store Configuration
+# Task #042: Feature Store Implementation
+# Feast Version: 0.10.2 (latest available)
+# Date: 2025-12-29
+
 project: mt5_crs_features
 registry: registry.db
 provider: local
 
-offline_store:
-  type: postgres
-  host: ${POSTGRES_HOST}
-  port: ${POSTGRES_PORT}
-  user: ${POSTGRES_USER}
-  password: ${POSTGRES_PASSWORD}
-  database: ${POSTGRES_DB}
-
+# Online Store Configuration
+# Feast 0.10.2 supports: SQLite (recommended for dev) or Datastore (for GCP)
+# Redis/PostgreSQL not supported in 0.10.2 - would require newer Feast version
 online_store:
-  type: redis
-  host: ${REDIS_HOST:localhost}
-  port: ${REDIS_PORT:6379}
+  type: sqlite
+  path: data/online.db
 
-entity_key_serialization_version: 2
+# Note on Offline Store:
+# Feast 0.10.2 doesn't persist offline store configuration in YAML.
+# Offline store is typically accessed directly by FeatureViews via their data sources.
+# For PostgreSQL data access, use FileSource (Parquet/CSV exports) or BigQuerySource.
