@@ -106,15 +106,21 @@ def main():
     # Mask password for display
     display_url = db_url
     if "password" in db_url.lower():
-        parts = db_url.split(":")
-        if len(parts) >= 3:
-            # Replace password with masked version
-            display_url = db_url.replace(
-                db_url.split("@")[0].split(":")[-1],
-                "***"
-            )
+        # Mask the password part
+        try:
+            parts = db_url.split("://")
+            if len(parts) == 2:
+                protocol = parts[0]
+                rest = parts[1]
+                # Split on @
+                if "@" in rest:
+                    creds, host = rest.split("@", 1)
+                    user = creds.split(":")[0]
+                    display_url = f"{protocol}://{user}:***@{host}"
+        except:
+            display_url = db_url
 
-    print(f"🔌 Database: {db_url}")
+    print(f"🔌 Database: {display_url}")
     print()
 
     # Step 3: Test connection
@@ -166,7 +172,7 @@ def main():
     # Final status
     print("=" * 80)
     print()
-    print("✅ System Healthy")
+    print("✅ Environment Reset Complete & Healthy")
     print()
     print("=" * 80)
     print()
