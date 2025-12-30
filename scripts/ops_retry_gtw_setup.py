@@ -155,47 +155,77 @@ def deploy_key_to_gtw(public_key):
         )
         check_status(f"SSH connection to GTW", True, f"{user}@{hostname}")
 
+        # Open SFTP session for file uploads
+        print(f"\n  Opening SFTP session...")
+        sftp = client.open_sftp()
+        check_status(f"SFTP session opened", True, "")
+
         # Deploy to BOTH paths for compatibility
         print(f"\n  Deploying public key to user directory: {ssh_dir}...")
 
         # Path A: User .ssh directory (C:\Users\Administrator\.ssh\authorized_keys)
+        # Step 1: Create directory
         mkdir_user = f'if not exist "{ssh_dir}" mkdir "{ssh_dir}"'
-        append_user = f'echo {public_key} >> "{ssh_dir}\\authorized_keys"'
+        stdin, stdout, stderr = client.exec_command(mkdir_user)
+        stdout.channel.recv_exit_status()
+
+        # Step 2: Upload key via SFTP (UTF-8 encoding guaranteed)
+        user_authkeys_path = f"{ssh_dir}\\authorized_keys"
+        user_authkeys_posix = user_authkeys_path.replace('\\', '/')  # SFTP uses forward slashes
+
+        try:
+            with sftp.file(user_authkeys_posix, 'w') as f:
+                f.write(public_key + '\n')  # Ensure newline at end
+            check_status(f"Key uploaded via SFTP (user)", True, user_authkeys_posix)
+        except Exception as e:
+            check_status(f"Key upload via SFTP (user)", False, "", str(e))
+
+        # Step 3: Fix permissions with icacls
         icacls_user_dir = f'icacls "{ssh_dir}" /inheritance:r /grant "Administrators:(F)" /grant "SYSTEM:(F)"'
         icacls_user_file = f'icacls "{ssh_dir}\\authorized_keys" /inheritance:r /grant "Administrators:(F)" /grant "SYSTEM:(F)"'
+        icacls_user_cmd = f'{icacls_user_dir} && {icacls_user_file}'
 
-        user_cmd = f'{mkdir_user} && {append_user} && {icacls_user_dir} && {icacls_user_file}'
-
-        # Execute user directory deployment
-        stdin, stdout, stderr = client.exec_command(user_cmd)
+        stdin, stdout, stderr = client.exec_command(icacls_user_cmd)
         stdout.channel.recv_exit_status()
         error_output = safe_decode(stderr.read()).strip()
 
-        if error_output and "already exists" not in error_output and "successfully processed" not in error_output.lower():
+        if error_output and "successfully processed" not in error_output.lower():
             print(f"     Warning (user path): {error_output[:200]}")
 
-        check_status(f"Key deployed to user .ssh", True, f"{ssh_dir}\\authorized_keys")
+        check_status(f"Permissions fixed (user)", True, f"{ssh_dir}\\authorized_keys")
 
         # Path B: ProgramData (C:\ProgramData\ssh\administrators_authorized_keys)
         # This is the standard path for Administrator users in Win32-OpenSSH
         print(f"\n  Deploying public key to ProgramData: {programdata_authkeys}...")
 
+        # Step 1: Create directory
         mkdir_programdata = f'if not exist "{programdata_ssh_dir}" mkdir "{programdata_ssh_dir}"'
-        append_programdata = f'echo {public_key} >> "{programdata_authkeys}"'
+        stdin, stdout, stderr = client.exec_command(mkdir_programdata)
+        stdout.channel.recv_exit_status()
+
+        # Step 2: Upload key via SFTP (UTF-8 encoding guaranteed)
+        programdata_authkeys_posix = programdata_authkeys.replace('\\', '/')  # SFTP uses forward slashes
+
+        try:
+            with sftp.file(programdata_authkeys_posix, 'w') as f:
+                f.write(public_key + '\n')  # Ensure newline at end
+            check_status(f"Key uploaded via SFTP (ProgramData)", True, programdata_authkeys_posix)
+        except Exception as e:
+            check_status(f"Key upload via SFTP (ProgramData)", False, "", str(e))
+
+        # Step 3: Fix permissions with icacls
         icacls_programdata_dir = f'icacls "{programdata_ssh_dir}" /inheritance:r /grant "Administrators:(F)" /grant "SYSTEM:(F)"'
         icacls_programdata_file = f'icacls "{programdata_authkeys}" /inheritance:r /grant "Administrators:(F)" /grant "SYSTEM:(F)"'
+        icacls_programdata_cmd = f'{icacls_programdata_dir} && {icacls_programdata_file}'
 
-        programdata_cmd = f'{mkdir_programdata} && {append_programdata} && {icacls_programdata_dir} && {icacls_programdata_file}'
-
-        # Execute ProgramData deployment
-        stdin, stdout, stderr = client.exec_command(programdata_cmd)
+        stdin, stdout, stderr = client.exec_command(icacls_programdata_cmd)
         stdout.channel.recv_exit_status()
         error_output = safe_decode(stderr.read()).strip()
 
-        if error_output and "already exists" not in error_output and "successfully processed" not in error_output.lower():
+        if error_output and "successfully processed" not in error_output.lower():
             print(f"     Warning (ProgramData): {error_output[:200]}")
 
-        check_status(f"Key deployed to ProgramData", True, f"{programdata_authkeys}")
+        check_status(f"Permissions fixed (ProgramData)", True, f"{programdata_authkeys}")
 
         # Verify both deployments
         print(f"\n  Verifying key deployment...")
@@ -236,15 +266,18 @@ def deploy_key_to_gtw(public_key):
         if programdata_deployed:
             print(f"\n  {GREEN}✅ GTW Key Installed (ProgramData path - recommended){RESET}")
             print(f"  {GREEN}✅ Permissions fixed - inheritance removed{RESET}")
+            sftp.close()
             client.close()
             return True
         elif user_deployed:
             print(f"\n  {GREEN}✅ GTW Key Installed (User path){RESET}")
             print(f"  {YELLOW}⚠️  ProgramData deployment failed - may need manual fix{RESET}")
+            sftp.close()
             client.close()
             return True
         else:
             check_status(f"Key verification on GTW", False, "", "Key not found in any authorized_keys")
+            sftp.close()
             client.close()
             return False
 
