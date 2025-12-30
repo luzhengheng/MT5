@@ -32,6 +32,35 @@ HOME = Path.home()
 SSH_DIR = HOME / ".ssh"
 PUBLIC_KEY_PATH = SSH_DIR / "id_rsa.pub"
 
+
+def safe_decode(bytes_obj):
+    """
+    Safely decode bytes to string using multiple encoding fallbacks.
+
+    Windows systems may use GBK (Chinese), CP936, CP1252, or other encodings
+    instead of UTF-8. This function tries common encodings in order.
+
+    Args:
+        bytes_obj: Bytes object to decode (e.g., from stdout.read())
+
+    Returns:
+        Decoded string, or empty string if bytes_obj is None/empty
+    """
+    if not bytes_obj:
+        return ""
+
+    # Try encodings in order of likelihood
+    encodings = ['utf-8', 'gbk', 'cp936', 'cp1252', 'latin-1']
+
+    for encoding in encodings:
+        try:
+            return bytes_obj.decode(encoding)
+        except (UnicodeDecodeError, LookupError):
+            continue
+
+    # Final fallback: decode with errors ignored
+    return bytes_obj.decode('utf-8', errors='ignore')
+
 # GTW Configuration
 GTW_CONFIG = {
     "hostname": "172.19.141.255",
@@ -140,7 +169,7 @@ def deploy_key_to_gtw(public_key):
         # Execute user directory deployment
         stdin, stdout, stderr = client.exec_command(user_cmd)
         stdout.channel.recv_exit_status()
-        error_output = stderr.read().decode().strip()
+        error_output = safe_decode(stderr.read()).strip()
 
         if error_output and "already exists" not in error_output and "successfully processed" not in error_output.lower():
             print(f"     Warning (user path): {error_output[:200]}")
@@ -161,7 +190,7 @@ def deploy_key_to_gtw(public_key):
         # Execute ProgramData deployment
         stdin, stdout, stderr = client.exec_command(programdata_cmd)
         stdout.channel.recv_exit_status()
-        error_output = stderr.read().decode().strip()
+        error_output = safe_decode(stderr.read()).strip()
 
         if error_output and "already exists" not in error_output and "successfully processed" not in error_output.lower():
             print(f"     Warning (ProgramData): {error_output[:200]}")
@@ -174,13 +203,13 @@ def deploy_key_to_gtw(public_key):
         # Verify user path
         verify_user_cmd = f'type "{ssh_dir}\\authorized_keys"'
         stdin, stdout, stderr = client.exec_command(verify_user_cmd)
-        verify_user_output = stdout.read().decode().strip()
+        verify_user_output = safe_decode(stdout.read()).strip()
         user_deployed = public_key[:20] in verify_user_output
 
         # Verify ProgramData path
         verify_programdata_cmd = f'type "{programdata_authkeys}"'
         stdin, stdout, stderr = client.exec_command(verify_programdata_cmd)
-        verify_programdata_output = stdout.read().decode().strip()
+        verify_programdata_output = safe_decode(stdout.read()).strip()
         programdata_deployed = public_key[:20] in verify_programdata_output
 
         # Check results
@@ -191,11 +220,11 @@ def deploy_key_to_gtw(public_key):
         print(f"\n  Verifying permissions...")
         verify_perms_user = f'icacls "{ssh_dir}\\authorized_keys"'
         stdin, stdout, stderr = client.exec_command(verify_perms_user)
-        perms_user = stdout.read().decode().strip()
+        perms_user = safe_decode(stdout.read()).strip()
 
         verify_perms_programdata = f'icacls "{programdata_authkeys}"'
         stdin, stdout, stderr = client.exec_command(verify_perms_programdata)
-        perms_programdata = stdout.read().decode().strip()
+        perms_programdata = safe_decode(stdout.read()).strip()
 
         # Check for strict permissions (no inheritance, only Administrators/SYSTEM)
         user_secure = "BUILTIN\\Administrators:(F)" in perms_user or "Administrators:(F)" in perms_user
