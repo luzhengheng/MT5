@@ -1,14 +1,44 @@
-# Feast Feature Store Configuration (Feast 0.10.2)
-# Task #042: MT5-CRS Feature Store Implementation
-# Note: Feast 0.10.2 supports limited backends (Sqlite, Datastore)
+# Feast Feature Store Configuration (Feast 0.49.0)
+# Task #042.8: Redis Integration - Production Architecture
+#
+# Architecture:
+# - Offline Store: PostgreSQL TimescaleDB (historical data warehouse)
+# - Online Store: Redis (real-time feature serving, <10ms latency)
+# - Registry: Local SQLite registry
+#
+# Data Flow: PostgreSQL → Feast Materialize → Redis → ML Inference
 
 project: mt5_crs_features
 registry: registry.db
 provider: local
 
-# Online Store: Sqlite (Local Development)
-# Note: Feast 0.10.2 doesn't support Redis natively
-# Using Sqlite as the online store for local development
+# ============================================================================
+# OFFLINE STORE: PostgreSQL TimescaleDB (Cold Path)
+# Purpose: Historical market data (340k+ rows), long-term storage
+# ============================================================================
+offline_store:
+  type: postgres
+  host: ${POSTGRES_HOST}
+  port: ${POSTGRES_PORT}
+  database: ${POSTGRES_DB}
+  user: ${POSTGRES_USER}
+  password: ${POSTGRES_PASSWORD}
+  schema: public
+
+# ============================================================================
+# ONLINE STORE: Redis (Hot Path)
+# Purpose: Real-time feature serving (<10ms retrieval latency)
+# Configuration: Docker container (redis:7-alpine)
+# ============================================================================
 online_store:
-  type: sqlite
-  path: online_store.db
+  type: redis
+  connection_string: redis://${REDIS_HOST}:${REDIS_PORT}
+
+# ============================================================================
+# ENTITY & FEATURE REGISTRY
+# ============================================================================
+# Entities defined in: definitions.py
+# Features defined in: definitions.py
+#
+# Entity: ticker (stock/forex symbol)
+# Feature View: daily_ohlcv_stats (OHLC values from market_data table)
