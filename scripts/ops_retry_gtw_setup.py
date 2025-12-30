@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""
+r"""
 Task #011.19: Retry GTW SSH Key Deployment
 Purpose: Deploy SSH key to Gateway (GTW) Windows node after OpenSSH is enabled
 Protocol: v2.2 (Docs-as-Code)
