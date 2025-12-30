@@ -165,34 +165,46 @@ def create_notion_ticket(ticket_num, task_name):
         return None
 
 def run_code_review():
-    """Execute gemini_review_bridge.py"""
-    log("Running code review (gemini_review_bridge.py)...", "PHASE")
+    """Execute gemini_review_bridge.py with visible output"""
+    print("=" * 80)
+    log("Running External AI Review (gemini_review_bridge.py)...", "PHASE")
+    print("=" * 80)
+    print()
 
     try:
+        # Run with output visible to user (no capture)
         result = subprocess.run(
             ["python3", os.path.join(PROJECT_ROOT, "gemini_review_bridge.py")],
             cwd=PROJECT_ROOT,
-            capture_output=True,
-            text=True,
             timeout=120
         )
 
+        print()
+        print("=" * 80)
         if result.returncode == 0:
-            log("✅ Code review passed!", "SUCCESS")
+            log("✅ AI REVIEW PASSED - Task can proceed!", "SUCCESS")
+            print("=" * 80)
+            print()
             return True
         else:
-            log("❌ Code review failed!", "ERROR")
-            if result.stdout:
-                print(f"STDOUT:\n{result.stdout[-500:]}")
-            if result.stderr:
-                print(f"STDERR:\n{result.stderr[-500:]}")
+            log("❌ AI REVIEW FAILED - Fix issues before proceeding!", "ERROR")
+            print("=" * 80)
+            print()
+            log("The AI review must pass before the task can be completed.", "ERROR")
+            log("Fix the identified issues and run 'finish' again.", "ERROR")
             return False
 
     except subprocess.TimeoutExpired:
-        log("Code review timeout (>120s)", "ERROR")
+        print()
+        print("=" * 80)
+        log("⏱️  AI review timeout (>120s)", "ERROR")
+        print("=" * 80)
         return False
     except Exception as e:
-        log(f"Exception: {str(e)}", "ERROR")
+        print()
+        print("=" * 80)
+        log(f"Exception during AI review: {str(e)}", "ERROR")
+        print("=" * 80)
         return False
 
 def push_to_github():
@@ -204,8 +216,9 @@ def push_to_github():
         result = subprocess.run(
             ["git", "push", "origin", "main"],
             cwd=PROJECT_ROOT,
-            capture_output=True,
-            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            universal_newlines=True,
             timeout=30
         )
 
@@ -555,8 +568,9 @@ def main():
             result = subprocess.run(
                 ["git", "log", "-1", "--format=%B"],
                 cwd=PROJECT_ROOT,
-                capture_output=True,
-                text=True
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True
             )
             commit_msg = result.stdout
             match = re.search(r'#(\d+)', commit_msg)

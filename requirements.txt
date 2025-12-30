@@ -6,7 +6,11 @@
 # ============================================================================
 requests>=2.28.0
 python-dotenv>=0.19.0
-curl_cffi>=0.7.0
+curl_cffi>=0.7.0         # Python 3.7+ (restored for Python 3.9 - Task #040.13)
+
+# NOTE: curl_cffi was commented for Python 3.6 compatibility
+#       Restored in Task #040.13 after upgrading to Python 3.9
+#       Graceful fallback still available: gemini_review_bridge.py lines 23-28
 
 # ============================================================================
 # Work Order #022: ZeroMQ Communication Fabric

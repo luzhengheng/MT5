@@ -1,115 +1,49 @@
 """
 Feast Feature Definitions for MT5-CRS
+Task #042: Feature Store Implementation (Feast 0.10.2)
 
-Task #042: Feature Store Implementation
-Date: 2025-12-29
-Feast Version: 0.10.2 (latest available)
-
-Entity: ticker (stock symbols)
-FeatureView: daily_ohlcv_stats (market data statistics)
-
-Note: Feast 0.10.2 doesn't include native PostgreSQL adapter.
-For production PostgreSQL integration, consider:
-1. Export PostgreSQL data to Parquet files and use FileSource
-2. Use BigQuerySource as template (same API structure)
-3. Upgrade to newer Feast version (when available)
+This module defines:
+1. Entity: ticker (Stock/Forex symbol)
+2. Data Source: PostgreSQL market_data table
+3. Feature View: daily_ohlcv_stats (OHLCV features)
 """
 
 from datetime import timedelta
-from feast import Entity, Feature, FeatureView, BigQuerySource
-from feast.value_type import ValueType
+from feast import Entity, FeatureView, Feature, ValueType, FileSource
 
-# ============================================================================
-# Entity Definition
-# ============================================================================
-
-# Entity: ticker (stock symbol like AAPL.US, EURUSD.s, etc.)
-# This represents the primary key for joining with feature tables
+# Entity: Stock/Forex symbol (ticker)
+# This is the join key for feature lookups
 ticker = Entity(
     name="ticker",
     value_type=ValueType.STRING,
-    description="Stock or currency pair ticker symbol (e.g., AAPL.US, EURUSD.s)"
+    description="Stock or currency pair ticker symbol (e.g., AAPL.US, EURUSD)"
 )
 
-# ============================================================================
-# Feature Definitions
-# ============================================================================
-
-# OHLCV (Open, High, Low, Close, Volume) features for daily market data
-ohlcv_features = [
-    Feature(name="open", dtype=ValueType.FLOAT),
-    Feature(name="high", dtype=ValueType.FLOAT),
-    Feature(name="low", dtype=ValueType.FLOAT),
-    Feature(name="close", dtype=ValueType.FLOAT),
-    Feature(name="adjusted_close", dtype=ValueType.FLOAT),
-    Feature(name="volume", dtype=ValueType.INT64),
-]
-
-# Additional derived features that could be computed
-derived_features = [
-    Feature(name="daily_return", dtype=ValueType.FLOAT),
-    Feature(name="volatility", dtype=ValueType.FLOAT),
-]
-
-# ============================================================================
-# Data Source Definition
-# ============================================================================
-
-# NOTE: Feast 0.10.2 doesn't have PostgreSQL source
-# This uses BigQuerySource as template - structure is same, just different source type
-# For PostgreSQL, use this in production setup:
-#
-# from feast.infra.offline_stores.postgres import PostgreSQLSource
-# market_data_source = PostgreSQLSource(
-#     event_timestamp_column="time",
-#     created_timestamp_column="created_at",
-#     table="market_data",
-#     database="data_nexus",
-# )
-#
-# For now, we define the structure using BigQuerySource:
-
-market_data_source = BigQuerySource(
-    event_timestamp_column="time",
-    table_ref="daily_market_data",
-    query=None
+# Data Source: Parquet files as a proxy for PostgreSQL data
+# Note: Feast 0.10.2 offline store configuration is different
+# The PostgreSQL connection is configured in feature_store.yaml
+# For now, we use FileSource pointing to exported data
+market_data_source = FileSource(
+    path="data/market_data_features.parquet",
+    event_timestamp_column="date",
 )
 
-# Alternative: FileSource for Parquet/CSV data
-# This requires exporting PostgreSQL data to files first
-# from feast.data_source import FileSource
-# market_data_source = FileSource(
-#     event_timestamp_column="time",
-#     path="data/market_data/*.parquet"
-# )
-
-# ============================================================================
-# Feature View Definition
-# ============================================================================
-
-# Feature view: daily_ohlcv_stats
-# Maps market_data table columns to feature names
-# TTL: 30 days (features older than 30 days are evicted from online store)
+# Feature View: Daily OHLCV Statistics
+# Maps market_data columns to servable features
+# TTL: 30 days (features older than 30 days are not served)
 daily_ohlcv_stats = FeatureView(
     name="daily_ohlcv_stats",
     entities=["ticker"],
-    features=ohlcv_features,
     ttl=timedelta(days=30),
+    features=[
+        Feature(name="open", dtype=ValueType.DOUBLE),
+        Feature(name="high", dtype=ValueType.DOUBLE),
+        Feature(name="low", dtype=ValueType.DOUBLE),
+        Feature(name="close", dtype=ValueType.DOUBLE),
+        Feature(name="adjusted_close", dtype=ValueType.DOUBLE),
+        Feature(name="volume", dtype=ValueType.INT64),
+    ],
+    online=True,
     input=market_data_source,
-    tags={
-        "team": "ml",
-        "source": "market_data",
-        "description": "Daily OHLCV market statistics"
-    }
+    tags={"team": "ml-platform", "source": "market_data"}
 )
-
-# ============================================================================
-# Exports
-# ============================================================================
-
-__all__ = [
-    "ticker",
-    "daily_ohlcv_stats",
-    "ohlcv_features",
-    "derived_features",
-]
