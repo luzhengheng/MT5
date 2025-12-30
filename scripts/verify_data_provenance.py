@@ -21,8 +21,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 import psycopg2
 from datetime import datetime, timedelta
+from decimal import Decimal
 
-# Load environment
+# Load environment (respecting 12-Factor App principles)
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 load_dotenv(PROJECT_ROOT / ".env")
 
@@ -174,8 +175,8 @@ def compare_data(local_data, remote_data, symbol, target_date):
     print_row("Adjusted Close", remote_data["adjusted_close"], "USD")
     print_row("Volume", remote_data["volume"], "shares")
 
-    # Tolerance for floating-point comparison (0.01%)
-    tolerance = 0.0001
+    # Tolerance for comparison (using Decimal for financial precision)
+    tolerance = Decimal("0.0001")
 
     print("\n")
     print("VERIFICATION RESULTS:")
@@ -185,40 +186,38 @@ def compare_data(local_data, remote_data, symbol, target_date):
     checks_passed = 0
     checks_total = 6  # open, high, low, close, adjusted_close, volume
 
-    # Open
-    if abs(local_data["open"] - remote_data["open"]) < tolerance:
-        print(f"  ✅ Open prices MATCH ({local_data['open']:.6f})")
-        checks_passed += 1
-    else:
-        print(f"  ❌ Open mismatch: Local={local_data['open']:.6f}, Remote={remote_data['open']:.6f}")
+    # Helper function to safely convert to Decimal (financial precision)
+    def to_decimal(val):
+        """Convert any value to Decimal, using string representation for float to avoid precision loss."""
+        if isinstance(val, Decimal):
+            return val
+        try:
+            # Use string conversion for floats to avoid IEEE 754 artifacts
+            return Decimal(str(val))
+        except Exception:
+            return Decimal(0)
 
-    # High
-    if abs(local_data["high"] - remote_data["high"]) < tolerance:
-        print(f"  ✅ High prices MATCH ({local_data['high']:.6f})")
-        checks_passed += 1
-    else:
-        print(f"  ❌ High mismatch: Local={local_data['high']:.6f}, Remote={remote_data['high']:.6f}")
+    # Define verification function to reduce repetition
+    def verify_price_field(field_name, local_val, remote_val, is_critical=False):
+        """Verify a price field with Decimal precision."""
+        d_local = to_decimal(local_val)
+        d_remote = to_decimal(remote_val)
+        diff = abs(d_local - d_remote)
 
-    # Low
-    if abs(local_data["low"] - remote_data["low"]) < tolerance:
-        print(f"  ✅ Low prices MATCH ({local_data['low']:.6f})")
-        checks_passed += 1
-    else:
-        print(f"  ❌ Low mismatch: Local={local_data['low']:.6f}, Remote={remote_data['low']:.6f}")
+        if diff < tolerance:
+            marker = " ← CRITICAL MATCH" if is_critical else ""
+            print(f"  ✅ {field_name} prices MATCH ({d_local}){marker}")
+            return 1
+        else:
+            print(f"  ❌ {field_name} mismatch: Local={d_local}, Remote={d_remote}")
+            return 0
 
-    # Close (most important field for verification)
-    if abs(local_data["close"] - remote_data["close"]) < tolerance:
-        print(f"  ✅ Close prices MATCH ({local_data['close']:.6f}) ← CRITICAL MATCH")
-        checks_passed += 1
-    else:
-        print(f"  ❌ Close mismatch: Local={local_data['close']:.6f}, Remote={remote_data['close']:.6f}")
-
-    # Adjusted Close
-    if abs(local_data["adjusted_close"] - remote_data["adjusted_close"]) < tolerance:
-        print(f"  ✅ Adjusted Close prices MATCH ({local_data['adjusted_close']:.6f})")
-        checks_passed += 1
-    else:
-        print(f"  ❌ Adjusted Close mismatch: Local={local_data['adjusted_close']:.6f}, Remote={remote_data['adjusted_close']:.6f}")
+    # Verify each OHLCV field using Decimal precision
+    checks_passed += verify_price_field("Open", local_data["open"], remote_data["open"])
+    checks_passed += verify_price_field("High", local_data["high"], remote_data["high"])
+    checks_passed += verify_price_field("Low", local_data["low"], remote_data["low"])
+    checks_passed += verify_price_field("Close", local_data["close"], remote_data["close"], is_critical=True)
+    checks_passed += verify_price_field("Adjusted Close", local_data["adjusted_close"], remote_data["adjusted_close"])
 
     # Volume (exact match expected)
     if local_data["volume"] == remote_data["volume"]:
