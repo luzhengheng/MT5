@@ -1,0 +1,272 @@
+#!/usr/bin/env python3
+"""
+Task #011.19: Retry GTW SSH Key Deployment
+Purpose: Deploy SSH key to Gateway (GTW) Windows node after OpenSSH is enabled
+Protocol: v2.2 (Docs-as-Code)
+
+This script:
+1. Loads the pre-generated SSH public key
+2. Prompts for Administrator password on GTW
+3. Connects via Paramiko SSH
+4. Deploys key to C:\Users\Administrator\.ssh\authorized_keys
+5. Sets proper file permissions via icacls
+"""
+
+import os
+import sys
+from pathlib import Path
+from getpass import getpass
+import paramiko
+from paramiko import SSHClient, AutoAddPolicy
+
+# Color codes
+GREEN = "\033[92m"
+RED = "\033[91m"
+YELLOW = "\033[93m"
+BLUE = "\033[94m"
+CYAN = "\033[96m"
+RESET = "\033[0m"
+
+# Paths
+HOME = Path.home()
+SSH_DIR = HOME / ".ssh"
+PUBLIC_KEY_PATH = SSH_DIR / "id_rsa.pub"
+
+# GTW Configuration
+GTW_CONFIG = {
+    "hostname": "172.19.141.255",
+    "user": "Administrator",
+    "os": "Windows",
+    "ssh_dir": r"C:\Users\Administrator\.ssh",
+}
+
+
+def print_header(title, subtitle=""):
+    """Print formatted section header."""
+    print(f"\n{CYAN}{'='*80}{RESET}")
+    print(f"{CYAN}  {title}{RESET}")
+    if subtitle:
+        print(f"{CYAN}  {subtitle}{RESET}")
+    print(f"{CYAN}{'='*80}{RESET}\n")
+
+
+def check_status(name, status, detail="", error=""):
+    """Print formatted status check."""
+    symbol = f"{GREEN}✅{RESET}" if status else f"{RED}❌{RESET}"
+    detail_str = f"  [{detail}]" if detail else ""
+    if error:
+        print(f"  {symbol} {name:<50} {detail_str}")
+        print(f"     {RED}Error: {error}{RESET}")
+    else:
+        print(f"  {symbol} {name:<50} {detail_str}")
+    return status
+
+
+def read_public_key():
+    """Read public key from file."""
+    print(f"\n{BLUE}[Step 1]{RESET} Read Local SSH Public Key")
+
+    if not PUBLIC_KEY_PATH.exists():
+        check_status("Public key exists", False, "", f"Not found at {PUBLIC_KEY_PATH}")
+        print(f"\n  {YELLOW}⚠️  SSH key not generated yet.{RESET}")
+        print(f"  {YELLOW}Run ops_universal_key_setup.py first to generate keys.{RESET}\n")
+        return None
+
+    try:
+        with open(PUBLIC_KEY_PATH, 'r') as f:
+            pub_key = f.read().strip()
+
+        # Extract fingerprint
+        if pub_key.startswith("ssh-rsa"):
+            fingerprint = pub_key.split()[1][:16]
+        else:
+            fingerprint = "unknown"
+
+        check_status("Public key readable", True, f"Fingerprint: {fingerprint}...")
+        return pub_key
+
+    except Exception as e:
+        check_status("Public key read", False, "", str(e))
+        return None
+
+
+def deploy_key_to_gtw(public_key):
+    """Deploy public key to GTW Windows node."""
+    print(f"\n{BLUE}[Step 2]{RESET} Connect to GTW and Deploy Key")
+
+    hostname = GTW_CONFIG["hostname"]
+    user = GTW_CONFIG["user"]
+    ssh_dir = GTW_CONFIG["ssh_dir"]
+
+    # Prompt for password
+    password = getpass(f"\n  Enter password for {user}@{hostname}: ")
+
+    if not password:
+        check_status("Authentication", False, "", "No password provided")
+        return False
+
+    try:
+        # Create SSH client
+        client = SSHClient()
+        client.set_missing_host_key_policy(AutoAddPolicy())
+
+        # Connect
+        print(f"\n  Connecting to {hostname}...")
+        client.connect(
+            hostname=hostname,
+            username=user,
+            password=password,
+            timeout=10,
+            look_for_keys=False,
+            allow_agent=False
+        )
+        check_status(f"SSH connection to GTW", True, f"{user}@{hostname}")
+
+        # Windows commands
+        print(f"\n  Deploying public key to {ssh_dir}...")
+
+        # Step 1: Create .ssh directory
+        mkdir_cmd = f'if not exist "{ssh_dir}" mkdir "{ssh_dir}"'
+
+        # Step 2: Append key to authorized_keys
+        append_cmd = f'echo {public_key} >> "{ssh_dir}\\authorized_keys"'
+
+        # Step 3: Fix permissions with icacls
+        # icacls is Windows ACL tool - sets permissions to Administrator only
+        icacls_cmd = f'icacls "{ssh_dir}" /inheritance:r /grant:r "%USERNAME%:(F)" /grant:r "NT AUTHORITY\\SYSTEM:(F)"'
+        icacls_authkeys = f'icacls "{ssh_dir}\\authorized_keys" /inheritance:r /grant:r "%USERNAME%:(F)" /grant:r "NT AUTHORITY\\SYSTEM:(F)"'
+
+        # Combined command
+        full_cmd = f'{mkdir_cmd} && {append_cmd} && {icacls_cmd} && {icacls_authkeys}'
+
+        # Execute deployment command
+        stdin, stdout, stderr = client.exec_command(full_cmd)
+        stdout.channel.recv_exit_status()
+        error_output = stderr.read().decode().strip()
+
+        if error_output and "already exists" not in error_output and "The data is invalid" not in error_output:
+            print(f"     Warning: {error_output}")
+
+        # Verify deployment
+        verify_cmd = f'type "{ssh_dir}\\authorized_keys"'
+        stdin, stdout, stderr = client.exec_command(verify_cmd)
+        verify_output = stdout.read().decode().strip()
+
+        if public_key[:20] in verify_output:
+            check_status(f"Key deployed to GTW", True, f"authorized_keys updated")
+            print(f"\n  {GREEN}✅ GTW Key Installed{RESET}")
+            client.close()
+            return True
+        else:
+            check_status(f"Key verification on GTW", False, "", "Key not found in authorized_keys")
+            client.close()
+            return False
+
+    except paramiko.AuthenticationException as e:
+        check_status(f"Authentication", False, "", "Invalid password or authentication failed")
+        return False
+    except paramiko.SSHException as e:
+        check_status(f"SSH connection", False, "", str(e))
+        print(f"\n  {RED}❌ Connection failed. Is OpenSSH Server running on GTW?{RESET}")
+        print(f"  {YELLOW}Run the Windows setup guide first: MANUAL_WINDOWS_SSH_SETUP.md{RESET}\n")
+        return False
+    except Exception as e:
+        check_status(f"Key deployment", False, "", str(e))
+        return False
+
+
+def verify_connection():
+    """Verify password-less SSH connection to GTW."""
+    print(f"\n{BLUE}[Step 3]{RESET} Verify Password-less SSH Access")
+
+    try:
+        import subprocess
+
+        print(f"\n  Testing SSH connection to GTW...")
+        result = subprocess.run(
+            [
+                "ssh",
+                "-o", "BatchMode=yes",
+                "-o", "ConnectTimeout=5",
+                "-o", "StrictHostKeyChecking=no",
+                "-o", "UserKnownHostsFile=/dev/null",
+                "gtw",
+                "echo SUCCESS"
+            ],
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+
+        if result.returncode == 0:
+            check_status("Password-less SSH to GTW", True, "Connection successful")
+            print(f"\n  {GREEN}✅ GTW is now accessible via: ssh gtw{RESET}")
+            return True
+        else:
+            error = result.stderr.strip() or "Unknown error"
+            check_status("Password-less SSH to GTW", False, "", error)
+            print(f"\n  {YELLOW}⚠️  Connection test failed.{RESET}")
+            print(f"  {YELLOW}Ensure SSH config is properly generated.{RESET}\n")
+            return False
+
+    except Exception as e:
+        check_status("SSH verification", False, "", str(e))
+        return False
+
+
+def main():
+    """Execute GTW SSH key deployment."""
+    print(f"\n{CYAN}{'='*80}{RESET}")
+    print(f"{CYAN}  TASK #011.19: RETRY GTW SSH KEY DEPLOYMENT{RESET}")
+    print(f"{CYAN}  After Windows OpenSSH Setup{RESET}")
+    print(f"{CYAN}{'='*80}{RESET}\n")
+
+    print(f"{YELLOW}Prerequisites:{RESET}")
+    print(f"  1. OpenSSH Server installed on GTW (Windows)")
+    print(f"  2. SSH service running (netstat -ano | findstr :22)")
+    print(f"  3. Firewall allows port 22")
+    print(f"  4. SSH key pair generated (~/.ssh/id_rsa)")
+    print()
+
+    # Step 1: Read public key
+    public_key = read_public_key()
+    if not public_key:
+        print(f"\n{RED}❌ Failed to read public key{RESET}\n")
+        return 1
+
+    # Step 2: Deploy key to GTW
+    if not deploy_key_to_gtw(public_key):
+        print(f"\n{RED}❌ Failed to deploy key to GTW{RESET}\n")
+        print(f"{YELLOW}Troubleshooting:{RESET}")
+        print(f"  1. Verify OpenSSH is installed: Get-WindowsCapability -Online | Where-Object Name -like '*OpenSSH*'")
+        print(f"  2. Check service is running: Get-Service sshd")
+        print(f"  3. Verify port 22 is listening: netstat -ano | findstr :22")
+        print(f"  4. Check firewall rule: Get-NetFirewallRule -Name 'OpenSSH-Server-In-TCP'")
+        print()
+        return 1
+
+    # Step 3: Verify connection
+    print()
+    if verify_connection():
+        print_header("DEPLOYMENT SUCCESSFUL")
+        print(f"  {GREEN}✅ GTW SSH key deployment complete!{RESET}\n")
+        print(f"  {GREEN}You can now use:{RESET}")
+        print(f"    • ssh gtw")
+        print(f"    • ssh gtw 'powershell command'")
+        print(f"    • scp file.txt gtw:/path/to/destination")
+        print()
+        return 0
+    else:
+        print_header("VERIFICATION FAILED")
+        print(f"  {RED}❌ SSH connection test failed{RESET}\n")
+        print(f"  {YELLOW}Check your SSH config in ~/.ssh/config:{RESET}")
+        print(f"    Host gtw")
+        print(f"      HostName 172.19.141.255")
+        print(f"      User Administrator")
+        print(f"      IdentityFile ~/.ssh/id_rsa")
+        print()
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())
