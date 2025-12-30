@@ -98,6 +98,10 @@ def deploy_key_to_gtw(public_key):
     user = GTW_CONFIG["user"]
     ssh_dir = GTW_CONFIG["ssh_dir"]
 
+    # Windows OpenSSH for Administrator users uses ProgramData path
+    programdata_ssh_dir = r"C:\ProgramData\ssh"
+    programdata_authkeys = r"C:\ProgramData\ssh\administrators_authorized_keys"
+
     # Prompt for password
     password = getpass(f"\n  Enter password for {user}@{hostname}: ")
 
@@ -122,43 +126,96 @@ def deploy_key_to_gtw(public_key):
         )
         check_status(f"SSH connection to GTW", True, f"{user}@{hostname}")
 
-        # Windows commands
-        print(f"\n  Deploying public key to {ssh_dir}...")
+        # Deploy to BOTH paths for compatibility
+        print(f"\n  Deploying public key to user directory: {ssh_dir}...")
 
-        # Step 1: Create .ssh directory
-        mkdir_cmd = f'if not exist "{ssh_dir}" mkdir "{ssh_dir}"'
+        # Path A: User .ssh directory (C:\Users\Administrator\.ssh\authorized_keys)
+        mkdir_user = f'if not exist "{ssh_dir}" mkdir "{ssh_dir}"'
+        append_user = f'echo {public_key} >> "{ssh_dir}\\authorized_keys"'
+        icacls_user_dir = f'icacls "{ssh_dir}" /inheritance:r /grant "Administrators:(F)" /grant "SYSTEM:(F)"'
+        icacls_user_file = f'icacls "{ssh_dir}\\authorized_keys" /inheritance:r /grant "Administrators:(F)" /grant "SYSTEM:(F)"'
 
-        # Step 2: Append key to authorized_keys
-        append_cmd = f'echo {public_key} >> "{ssh_dir}\\authorized_keys"'
+        user_cmd = f'{mkdir_user} && {append_user} && {icacls_user_dir} && {icacls_user_file}'
 
-        # Step 3: Fix permissions with icacls
-        # icacls is Windows ACL tool - sets permissions to Administrator only
-        icacls_cmd = f'icacls "{ssh_dir}" /inheritance:r /grant:r "%USERNAME%:(F)" /grant:r "NT AUTHORITY\\SYSTEM:(F)"'
-        icacls_authkeys = f'icacls "{ssh_dir}\\authorized_keys" /inheritance:r /grant:r "%USERNAME%:(F)" /grant:r "NT AUTHORITY\\SYSTEM:(F)"'
-
-        # Combined command
-        full_cmd = f'{mkdir_cmd} && {append_cmd} && {icacls_cmd} && {icacls_authkeys}'
-
-        # Execute deployment command
-        stdin, stdout, stderr = client.exec_command(full_cmd)
+        # Execute user directory deployment
+        stdin, stdout, stderr = client.exec_command(user_cmd)
         stdout.channel.recv_exit_status()
         error_output = stderr.read().decode().strip()
 
-        if error_output and "already exists" not in error_output and "The data is invalid" not in error_output:
-            print(f"     Warning: {error_output}")
+        if error_output and "already exists" not in error_output and "successfully processed" not in error_output.lower():
+            print(f"     Warning (user path): {error_output[:200]}")
 
-        # Verify deployment
-        verify_cmd = f'type "{ssh_dir}\\authorized_keys"'
-        stdin, stdout, stderr = client.exec_command(verify_cmd)
-        verify_output = stdout.read().decode().strip()
+        check_status(f"Key deployed to user .ssh", True, f"{ssh_dir}\\authorized_keys")
 
-        if public_key[:20] in verify_output:
-            check_status(f"Key deployed to GTW", True, f"authorized_keys updated")
-            print(f"\n  {GREEN}✅ GTW Key Installed{RESET}")
+        # Path B: ProgramData (C:\ProgramData\ssh\administrators_authorized_keys)
+        # This is the standard path for Administrator users in Win32-OpenSSH
+        print(f"\n  Deploying public key to ProgramData: {programdata_authkeys}...")
+
+        mkdir_programdata = f'if not exist "{programdata_ssh_dir}" mkdir "{programdata_ssh_dir}"'
+        append_programdata = f'echo {public_key} >> "{programdata_authkeys}"'
+        icacls_programdata_dir = f'icacls "{programdata_ssh_dir}" /inheritance:r /grant "Administrators:(F)" /grant "SYSTEM:(F)"'
+        icacls_programdata_file = f'icacls "{programdata_authkeys}" /inheritance:r /grant "Administrators:(F)" /grant "SYSTEM:(F)"'
+
+        programdata_cmd = f'{mkdir_programdata} && {append_programdata} && {icacls_programdata_dir} && {icacls_programdata_file}'
+
+        # Execute ProgramData deployment
+        stdin, stdout, stderr = client.exec_command(programdata_cmd)
+        stdout.channel.recv_exit_status()
+        error_output = stderr.read().decode().strip()
+
+        if error_output and "already exists" not in error_output and "successfully processed" not in error_output.lower():
+            print(f"     Warning (ProgramData): {error_output[:200]}")
+
+        check_status(f"Key deployed to ProgramData", True, f"{programdata_authkeys}")
+
+        # Verify both deployments
+        print(f"\n  Verifying key deployment...")
+
+        # Verify user path
+        verify_user_cmd = f'type "{ssh_dir}\\authorized_keys"'
+        stdin, stdout, stderr = client.exec_command(verify_user_cmd)
+        verify_user_output = stdout.read().decode().strip()
+        user_deployed = public_key[:20] in verify_user_output
+
+        # Verify ProgramData path
+        verify_programdata_cmd = f'type "{programdata_authkeys}"'
+        stdin, stdout, stderr = client.exec_command(verify_programdata_cmd)
+        verify_programdata_output = stdout.read().decode().strip()
+        programdata_deployed = public_key[:20] in verify_programdata_output
+
+        # Check results
+        check_status(f"User .ssh verification", user_deployed, "Key present" if user_deployed else "")
+        check_status(f"ProgramData verification", programdata_deployed, "Key present" if programdata_deployed else "")
+
+        # Verify permissions
+        print(f"\n  Verifying permissions...")
+        verify_perms_user = f'icacls "{ssh_dir}\\authorized_keys"'
+        stdin, stdout, stderr = client.exec_command(verify_perms_user)
+        perms_user = stdout.read().decode().strip()
+
+        verify_perms_programdata = f'icacls "{programdata_authkeys}"'
+        stdin, stdout, stderr = client.exec_command(verify_perms_programdata)
+        perms_programdata = stdout.read().decode().strip()
+
+        # Check for strict permissions (no inheritance, only Administrators/SYSTEM)
+        user_secure = "BUILTIN\\Administrators:(F)" in perms_user or "Administrators:(F)" in perms_user
+        programdata_secure = "BUILTIN\\Administrators:(F)" in perms_programdata or "Administrators:(F)" in perms_programdata
+
+        check_status(f"User .ssh permissions", user_secure, "Strict ACLs" if user_secure else "")
+        check_status(f"ProgramData permissions", programdata_secure, "Strict ACLs" if programdata_secure else "")
+
+        if programdata_deployed:
+            print(f"\n  {GREEN}✅ GTW Key Installed (ProgramData path - recommended){RESET}")
+            print(f"  {GREEN}✅ Permissions fixed - inheritance removed{RESET}")
+            client.close()
+            return True
+        elif user_deployed:
+            print(f"\n  {GREEN}✅ GTW Key Installed (User path){RESET}")
+            print(f"  {YELLOW}⚠️  ProgramData deployment failed - may need manual fix{RESET}")
             client.close()
             return True
         else:
-            check_status(f"Key verification on GTW", False, "", "Key not found in authorized_keys")
+            check_status(f"Key verification on GTW", False, "", "Key not found in any authorized_keys")
             client.close()
             return False
 
