@@ -32,8 +32,9 @@ NOTION_HEADERS = {
 
 # ========== 数据库 Schema 映射 ==========
 # 根据实际 Notion 数据库定义这些属性
+# Fixed in Task #012.00: Changed "名称" to "标题" (actual field name)
 NOTION_SCHEMA = {
-    "title_field": "名称",        # 工单标题属性名（title 类型）
+    "title_field": "标题",        # 工单标题属性名（title 类型）
     "status_field": "状态",       # 工单状态属性名（status 类型）
     "date_field": "日期",         # 工单日期属性名（date 类型）
 }
