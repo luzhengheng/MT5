@@ -5,5 +5,6 @@ MT5 Gateway 模块
 """
 
 from .mt5_service import MT5Service, get_mt5_service
+from .mt5_client import MT5Client
 
-__all__ = ['MT5Service', 'get_mt5_service']
+__all__ = ['MT5Service', 'get_mt5_service', 'MT5Client']
