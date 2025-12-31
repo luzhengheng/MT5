@@ -1,7 +1,13 @@
 """
-回测报告模块 - 生成专业的交易策略分析报告
+Reporting Package - Trading Bot Analytics
+==========================================
+
+Task #019.01: Signal Verification Dashboard
+
+包含报告和分析相关的模块：
+- log_parser.py: 解析交易日志生成结构化数据
 """
 
-from .tearsheet import TearSheetGenerator, calculate_deflated_sharpe_ratio
+from .log_parser import TradeLogParser
 
-__all__ = ['TearSheetGenerator', 'calculate_deflated_sharpe_ratio']
+__all__ = ['TradeLogParser']
