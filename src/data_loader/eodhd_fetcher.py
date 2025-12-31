@@ -52,15 +52,24 @@ class EODHDFetcher:
     INTRADAY_URL = "https://eodhd.com/api/intraday/"
     EOD_URL = "https://eodhd.com/api/eod/"
 
-    # Supported symbols - FOREX pairs
+    # Supported symbols - FOREX pairs (Task #012.05 multi-asset bulk ingestion)
     FOREX_SYMBOLS = {
-        'EURUSD': 'EURUSD.FOREX',
-        'XAUUSD': 'XAUUSD.FOREX',
+        'EURUSD': 'EURUSD.FOREX',    # EUR/USD - Primary forex pair
+        'GBPUSD': 'GBPUSD.FOREX',    # GBP/USD - British pound
+        'USDJPY': 'USDJPY.FOREX',    # USD/JPY - Japanese yen
+        'AUDUSD': 'AUDUSD.FOREX',    # AUD/USD - Australian dollar
+        'XAUUSD': 'XAUUSD.FOREX',    # XAU/USD - Gold (Forex endpoint preferred)
+    }
+
+    # Index symbols (Task #012.05)
+    INDEX_SYMBOLS = {
+        'GSPC': 'GSPC.INDX',         # S&P 500 Index
+        'DJI': 'DJI.INDX',           # Dow Jones Industrial Average
     }
 
     # Commodities mapping
     COMMODITY_SYMBOLS = {
-        'XAUUSD': 'XAUUSD.COMM',  # Gold as commodity
+        'XAUUSD': 'XAUUSD.COMM',  # Gold as commodity (alternative endpoint)
     }
 
     # Data directory
@@ -122,8 +131,14 @@ class EODHDFetcher:
 
         logger.info(f"Fetching {symbol} {period} data from {from_date} to {to_date}")
 
-        # Get full symbol name
-        full_symbol = self.FOREX_SYMBOLS.get(symbol, symbol)
+        # Get full symbol name (try FOREX first, then INDEX, then fallback)
+        if symbol in self.FOREX_SYMBOLS:
+            full_symbol = self.FOREX_SYMBOLS[symbol]
+        elif symbol in self.INDEX_SYMBOLS:
+            full_symbol = self.INDEX_SYMBOLS[symbol]
+        else:
+            # Fallback: assume symbol is already in EODHD format
+            full_symbol = symbol
         logger.info(f"Full symbol: {full_symbol}")
 
         # Check cache first

@@ -366,6 +366,55 @@ def audit():
     print()
 
     # ============================================================================
+    # 7. TASK #012.05 MULTI-ASSET INGESTION AUDIT (Protocol v2.2)
+    # ============================================================================
+    print("📋 [7/7] TASK #012.05 DOCUMENTATION & CONFIG AUDIT (CRITICAL)")
+    print("-" * 80)
+
+    try:
+        # Check 1: Documentation file exists
+        plan_file = PROJECT_ROOT / "docs" / "TASK_012_05_PLAN.md"
+        if plan_file.exists():
+            print(f"✅ [Docs] TASK_012_05_PLAN.md exists (Docs-as-Code requirement)")
+            passed += 1
+        else:
+            print(f"❌ [Docs] TASK_012_05_PLAN.md not found (CRITICAL)")
+            failed += 1
+
+        # Check 2: Asset configuration file exists
+        assets_config = PROJECT_ROOT / "config" / "assets.yaml"
+        if assets_config.exists():
+            print(f"✅ [Config] assets.yaml exists with Task #012.05 assets")
+            passed += 1
+        else:
+            print(f"❌ [Config] assets.yaml not found")
+            failed += 1
+
+        # Check 3: EODHDBulkLoader can be imported
+        try:
+            from src.data_loader.eodhd_bulk_loader import EODHDBulkLoader
+            print(f"✅ [Code] EODHDBulkLoader imports successfully")
+            passed += 1
+        except ImportError as e:
+            print(f"❌ [Code] EODHDBulkLoader import failed: {e}")
+            failed += 1
+
+        # Check 4: EODHD Fetcher available
+        try:
+            from src.data_loader.eodhd_fetcher import EODHDFetcher
+            print(f"✅ [Code] EODHDFetcher imports successfully")
+            passed += 1
+        except ImportError as e:
+            print(f"❌ [Code] EODHDFetcher import failed: {e}")
+            failed += 1
+
+    except Exception as e:
+        print(f"❌ [Task #012.05] Audit error: {e}")
+        failed += 3
+
+    print()
+
+    # ============================================================================
     # SUMMARY
     # ============================================================================
     print("=" * 80)

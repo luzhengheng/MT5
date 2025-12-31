@@ -1,6 +1,53 @@
-# 资产配置文件
+# 资产配置文件 - Task #012.05 批量摄取
 # 定义需要采集的所有资产
+# 协议版本: v2.2
 
+# ========== 任务特定资产（Task #012.05） ==========
+# 这 7 个资产用于 Task #012.05 的批量历史数据摄取
+task_012_05_assets:
+  - symbol: EURUSD
+    exchange: FOREX
+    name: 欧元/美元
+    from_date: "1990-01-01"
+    description: "欧洲最主要的外汇交易对"
+
+  - symbol: GBPUSD
+    exchange: FOREX
+    name: 英镑/美元
+    from_date: "1990-01-01"
+    description: "英国最主要的外汇交易对"
+
+  - symbol: USDJPY
+    exchange: FOREX
+    name: 美元/日元
+    from_date: "1990-01-01"
+    description: "亚太最主要的外汇交易对"
+
+  - symbol: AUDUSD
+    exchange: FOREX
+    name: 澳元/美元
+    from_date: "1990-01-01"
+    description: "大洋洲最主要的外汇交易对"
+
+  - symbol: XAUUSD
+    exchange: FOREX
+    name: 黄金/美元
+    from_date: "1990-01-01"
+    description: "避险资产 - 贵金属"
+
+  - symbol: GSPC
+    exchange: INDX
+    name: 标普500指数
+    from_date: "1990-01-01"
+    description: "美国最主要的股票指数"
+
+  - symbol: DJI
+    exchange: INDX
+    name: 道琼斯工业平均指数
+    from_date: "1990-01-01"
+    description: "美国蓝筹股指数"
+
+# ========== 通用资产配置 ==========
 assets:
   # 股票 (30)
   stocks:
@@ -72,12 +119,29 @@ assets:
     - NDX.INDX   # NASDAQ 100
     - DJI.INDX   # Dow Jones
 
-# 数据采集配置
+# ========== 摄取配置（Task #012.05） ==========
+ingestion:
+  batch_size: 5000
+  rate_limit_delay: 1.0  # 秒
+  max_retries: 3
+  retry_delay: 5.0  # 秒
+  asset_timeout: 60.0  # 秒
+
+# ========== 数据库配置 ==========
+database:
+  host: "localhost"
+  port: 5432
+  user: "trader"
+  password: "password"
+  name: "mt5_crs"
+  table: "market_data_ohlcv"
+
+# ========== 数据采集配置 ==========
 data_collection:
   start_date: "2023-12-01"
   frequency: "daily"
 
-# 数据源配置
+# ========== 数据源配置 ==========
 data_sources:
   primary: "eodhd"
   backup: "yfinance"
