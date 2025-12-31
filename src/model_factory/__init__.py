@@ -1,7 +1,15 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-Model Factory Module - Baseline Model Training Pipeline
+Model Factory Package
+
+模型开发和训练模块。
 """
 
-from .baseline_trainer import train_baseline_model
+from src.model_factory.data_loader import APIDataLoader
+from src.model_factory.baseline_trainer import BaselineTrainer
 
-__all__ = ['train_baseline_model']
+__all__ = [
+    "APIDataLoader",
+    "BaselineTrainer"
+]
