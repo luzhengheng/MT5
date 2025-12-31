@@ -591,8 +591,48 @@ def main():
             log("GitHub push failed - continuing with Notion updates", "WARN")
         print()
 
-        # Step 4: Update Notion (optional if we have ticket)
+        # Step 4: Update Notion with enhanced sync
         if ticket_num:
+            print("=" * 80)
+            log("Synchronizing with Notion...", "PHASE")
+            print("=" * 80)
+            print()
+
+            # Get GitHub commit URL
+            try:
+                commit_sha = subprocess.check_output(
+                    ["git", "rev-parse", "HEAD"],
+                    cwd=PROJECT_ROOT,
+                    universal_newlines=True
+                ).strip()
+
+                # Get remote URL and convert to GitHub URL
+                remote_url = subprocess.check_output(
+                    ["git", "config", "--get", "remote.origin.url"],
+                    cwd=PROJECT_ROOT,
+                    universal_newlines=True
+                ).strip()
+
+                # Convert SSH/HTTPS URL to web URL
+                if "github.com" in remote_url:
+                    if remote_url.startswith("git@"):
+                        # SSH format: git@github.com:user/repo.git
+                        repo_path = remote_url.split("github.com:")[1].replace(".git", "")
+                        github_url = f"https://github.com/{repo_path}"
+                    else:
+                        # HTTPS format
+                        github_url = remote_url.replace(".git", "")
+
+                    commit_url = f"{github_url}/commit/{commit_sha}"
+                    log(f"Commit URL: {commit_url}", "INFO")
+                else:
+                    commit_url = None
+                    log("Non-GitHub remote detected", "WARN")
+
+            except Exception as e:
+                commit_url = None
+                log(f"Could not build commit URL: {str(e)}", "WARN")
+
             # Try to find the Notion page ID
             url = f"{NOTION_API_URL}/databases/{NOTION_ISSUES_DB_ID}/query"
             payload = {
@@ -609,10 +649,32 @@ def main():
                     if results:
                         page_id = results[0].get('id')
 
-                        update_notion_status_done(page_id)
+                        log(f"Found Notion page: #{ticket_num:03d}", "INFO")
+
+                        # Update status using new function
+                        from scripts.utils.notion_updater import update_task_status
+
+                        success = update_task_status(
+                            page_id=page_id,
+                            status="Done",
+                            commit_url=commit_url
+                        )
+
+                        if success:
+                            print()
+                            print("=" * 80)
+                            log(f"✅ Notion Ticket #{ticket_num:03d} updated to DONE", "SUCCESS")
+                            if commit_url:
+                                log(f"📎 GitHub commit URL synced", "SUCCESS")
+                            print("=" * 80)
+                        else:
+                            log("⚠️  Notion sync failed (see above errors)", "WARN")
+
                         print()
                         append_release_summary(page_id)
                         print()
+                    else:
+                        log(f"Notion page not found for ticket #{ticket_num:03d}", "WARN")
 
             except Exception as e:
                 log(f"Could not update Notion: {str(e)}", "WARN")

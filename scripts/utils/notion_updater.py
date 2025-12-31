@@ -333,6 +333,112 @@ def clear_page_blocks(page_id: str, token: str = None) -> bool:
 
 
 # ============================================================================
+# Property Update Functions
+# ============================================================================
+
+def update_task_status(page_id: str, status: str = "Done", commit_url: str = None, token: str = None) -> bool:
+    """
+    Update Notion task status and optionally add GitHub commit URL.
+
+    Protocol v2.2 "Notion Light": Only updates properties, not content.
+
+    Args:
+        page_id: Notion page ID
+        status: Target status ("Done", "Complete", "In Progress", etc.)
+        commit_url: Optional GitHub commit URL
+        token: Optional Notion API token
+
+    Returns:
+        True if successful, False otherwise
+    """
+    headers = get_headers(token)
+    url = f"{NOTION_API_URL}/pages/{page_id}"
+
+    # Build properties payload
+    properties = {
+        "状态": {
+            "status": {"name": "完成" if status == "Done" else status}
+        }
+    }
+
+    # Add GitHub commit URL if provided
+    if commit_url:
+        properties["GitHub Commit"] = {
+            "url": commit_url
+        }
+
+    payload = {"properties": properties}
+
+    try:
+        response = requests.patch(
+            url,
+            headers=headers,
+            json=payload,
+            timeout=30
+        )
+
+        if response.status_code == 200:
+            return True
+        else:
+            print(f"⚠️  Failed to update status: {response.status_code}")
+            print(f"   Response: {response.text[:300]}")
+            return False
+
+    except Exception as e:
+        print(f"⚠️  Error updating status: {e}")
+        return False
+
+
+def find_page_by_ticket_id(database_id: str, ticket_id: str, token: str = None) -> str:
+    """
+    Find a Notion page ID by ticket ID.
+
+    Args:
+        database_id: Notion database ID
+        ticket_id: Ticket ID (e.g., "099.01" or "099")
+        token: Optional Notion API token
+
+    Returns:
+        Page ID if found, None otherwise
+    """
+    headers = get_headers(token)
+    url = f"{NOTION_API_URL}/databases/{database_id}/query"
+
+    # Try different ticket formats
+    ticket_formats = [
+        f"#{ticket_id}",
+        f"Task #{ticket_id}",
+        f"#{ticket_id.split('.')[0]:03d}" if '.' not in ticket_id else f"#{int(ticket_id.split('.')[0]):03d}"
+    ]
+
+    for ticket_format in ticket_formats:
+        payload = {
+            "filter": {
+                "property": "标题",
+                "title": {"contains": ticket_format}
+            }
+        }
+
+        try:
+            response = requests.post(
+                url,
+                headers=headers,
+                json=payload,
+                timeout=30
+            )
+
+            if response.status_code == 200:
+                results = response.json().get('results', [])
+                if results:
+                    return results[0].get('id')
+
+        except Exception as e:
+            print(f"⚠️  Error searching for ticket: {e}")
+
+    return None
+
+
+# ============================================================================
 # Convenience Functions
 # ============================================================================
 
