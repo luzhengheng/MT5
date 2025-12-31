@@ -184,8 +184,26 @@ def external_ai_review(diff_content):
             log(f"API 请求失败: {resp.status_code}", "ERROR")
             return None
 
+    except requests.ConnectTimeout:
+        log(f"连接超时: 无法连接API服务器 (timeout=60s)", "ERROR")
+        log(f"请检查网络连接和API地址: {GEMINI_BASE_URL}", "ERROR")
+        return None
+
+    except requests.ReadTimeout:
+        log(f"读取超时: API服务器响应过慢 (timeout=60s)", "ERROR")
+        log(f"请检查网络连接或稍后重试", "ERROR")
+        return None
+
+    except requests.RequestException as e:
+        log(f"网络错误: {e}", "ERROR")
+        log(f"API地址: {GEMINI_BASE_URL}", "ERROR")
+        log(f"请检查网络连接并重试", "ERROR")
+        return None
+
     except Exception as e:
-        log(f"穿透失败: {e}", "ERROR")
+        log(f"AI审查失败: {e}", "ERROR")
+        import traceback
+        traceback.print_exc()
         return None
 
 # ==============================================================================
@@ -209,9 +227,35 @@ def main():
     # 2. 外部 AI 审查 (架构师把关)
     ai_commit_msg = None
     if ENABLE_AI_REVIEW:
+        log("=" * 80, "INFO")
+        log("启动外部AI审查...", "PHASE")
+        log("=" * 80, "INFO")
+        print()
+
         review_result = external_ai_review(diff)
+
         if review_result == "FAIL":
-            sys.exit(1) # AI 明确拒绝，阻断提交
+            print()
+            print(f"{RED}{'=' * 80}{RESET}")
+            log("AI审查拒绝提交", "ERROR")
+            print(f"{RED}{'=' * 80}{RESET}")
+            log("修复上述问题后重新运行finish命令", "ERROR")
+            sys.exit(1)  # AI 明确拒绝，阻断提交
+
+        elif review_result is None:
+            print()
+            print(f"{YELLOW}{'=' * 80}{RESET}")
+            log("AI审查服务不可用", "WARN")
+            print(f"{YELLOW}{'=' * 80}{RESET}")
+            log("可能原因:", "WARN")
+            log("  - 网络连接失败", "WARN")
+            log("  - API密钥无效或未设置", "WARN")
+            log("  - API服务器无响应", "WARN")
+            print()
+            log("将继续使用本地提交信息", "WARN")
+            print(f"{YELLOW}{'=' * 80}{RESET}")
+            print()
+
         ai_commit_msg = review_result
 
     # 3. 决定提交信息

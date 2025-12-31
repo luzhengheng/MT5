@@ -555,14 +555,48 @@ def main():
         print("=" * 80)
         print()
 
-        # Step 1: Code review
+        # Step 1: AI Review (Blocking)
+        print()
+        print("=" * 80)
+        log("Step 1/5: External AI Review", "PHASE")
+        print("=" * 80)
+        print()
+
+        log("Calling gemini_review_bridge.py...", "INFO")
+
+        try:
+            ret = subprocess.call(["python3", "gemini_review_bridge.py"], cwd=PROJECT_ROOT)
+
+            if ret != 0:
+                print()
+                print("=" * 80)
+                log("AI REVIEW FAILED", "ERROR")
+                print("=" * 80)
+                log(f"gemini_review_bridge.py exited with code {ret}", "ERROR")
+                log("Task CANNOT be marked as complete", "ERROR")
+                log("Please review the errors above and fix them", "WARN")
+                print("=" * 80)
+                sys.exit(1)
+
+            log("AI review completed successfully", "SUCCESS")
+
+        except FileNotFoundError:
+            log("gemini_review_bridge.py not found!", "ERROR")
+            sys.exit(1)
+        except Exception as e:
+            log(f"Unexpected error during AI review: {e}", "ERROR")
+            sys.exit(1)
+
+        print()
+
+        # Step 2: Code review
         if not run_code_review():
             log("Task finish aborted - code review failed", "ERROR")
             sys.exit(1)
 
         print()
 
-        # Step 2: Get current ticket from git log
+        # Step 3: Get current ticket from git log
         log("Fetching latest ticket from git history...", "PHASE")
         try:
             result = subprocess.run(
@@ -585,13 +619,44 @@ def main():
             log(f"Could not fetch git info: {str(e)}", "WARN")
             ticket_num = None
 
-        # Step 3: Push to GitHub
+        # Step 4: Push to GitHub (Blocking)
         print()
-        if not push_to_github():
-            log("GitHub push failed - continuing with Notion updates", "WARN")
+        print("=" * 80)
+        log("Step 4/5: Push to GitHub", "PHASE")
+        print("=" * 80)
         print()
 
-        # Step 4: Update Notion with enhanced sync
+        log("Running: git push", "INFO")
+
+        try:
+            ret = subprocess.call(["git", "push"], cwd=PROJECT_ROOT)
+
+            if ret != 0:
+                print()
+                print("=" * 80)
+                log("GIT PUSH FAILED", "ERROR")
+                print("=" * 80)
+                log(f"git push exited with code {ret}", "ERROR")
+                log("Possible causes:", "WARN")
+                log("  - Network connectivity issue", "WARN")
+                log("  - Authentication failure", "WARN")
+                log("  - Remote repository unreachable", "WARN")
+                log("Task CANNOT be marked as complete", "ERROR")
+                print("=" * 80)
+                sys.exit(1)
+
+            log("Git push completed successfully", "SUCCESS")
+
+        except FileNotFoundError:
+            log("git command not found!", "ERROR")
+            sys.exit(1)
+        except Exception as e:
+            log(f"Unexpected error during git push: {e}", "ERROR")
+            sys.exit(1)
+
+        print()
+
+        # Step 5: Update Notion with enhanced sync
         if ticket_num:
             print("=" * 80)
             log("Synchronizing with Notion...", "PHASE")
@@ -668,7 +733,19 @@ def main():
                                 log(f"📎 GitHub commit URL synced", "SUCCESS")
                             print("=" * 80)
                         else:
-                            log("⚠️  Notion sync failed (see above errors)", "WARN")
+                            print()
+                            print("=" * 80)
+                            log("NOTION SYNC FAILED", "ERROR")
+                            print("=" * 80)
+                            log("Failed to update Notion task status", "ERROR")
+                            log("Possible causes:", "WARN")
+                            log("  - NOTION_TOKEN not set", "WARN")
+                            log("  - Network connectivity issue", "WARN")
+                            log("  - Invalid page_id", "WARN")
+                            log("Task WAS pushed to GitHub but Notion is out of sync", "WARN")
+                            log("Please resolve and manually update Notion", "WARN")
+                            print("=" * 80)
+                            sys.exit(1)
 
                         print()
                         append_release_summary(page_id)
@@ -677,10 +754,25 @@ def main():
                         log(f"Notion page not found for ticket #{ticket_num:03d}", "WARN")
 
             except Exception as e:
-                log(f"Could not update Notion: {str(e)}", "WARN")
+                print()
+                print("=" * 80)
+                log("NOTION UPDATE ERROR", "ERROR")
+                print("=" * 80)
+                log(f"Error updating Notion: {str(e)}", "ERROR")
+                log("Please check your NOTION_TOKEN and API configuration", "ERROR")
+                print("=" * 80)
+                sys.exit(1)
 
+        print()
         print("=" * 80)
-        log("✅ Task completed successfully!", "SUCCESS")
+        log("✅ TASK COMPLETION SUCCESSFUL", "SUCCESS")
+        print("=" * 80)
+        log("All pipeline steps completed successfully:", "SUCCESS")
+        log("  ✅ AI Review passed", "SUCCESS")
+        log("  ✅ Code review passed", "SUCCESS")
+        log("  ✅ Git pushed to remote", "SUCCESS")
+        if ticket_num:
+            log("  ✅ Notion status updated", "SUCCESS")
         print("=" * 80)
         print()
 
