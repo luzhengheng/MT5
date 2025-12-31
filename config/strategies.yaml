@@ -1,0 +1,49 @@
+# Multi-Strategy Configuration
+# Task #021.01: Multi-Strategy Orchestration Engine
+# Protocol: v2.2 (Configuration-as-Code)
+
+strategies:
+  # Strategy 1: EURUSD Trend Following
+  - name: eurusd_trend_v1
+    symbol: EURUSD
+    model_path: models/baseline_v1.json
+    enabled: true
+    threshold: 0.55
+    risk_config:
+      risk_per_trade: 0.02
+      max_position_size: 0.10
+      stop_loss_atr_multiple: 2.0
+      take_profit_risk_reward: 2.0
+
+  # Strategy 2: GBPUSD Pair Trading
+  - name: gbpusd_pairtrading_v1
+    symbol: GBPUSD
+    model_path: models/baseline_v1.json
+    enabled: true
+    threshold: 0.50
+    risk_config:
+      risk_per_trade: 0.01
+      max_position_size: 0.08
+      stop_loss_atr_multiple: 1.5
+      take_profit_risk_reward: 2.5
+
+  # Strategy 3: XAUUSD Scalping (Optional)
+  - name: xauusd_scalping_v1
+    symbol: XAUUSD
+    model_path: models/baseline_v1.json
+    enabled: false
+    threshold: 0.60
+    risk_config:
+      risk_per_trade: 0.015
+      max_position_size: 0.05
+      stop_loss_atr_multiple: 1.0
+      take_profit_risk_reward: 1.5
+
+# Global settings
+global:
+  zmq_market_url: tcp://localhost:5556
+  zmq_execution_host: localhost
+  zmq_execution_port: 5555
+  feature_api_url: http://localhost:8000
+  default_balance: 10000.0
+  paper_trading: true
