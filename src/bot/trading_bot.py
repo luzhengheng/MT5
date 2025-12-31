@@ -29,6 +29,7 @@ PROJECT_ROOT = Path(__file__).parent.parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from src.gateway.mt5_client import MT5Client
+from src.strategy import LiveStrategyAdapter
 
 # Configure logging
 logging.basicConfig(
@@ -104,6 +105,7 @@ class TradingBot:
 
         # Components
         self.model = None
+        self.adapter = None
         self.scaler = StandardScaler()
         self.mt5_client = MT5Client(
             host=zmq_execution_host,
@@ -144,11 +146,17 @@ class TradingBot:
         logger.info(f"{CYAN}🔌 Connecting to services...{RESET}")
 
         try:
-            # 1. Load XGBoost model
-            logger.info(f"  Loading model: {self.model_path}")
-            self.model = XGBClassifier()
-            self.model.load_model(self.model_path)
-            logger.info(f"{GREEN}  ✅ Model loaded{RESET}")
+            # 1. Initialize LiveStrategyAdapter
+            logger.info(f"  Initializing LiveStrategyAdapter...")
+            self.adapter = LiveStrategyAdapter(model_path=self.model_path)
+
+            if not self.adapter.is_model_loaded():
+                raise ConnectionError("Failed to load model via adapter")
+
+            logger.info(f"{GREEN}  ✅ Adapter initialized (Model: {self.adapter.model_type}){RESET}")
+
+            # Keep model reference for backward compatibility
+            self.model = self.adapter.model
 
             # 2. Connect to MT5 Gateway
             logger.info(f"  Connecting to MT5 Gateway...")
@@ -242,7 +250,7 @@ class TradingBot:
 
     def predict_signal(self, features: np.ndarray) -> int:
         """
-        Generate trading signal using XGBoost model
+        Generate trading signal using LiveStrategyAdapter
 
         Args:
             features: Feature array (1, 18)
@@ -251,28 +259,17 @@ class TradingBot:
             Signal: 1 (BUY), 0 (HOLD), -1 (SELL)
         """
         try:
-            # Scale features
-            features_scaled = self.scaler.fit_transform(features)
+            # Use adapter for unified signal generation
+            if self.adapter is None:
+                logger.error(f"{RED}❌ Adapter not initialized{RESET}")
+                return 0
 
-            # Predict
-            prediction = self.model.predict(features_scaled)[0]
-            proba = self.model.predict_proba(features_scaled)[0]
+            # Generate signal using adapter
+            signal = self.adapter.generate_signal(features)
 
-            # Convert to signal
-            # prediction = 1 means price up -> BUY
-            # prediction = 0 means price down -> SELL
-            if prediction == 1:
-                signal = 1  # BUY
-                confidence = proba[1]
-            else:
-                signal = -1  # SELL
-                confidence = proba[0]
-
-            logger.info(
-                f"{CYAN}[PRED] Signal: "
-                f"{'BUY' if signal == 1 else 'SELL'} "
-                f"(confidence: {confidence:.2f}){RESET}"
-            )
+            # Log signal with interpretation
+            signal_name = "BUY" if signal == 1 else ("SELL" if signal == -1 else "HOLD")
+            logger.info(f"{CYAN}[PRED] Signal: {signal_name} ({signal}){RESET}")
 
             return signal
 

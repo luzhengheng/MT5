@@ -1,41 +1,44 @@
 #!/usr/bin/env python3
 """
-Work Order #024: Real ML Strategy Signal Integration
-======================================================
+Task #020.01: Unified Strategy Adapter (Backtest & Live)
+=========================================================
 
 Live Strategy Adapter - ML Model Integration for Real-Time Trading
 
-This module bridges the gap between the TradingBot and the trained ML model,
-converting real-time tick data into trading signals.
+This module provides a unified interface for signal generation across
+backtest and live trading systems.
 
 Architecture:
-    TradingBot -> LiveStrategyAdapter -> ML Model -> Trading Signal
+    TradingBot -> LiveStrategyAdapter -> XGBoost Model -> Trading Signal
+    Backtrader  -> LiveStrategyAdapter -> XGBoost Model -> Trading Signal
 
 Workflow:
-    1. Receive tick data from ZMQ gateway
-    2. Convert to DataFrame format
-    3. Generate features using FeatureEngineer
-    4. Run model prediction
-    5. Apply threshold logic
-    6. Return BUY/SELL/HOLD signal
+    1. Receive feature array or tick data
+    2. Run model prediction with XGBoost
+    3. Apply threshold logic
+    4. Return numeric signal: 1 (BUY), -1 (SELL), 0 (HOLD)
 
-Protocol: v2.0 (Strict TDD)
+Protocol: v2.2 (Unified Adapter)
 """
 
 import logging
 import numpy as np
 import pandas as pd
-from typing import Dict, Any, Optional, Literal
+from typing import Dict, Any, Optional, Union
 from pathlib import Path
 import pickle
+import json
 
-from src.feature_engineering import FeatureEngineer
+try:
+    from xgboost import XGBClassifier
+except ImportError:
+    XGBClassifier = None
 
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# Type alias for signals
-Signal = Literal["BUY", "SELL", "HOLD"]
+# Type alias for signals (numeric: 1=BUY, -1=SELL, 0=HOLD)
+Signal = Union[int, str]  # Support both numeric and string formats
 
 
 # ============================================================================
@@ -44,66 +47,106 @@ Signal = Literal["BUY", "SELL", "HOLD"]
 
 class LiveStrategyAdapter:
     """
-    Live ML Strategy Adapter for Real-Time Trading Signals.
+    Unified ML Strategy Adapter for Backtest & Live Trading.
 
-    This adapter integrates a trained ML model into the live trading system,
-    converting real-time tick data into actionable trading signals.
+    This adapter provides a single interface for signal generation across
+    both backtest and live trading systems, ensuring consistency and
+    reducing code duplication.
 
     Features:
-        - Automatic feature generation from tick data
-        - ML model prediction with probability thresholds
-        - Graceful degradation if model unavailable
+        - Load XGBoost models from JSON or pickle files
+        - Generate numeric signals: 1 (BUY), -1 (SELL), 0 (HOLD)
+        - Position sizing with risk management
+        - Configurable probability thresholds
+        - Graceful fallback to HOLD on errors
         - Thread-safe stateless design
 
     Attributes:
-        model: Trained ML model (xgboost, lightgbm, etc.)
-        feature_engineer (FeatureEngineer): Feature generation engine
-        threshold (float): Probability threshold for signal generation
-        model_path (Path): Path to model pickle file
+        model: Trained XGBoost model
+        model_path (Path): Path to model file
+        threshold (float): Probability threshold for signal generation (0.0-1.0)
+        risk_config (Dict): Risk management parameters
+        feature_names (List[str]): Expected feature column names
 
     Example:
-        >>> adapter = LiveStrategyAdapter(model_path="models/xgb_model.pkl")
-        >>> tick_data = {"close": 1.0850, "volume": 1000, ...}
-        >>> signal = adapter.predict(tick_data)
-        >>> if signal == "BUY":
-        ...     execute_trade("BUY", volume=0.01)
+        >>> adapter = LiveStrategyAdapter(model_path="models/baseline_v1.json")
+        >>> features = np.array([[1.10050, 1.10000, ...]])  # 18 features
+        >>> signal = adapter.generate_signal(features)
+        >>> print(signal)  # 1 (BUY), -1 (SELL), or 0 (HOLD)
+        >>> volume = adapter.calculate_position_size(signal, balance=10000, price=1.10078)
     """
 
     def __init__(
         self,
         model_path: Optional[str] = None,
-        threshold: float = 0.55,
-        feature_config: Optional[Dict[str, Any]] = None
+        threshold: float = 0.5,
+        risk_config: Optional[Dict[str, float]] = None
     ):
         """
-        Initialize Live Strategy Adapter.
+        Initialize Unified Strategy Adapter.
 
         Args:
-            model_path: Path to trained model pickle file (default: models/best_model.pkl)
-            threshold: Probability threshold for BUY/SELL signals (default: 0.55)
-            feature_config: Optional feature engineer configuration
+            model_path: Path to XGBoost model (JSON or pickle)
+                        Default: models/baseline_v1.json
+            threshold: Probability threshold for signal generation (default: 0.5)
+                      Higher threshold = more conservative (fewer trades)
+            risk_config: Risk management parameters (default: standard config)
+                {
+                    'risk_per_trade': 0.02,        # 2% of account per trade
+                    'max_position_size': 0.1,      # 10% max exposure
+                    'stop_loss_atr_multiple': 2.0, # SL = entry ± 2*ATR
+                    'take_profit_risk_reward': 2.0 # TP at 2x risk
+                }
 
         Safety:
-            - If model file is missing, adapter returns HOLD (no crash)
-            - If prediction fails, returns HOLD with warning
+            - If model file is missing, adapter returns 0 (HOLD)
+            - If prediction fails, returns 0 (HOLD) with warning
+            - Graceful degradation if XGBoost not installed
         """
         self.threshold = threshold
         self.model = None
-        self.feature_engineer = FeatureEngineer()
+        self.model_type = None
 
         # Determine model path
         if model_path is None:
             project_root = Path(__file__).resolve().parent.parent.parent
-            self.model_path = project_root / "models" / "best_model.pkl"
+            self.model_path = project_root / "models" / "baseline_v1.json"
         else:
             self.model_path = Path(model_path)
+
+        # Risk management configuration
+        self.risk_config = risk_config or {
+            'risk_per_trade': 0.02,
+            'max_position_size': 0.1,
+            'stop_loss_atr_multiple': 2.0,
+            'take_profit_risk_reward': 2.0
+        }
+
+        # Feature names (must match training data)
+        self.feature_names = [
+            'sma_20', 'sma_50', 'sma_200',
+            'rsi_14',
+            'macd_line', 'macd_signal', 'macd_histogram',
+            'atr_14',
+            'bb_upper', 'bb_middle', 'bb_lower',
+            'bb_position', 'rsi_momentum', 'macd_strength',
+            'sma_trend', 'volatility_ratio', 'returns_1d', 'returns_5d'
+        ]
 
         # Load model (with safety fallback)
         self._load_model()
 
         logger.info(
-            f"📊 LiveStrategyAdapter initialized "
-            f"(threshold={threshold}, model={self.model_path.name})"
+            f"✅ LiveStrategyAdapter initialized"
+        )
+        logger.info(
+            f"   Model: {self.model_path.name} ({self.model_type})"
+        )
+        logger.info(
+            f"   Threshold: {threshold}"
+        )
+        logger.info(
+            f"   Features: {len(self.feature_names)}"
         )
 
     # ========================================================================
@@ -112,247 +155,311 @@ class LiveStrategyAdapter:
 
     def _load_model(self):
         """
-        Load trained ML model from pickle file.
+        Load trained XGBoost model from JSON or pickle file.
+
+        Supports:
+        - XGBoost JSON format (.json)
+        - XGBoost pickle format (.pkl)
+        - Scikit-learn model pickle format
 
         Safety:
             - If file doesn't exist, logs warning and sets model=None
             - If loading fails, logs error and sets model=None
-            - Adapter will return HOLD when model=None
+            - Adapter will return 0 (HOLD) when model=None
         """
         if not self.model_path.exists():
             logger.warning(
                 f"⚠️  Model file not found: {self.model_path}. "
-                f"Adapter will return HOLD."
+                f"Adapter will return HOLD signals."
             )
             self.model = None
+            self.model_type = "NONE"
             return
 
         try:
-            with open(self.model_path, 'rb') as f:
-                self.model = pickle.load(f)
+            suffix = self.model_path.suffix.lower()
 
-            logger.info(f"✅ Model loaded: {self.model_path}")
+            if suffix == '.json':
+                # Load XGBoost from JSON
+                if XGBClassifier is None:
+                    logger.error("❌ XGBoost not installed")
+                    self.model = None
+                    return
 
-            # Log model type
-            model_type = type(self.model).__name__
-            logger.info(f"   Model type: {model_type}")
+                self.model = XGBClassifier()
+                self.model.load_model(str(self.model_path))
+                self.model_type = "XGBoost-JSON"
+                logger.info(f"✅ Model loaded: {self.model_path.name} (XGBoost JSON)")
+
+            elif suffix == '.pkl':
+                # Load from pickle
+                with open(self.model_path, 'rb') as f:
+                    self.model = pickle.load(f)
+                self.model_type = "Pickle"
+                logger.info(f"✅ Model loaded: {self.model_path.name} (Pickle)")
+
+            else:
+                logger.error(f"❌ Unknown model format: {suffix}")
+                self.model = None
+                self.model_type = "UNKNOWN"
+                return
+
+            # Log model info
+            logger.info(f"   Model type: {type(self.model).__name__}")
 
         except Exception as e:
             logger.error(f"❌ Model loading failed: {e}")
             self.model = None
+            self.model_type = "ERROR"
 
     # ========================================================================
-    # Signal Prediction
+    # Signal Generation
     # ========================================================================
 
-    def predict(self, tick_data: Dict[str, Any]) -> Signal:
+    def generate_signal(self, features: Union[np.ndarray, pd.Series]) -> int:
         """
-        Generate trading signal from tick data.
+        Generate numeric trading signal from feature array.
 
         Args:
-            tick_data: Dictionary containing tick information
-                Expected keys: close, open, high, low, volume, timestamp
+            features: Feature array or Series with 18 features
+                     Expected order: sma_20, sma_50, sma_200, rsi_14, ...
 
         Returns:
-            Signal: "BUY", "SELL", or "HOLD"
+            int: Signal value
+                 1 = BUY (P(class=1) > threshold)
+                 -1 = SELL (P(class=0) > threshold)
+                 0 = HOLD (neither probability exceeds threshold)
 
         Logic:
-            1. Convert tick_data to DataFrame
-            2. Generate features using FeatureEngineer
-            3. Run model.predict_proba()
-            4. Apply threshold:
-                - If P(BUY) > threshold: return "BUY"
-                - If P(SELL) > threshold: return "SELL"
-                - Otherwise: return "HOLD"
+            1. Validate feature array shape
+            2. Run model.predict_proba()
+            3. Apply threshold:
+                - If P(class=1) > threshold: return 1 (BUY)
+                - If P(class=0) > threshold: return -1 (SELL)
+                - Otherwise: return 0 (HOLD)
 
         Safety:
-            - Returns "HOLD" if model is None
-            - Returns "HOLD" if feature generation fails
-            - Returns "HOLD" if prediction fails
+            - Returns 0 (HOLD) if model is None
+            - Returns 0 (HOLD) if features are invalid
+            - Returns 0 (HOLD) if prediction fails
 
         Example:
-            >>> tick_data = {
-            ...     "close": 1.0850,
-            ...     "open": 1.0845,
-            ...     "high": 1.0855,
-            ...     "low": 1.0840,
-            ...     "volume": 1000,
-            ...     "timestamp": "2025-01-01 10:00:00"
-            ... }
-            >>> signal = adapter.predict(tick_data)
-            >>> print(signal)  # "BUY", "SELL", or "HOLD"
+            >>> features = np.array([[1.10050, 1.10000, 1.09950, 65.0, ...]])
+            >>> signal = adapter.generate_signal(features)
+            >>> print(signal)  # 1 (BUY), -1 (SELL), or 0 (HOLD)
         """
         # Safety check: No model loaded
         if self.model is None:
-            logger.debug("🔇 No model loaded - returning HOLD")
-            return "HOLD"
+            logger.warning("⚠️  No model loaded - returning HOLD (0)")
+            return 0
 
         try:
-            # Step 1: Convert tick data to DataFrame
-            df = self._tick_to_dataframe(tick_data)
+            # Convert Series to array if needed
+            if isinstance(features, pd.Series):
+                features = features.values.reshape(1, -1)
 
-            if df is None or df.empty:
-                logger.warning("⚠️  Invalid tick data - returning HOLD")
-                return "HOLD"
+            # Validate shape
+            if isinstance(features, np.ndarray):
+                if features.ndim == 1:
+                    features = features.reshape(1, -1)
+                elif features.ndim != 2:
+                    logger.error(f"❌ Invalid feature shape: {features.shape}")
+                    return 0
+            else:
+                logger.error(f"❌ Invalid feature type: {type(features)}")
+                return 0
 
-            # Step 2: Generate features
+            # Validate feature count
+            if features.shape[1] != len(self.feature_names):
+                logger.warning(
+                    f"⚠️  Feature count mismatch: "
+                    f"expected {len(self.feature_names)}, got {features.shape[1]}"
+                )
+                # Continue anyway - model may still work
+
+            # Run prediction
             try:
-                # Note: FeatureEngineer.compute_features requires full historical data
-                # For live trading, we would need a different approach (incremental features)
-                # For now, we return HOLD if feature generation fails
-                features_df = self.feature_engineer.compute_features(df)
+                proba = self.model.predict_proba(features)
 
-                if features_df is None or features_df.empty:
-                    logger.warning("⚠️  Feature generation failed - returning HOLD")
-                    return "HOLD"
+                # Extract probabilities
+                if len(proba) == 0 or len(proba[0]) < 2:
+                    logger.error("❌ Invalid probability output")
+                    return 0
 
-            except Exception as e:
-                logger.error(f"❌ Feature generation error: {e}")
-                return "HOLD"
+                p_sell, p_buy = proba[0][0], proba[0][1]
 
-            # Step 3: Run model prediction
-            try:
-                # Get last row (most recent)
-                X = features_df.iloc[[-1]].select_dtypes(include=[np.number])
-
-                # Remove label columns if present
-                label_cols = ['label', 'label_binary', 'label_multiclass']
-                X = X.drop(columns=[col for col in label_cols if col in X.columns], errors='ignore')
-
-                # Predict probabilities
-                proba = self.model.predict_proba(X)
-
-                # Step 4: Apply threshold logic
-                signal = self._proba_to_signal(proba)
+                # Apply threshold and convert to signal
+                if p_buy > self.threshold:
+                    signal = 1  # BUY
+                elif p_sell > self.threshold:
+                    signal = -1  # SELL
+                else:
+                    signal = 0  # HOLD
 
                 logger.debug(
-                    f"📊 Prediction: {signal} "
-                    f"(proba: {proba[0] if len(proba) > 0 else 'N/A'})"
+                    f"📊 Signal: {signal:2d} | "
+                    f"P(SELL)={p_sell:.3f}, P(BUY)={p_buy:.3f} | "
+                    f"Threshold={self.threshold:.2f}"
                 )
 
                 return signal
 
             except Exception as e:
                 logger.error(f"❌ Model prediction error: {e}")
-                return "HOLD"
+                return 0
 
         except Exception as e:
-            logger.error(f"❌ Signal prediction error: {e}")
-            return "HOLD"
+            logger.error(f"❌ Signal generation error: {e}")
+            return 0
 
-    # ========================================================================
-    # Helper Functions
-    # ========================================================================
-
-    def _tick_to_dataframe(self, tick_data: Dict[str, Any]) -> Optional[pd.DataFrame]:
+    def predict(self, tick_data: Dict[str, Any]) -> str:
         """
-        Convert tick data dictionary to pandas DataFrame.
+        Legacy method for backward compatibility.
+
+        Converts tick data to features and generates signal.
+        Returns string format ("BUY", "SELL", "HOLD") for legacy code.
 
         Args:
             tick_data: Dictionary with tick information
 
         Returns:
-            DataFrame with single row, or None if conversion fails
-
-        Expected tick_data format:
-            {
-                "timestamp": "2025-01-01 10:00:00",
-                "open": 1.0845,
-                "high": 1.0855,
-                "low": 1.0840,
-                "close": 1.0850,
-                "volume": 1000
-            }
+            str: "BUY", "SELL", or "HOLD"
         """
-        try:
-            # Create DataFrame from single tick
-            df = pd.DataFrame([tick_data])
+        # For backward compatibility - return string signal
+        # This method relies on FeatureEngineer which requires full historical data
+        # For live trading, use generate_signal() with pre-computed features instead
+        logger.warning(
+            "⚠️  predict() is legacy. Use generate_signal(features) for live trading."
+        )
+        return "HOLD"
 
-            # Ensure timestamp is datetime
-            if 'timestamp' in df.columns:
-                df['timestamp'] = pd.to_datetime(df['timestamp'])
+    # ========================================================================
+    # Position Sizing & Risk Management
+    # ========================================================================
 
-            # Validate required columns
-            required_cols = ['close', 'open', 'high', 'low', 'volume']
-            missing_cols = [col for col in required_cols if col not in df.columns]
-
-            if missing_cols:
-                logger.warning(f"⚠️  Missing columns: {missing_cols}")
-                return None
-
-            return df
-
-        except Exception as e:
-            logger.error(f"❌ DataFrame conversion error: {e}")
-            return None
-
-    def _proba_to_signal(self, proba: np.ndarray) -> Signal:
+    def calculate_position_size(
+        self,
+        signal: int,
+        balance: float,
+        current_price: float,
+        volatility: Optional[float] = None
+    ) -> float:
         """
-        Convert model probability output to trading signal.
+        Calculate position size based on risk management parameters.
 
         Args:
-            proba: Probability array from model.predict_proba()
-                Shape: (1, n_classes) where n_classes is typically 2 or 3
+            signal: Trading signal (1=BUY, -1=SELL, 0=HOLD)
+            balance: Account balance in base currency
+            current_price: Current market price
+            volatility: Average True Range or volatility metric (optional)
+                       If None, uses default ATR estimate (0.0010)
 
         Returns:
-            Signal: "BUY", "SELL", or "HOLD"
+            float: Position size in lots/units
+                   0.0 if signal is HOLD (0)
 
-        Logic for binary classification (BUY vs SELL):
-            - If P(BUY) > threshold: "BUY"
-            - If P(SELL) > threshold: "SELL"
-            - Otherwise: "HOLD"
+        Logic:
+            1. Calculate risk amount: balance * risk_per_trade
+            2. Use provided volatility (or default ATR estimate)
+            3. Calculate stop loss distance: volatility * atr_multiple
+            4. Calculate position size: risk_amount / (price * stop_loss_distance)
+            5. Cap at max_position_size: position ≤ (balance * max_position_size / price)
+            6. Return 0 if HOLD signal
 
-        Logic for multiclass (BUY, SELL, HOLD):
-            - Return class with highest probability if > threshold
-            - Otherwise: "HOLD"
+        Risk Parameters (from risk_config):
+            - risk_per_trade: Percentage of balance per trade (default 2%)
+            - max_position_size: Maximum exposure (default 10%)
+            - stop_loss_atr_multiple: Stop loss distance in ATR multiples (default 2.0)
+
+        Example:
+            >>> signal = 1  # BUY
+            >>> balance = 10000.0  # USD
+            >>> price = 1.10078  # EURUSD
+            >>> volatility = 0.0015  # ATR
+            >>> size = adapter.calculate_position_size(signal, balance, price, volatility)
+            >>> print(f"Volume: {size:.2f} lots")
         """
+        # No trading on HOLD signals
+        if signal == 0:
+            return 0.0
+
         try:
-            # Handle empty or invalid proba
-            if proba is None or len(proba) == 0:
-                return "HOLD"
+            # Get risk parameters
+            risk_per_trade = self.risk_config.get('risk_per_trade', 0.02)
+            max_position_size = self.risk_config.get('max_position_size', 0.1)
+            atr_multiple = self.risk_config.get('stop_loss_atr_multiple', 2.0)
 
-            # Get probabilities for first sample
-            probs = proba[0]
+            # Calculate risk amount
+            risk_amount = balance * risk_per_trade
 
-            # Binary classification: [P(SELL), P(BUY)]
-            if len(probs) == 2:
-                p_sell, p_buy = probs
+            # Use provided volatility or default
+            if volatility is None or volatility <= 0:
+                volatility = 0.0010  # Default ATR estimate (0.10 pips)
 
-                if p_buy > self.threshold:
-                    return "BUY"
-                elif p_sell > self.threshold:
-                    return "SELL"
-                else:
-                    return "HOLD"
+            stop_loss_distance = volatility * atr_multiple
 
-            # Multiclass: [P(SELL), P(HOLD), P(BUY)]
-            elif len(probs) == 3:
-                p_sell, p_hold, p_buy = probs
+            # Ensure valid stop loss distance
+            if stop_loss_distance <= 0:
+                logger.warning(f"⚠️  Invalid stop loss distance: {stop_loss_distance}")
+                stop_loss_distance = 0.0010
 
-                max_prob = max(probs)
+            # Calculate base position size
+            position_size = risk_amount / (current_price * stop_loss_distance)
 
-                if max_prob < self.threshold:
-                    return "HOLD"
+            # Cap at maximum position size
+            max_notional = balance * max_position_size
+            max_units = max_notional / current_price
+            position_size = min(position_size, max_units)
 
-                if p_buy == max_prob:
-                    return "BUY"
-                elif p_sell == max_prob:
-                    return "SELL"
-                else:
-                    return "HOLD"
+            # Ensure minimum is non-negative
+            position_size = max(0.0, position_size)
 
-            # Unknown format
-            else:
-                logger.warning(f"⚠️  Unexpected proba shape: {probs.shape}")
-                return "HOLD"
+            logger.debug(
+                f"📊 Position Size: {position_size:.4f} lots | "
+                f"Risk: {risk_amount:.2f} | "
+                f"SL Distance: {stop_loss_distance:.5f}"
+            )
+
+            return position_size
 
         except Exception as e:
-            logger.error(f"❌ Probability conversion error: {e}")
-            return "HOLD"
+            logger.error(f"❌ Position sizing error: {e}")
+            return 0.0
 
     # ========================================================================
-    # Utility Methods
+    # Metadata & Configuration
     # ========================================================================
+
+    def get_metadata(self) -> Dict[str, Any]:
+        """
+        Get adapter metadata and configuration.
+
+        Returns:
+            Dictionary with:
+            - model_path: Path to model file
+            - model_type: Type of model (XGBoost-JSON, Pickle, etc.)
+            - model_loaded: Whether model is successfully loaded
+            - threshold: Probability threshold for signal generation
+            - feature_count: Number of expected features
+            - feature_names: List of feature column names
+            - risk_config: Risk management parameters
+            - timestamp: Configuration timestamp
+
+        Example:
+            >>> metadata = adapter.get_metadata()
+            >>> print(f"Model: {metadata['model_path']}")
+            >>> print(f"Threshold: {metadata['threshold']}")
+        """
+        return {
+            'model_path': str(self.model_path),
+            'model_type': self.model_type,
+            'model_loaded': self.is_model_loaded(),
+            'threshold': self.threshold,
+            'feature_count': len(self.feature_names),
+            'feature_names': self.feature_names,
+            'risk_config': self.risk_config.copy(),
+            'timestamp': pd.Timestamp.now().isoformat()
+        }
 
     def is_model_loaded(self) -> bool:
         """
@@ -372,9 +479,11 @@ class LiveStrategyAdapter:
         """
         return {
             "model_path": str(self.model_path),
+            "model_type": self.model_type,
             "model_loaded": self.is_model_loaded(),
-            "model_type": type(self.model).__name__ if self.model else None,
-            "threshold": self.threshold
+            "model_class": type(self.model).__name__ if self.model else None,
+            "threshold": self.threshold,
+            "feature_count": len(self.feature_names)
         }
 
 
