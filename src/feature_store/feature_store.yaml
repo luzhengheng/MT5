@@ -1,0 +1,35 @@
+# Feast Feature Store Configuration
+# ====================================
+# 配置 Feast 特征仓库以支持 TimescaleDB 离线存储
+#
+# 项目信息:
+# - 名称: mt5_feature_store
+# - 类型: 离线特征存储 (Offline-only)
+# - 数据源: PostgreSQL/TimescaleDB
+# - 注册表: 本地 SQLite (Protocol v2.2 合规 - 本地存储)
+
+project: mt5_feature_store
+registry_type: sqlite
+registry_path: "./registry.db"
+
+provider: local
+offline_store:
+  type: postgres
+  host: localhost
+  port: 5432
+  database: mt5_crs
+  user: trader
+  password: password
+  schema: public
+
+online_store:
+  type: sqlite
+  path: ./online_store.db
+
+repo_path: ./
+
+# 项目元数据
+metadata:
+  description: "MT5 Cryptocurrency and Forex Feature Store - Powered by Feast"
+  owner: "Trading Research System"
+  version: "1.0.0"
