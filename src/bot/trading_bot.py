@@ -1,409 +1,432 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-Work Order #023: Live Trading Strategy Integration
-====================================================
+Trading Bot - Real-time Inference & Execution Loop
 
-Trading Bot - The Conscious Loop (Brain Wakes Up)
+Task #018.01: Integrates MT5Client, XGBoost Model, and Feature API
+into a unified real-time trading system.
 
-This module integrates the ZmqClient (The Axon) with the TradingBot (The Brain),
-creating a real-time "Heartbeat -> Decision -> Execution" loop that drives the
-Windows Gateway.
-
-Architecture:
-- ZmqClient: Communication fabric to Windows Gateway
-- TradingBot: Decision-making and execution orchestration
-- Strategy Engine: Signal generation (optional, can be None for now)
-- Main Loop: Continuous operation with graceful shutdown
-
-Previous State (Work Order #022):
-- ZeroMQ fabric established (ports 5555/5556)
-- Windows Gateway listening and ready
-- Linux Brain has functioning ZmqClient
-
-Current Goal:
-- Upgrade TradingBot to actively use ZmqClient
-- Demonstrate "Heartbeat -> Decision -> Execution" loop
-- Drive Windows Gateway from Linux Brain
-
-Protocol: v2.0 (Strict TDD & Dual-Brain)
+Protocol: v2.2 (Hot Path Architecture)
 """
 
-import time
+import zmq
+import json
 import logging
-from typing import Optional, Dict, Any
+import time
+import threading
+from typing import List, Dict, Any, Optional
+from datetime import datetime
+from pathlib import Path
 
-from src.mt5_bridge.protocol import Action, ResponseStatus
+import numpy as np
+import requests
+from xgboost import XGBClassifier
+from sklearn.preprocessing import StandardScaler
+
+# Add project root to path
+import sys
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(PROJECT_ROOT))
+
+from src.gateway.mt5_client import MT5Client
 
 # Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(PROJECT_ROOT / 'logs' / 'trading.log'),
+        logging.StreamHandler()
+    ]
+)
 logger = logging.getLogger(__name__)
 
+# Color codes
+GREEN = "\033[92m"
+RED = "\033[91m"
+YELLOW = "\033[93m"
+CYAN = "\033[96m"
+BLUE = "\033[94m"
+RESET = "\033[0m"
 
-# ============================================================================
-# Trading Bot - The Conscious Loop
-# ============================================================================
 
 class TradingBot:
     """
-    Trading Bot with ZeroMQ Integration (Work Order #023)
+    Real-time Trading Bot
 
-    The "conscious loop" that orchestrates trading decisions and executes
-    them via the ZmqClient (The Axon) to the Windows Gateway.
+    Integrates:
+    - ZMQ PUB/SUB for market data (Port 5556)
+    - Feature Serving API (HTTP)
+    - XGBoost model for inference
+    - MT5Client for order execution (ZMQ REQ, Port 5555)
 
     Architecture:
-        Brain (Linux) -> ZmqClient (Axon) -> Windows Gateway -> MT5
+        Market Data (ZMQ PUB) -> on_tick()
+            -> fetch_features() (HTTP API)
+            -> predict_signal() (XGBoost)
+            -> execute_signal() (MT5Client)
 
-    Core Loop:
-        1. Heartbeat Check: Verify gateway connectivity
-        2. Account Sync: Fetch account info from gateway
-        3. Strategy Signal: Generate trading decision (placeholder)
-        4. Trade Execution: Send orders via ZmqClient
-        5. Sleep & Repeat
-
-    Attributes:
-        client (ZmqClient): The communication axon to Windows Gateway
-        strategy: Strategy engine for signal generation (optional)
-        symbol (str): Trading symbol (e.g., "EURUSD.s")
-        interval (int): Loop interval in seconds
-        running (bool): Control flag for main loop
+    Features:
+    - Real-time tick processing
+    - Feature fetching from API
+    - ML-based signal generation
+    - Order execution with error handling
+    - Comprehensive logging
     """
 
     def __init__(
         self,
-        zmq_client,
-        strategy_engine: Optional[Any] = None,
-        symbol: str = "EURUSD.s",
-        interval: int = 10
+        symbols: List[str],
+        model_path: str,
+        api_url: str = "http://localhost:8000",
+        zmq_market_url: str = "tcp://localhost:5556",
+        zmq_execution_host: str = "localhost",
+        zmq_execution_port: int = 5555,
+        volume: float = 0.1
     ):
         """
-        Initialize Trading Bot with ZmqClient integration.
+        Initialize Trading Bot
 
         Args:
-            zmq_client: ZmqClient instance (The Axon)
-            strategy_engine: Optional strategy for signal generation
-            symbol: Trading symbol (default: "EURUSD.s")
-            interval: Loop interval in seconds (default: 10)
-
-        Example:
-            >>> from src.mt5_bridge import ZmqClient
-            >>> client = ZmqClient(host="172.19.141.255")
-            >>> bot = TradingBot(zmq_client=client)
-            >>> bot.start()
+            symbols: List of trading symbols (e.g., ['EURUSD', 'XAUUSD'])
+            model_path: Path to XGBoost model file
+            api_url: Feature Serving API URL
+            zmq_market_url: ZMQ market data publisher URL
+            zmq_execution_host: MT5 Gateway host
+            zmq_execution_port: MT5 Gateway port
+            volume: Default trading volume (lots)
         """
-        self.client = zmq_client
-        self.strategy = strategy_engine
-        self.symbol = symbol
-        self.interval = interval
-        self.running = False
+        self.symbols = symbols
+        self.model_path = model_path
+        self.api_url = api_url
+        self.zmq_market_url = zmq_market_url
+        self.volume = volume
 
-        logger.info(
-            f"🤖 TradingBot initialized "
-            f"(symbol={symbol}, interval={interval}s)"
+        # Components
+        self.model = None
+        self.scaler = StandardScaler()
+        self.mt5_client = MT5Client(
+            host=zmq_execution_host,
+            port=zmq_execution_port
         )
+        self.zmq_context = zmq.Context()
+        self.zmq_subscriber = None
 
-    # ========================================================================
-    # Main Control Loop
-    # ========================================================================
-
-    def start(self):
-        """
-        Start the trading bot main loop.
-
-        Loop Sequence:
-            1. Check connection (heartbeat)
-            2. Run tick cycle (account sync + decision + execution)
-            3. Sleep for interval
-            4. Repeat until stopped
-
-        Handles:
-            - KeyboardInterrupt: Graceful shutdown
-            - Exceptions: Log error and continue (5-second backoff)
-
-        Example:
-            >>> bot = TradingBot(zmq_client=client)
-            >>> bot.start()  # Blocks until KeyboardInterrupt
-        """
-        logger.info(f"🚀 Starting Trading Bot for {self.symbol}...")
-        self.running = True
-
-        # Initial connection check
-        if not self._check_connection():
-            logger.critical("❌ Connection Failed - Cannot start bot")
-            return
-
-        logger.info("✅ Gateway connection verified")
-        logger.info(f"⏱️  Loop interval: {self.interval} seconds")
-        logger.info("🔄 Entering main trading loop...")
-        print()
-
-        # Main trading loop
-        cycle_count = 0
-        while self.running:
-            try:
-                cycle_count += 1
-                logger.info(f"{'='*60}")
-                logger.info(f"🔄 Cycle #{cycle_count} starting...")
-
-                # Execute one tick
-                self._tick()
-
-                # Wait for next cycle
-                logger.info(f"⏳ Waiting {self.interval} seconds...")
-                time.sleep(self.interval)
-
-            except KeyboardInterrupt:
-                # Graceful shutdown requested
-                logger.info("\n🛑 KeyboardInterrupt received")
-                self.stop()
-                break
-
-            except Exception as e:
-                # Error in cycle - log and continue with backoff
-                logger.error(f"❌ Loop Error: {e}")
-                import traceback
-                traceback.print_exc()
-                logger.info("⏳ Backing off 5 seconds before retry...")
-                time.sleep(5)
-
-        logger.info(f"🏁 Trading Bot stopped after {cycle_count} cycles")
-
-    def stop(self):
-        """
-        Stop the trading bot gracefully.
-
-        Sets running flag to False, which will exit the main loop
-        on the next iteration.
-
-        Example:
-            >>> bot.stop()
-        """
-        logger.info("🛑 Stopping Bot...")
+        # State
         self.running = False
+        self.order_lock = threading.Lock()  # Prevent concurrent orders
 
-    # ========================================================================
-    # Connection Management
-    # ========================================================================
+        # Feature columns (must match training)
+        self.feature_cols = [
+            'sma_20', 'sma_50', 'sma_200',
+            'rsi_14',
+            'macd_line', 'macd_signal', 'macd_histogram',
+            'atr_14',
+            'bb_upper', 'bb_middle', 'bb_lower',
+            'bb_position', 'rsi_momentum', 'macd_strength',
+            'sma_trend', 'volatility_ratio', 'returns_1d', 'returns_5d'
+        ]
 
-    def _check_connection(self) -> bool:
+        logger.info(f"{GREEN}✅ TradingBot initialized{RESET}")
+        logger.info(f"  Symbols: {symbols}")
+        logger.info(f"  Model: {model_path}")
+        logger.info(f"  API: {api_url}")
+        logger.info(f"  Market Data: {zmq_market_url}")
+        logger.info(f"  Execution: {zmq_execution_host}:{zmq_execution_port}")
+
+    def connect(self) -> bool:
         """
-        Verify connection to Windows Gateway via heartbeat.
+        Connect to all external services
 
         Returns:
-            True if gateway responds to heartbeat
-            False if gateway is unreachable
-
-        Example:
-            >>> if bot._check_connection():
-            ...     print("Gateway is alive")
+            True if all connections successful, False otherwise
         """
-        logger.info("🔍 Checking gateway connection...")
+        logger.info(f"{CYAN}🔌 Connecting to services...{RESET}")
 
         try:
-            is_alive = self.client.check_heartbeat()
+            # 1. Load XGBoost model
+            logger.info(f"  Loading model: {self.model_path}")
+            self.model = XGBClassifier()
+            self.model.load_model(self.model_path)
+            logger.info(f"{GREEN}  ✅ Model loaded{RESET}")
 
-            if is_alive:
-                logger.info("✅ Gateway heartbeat: OK")
-            else:
-                logger.error("❌ Gateway heartbeat: FAILED")
+            # 2. Connect to MT5 Gateway
+            logger.info(f"  Connecting to MT5 Gateway...")
+            if not self.mt5_client.connect():
+                raise ConnectionError("MT5 Gateway connection failed")
+            logger.info(f"{GREEN}  ✅ MT5 Gateway connected{RESET}")
 
-            return is_alive
+            # 3. Test Feature API
+            logger.info(f"  Testing Feature API...")
+            response = requests.get(f"{self.api_url}/health", timeout=5)
+            if response.status_code != 200:
+                raise ConnectionError(f"Feature API unhealthy: {response.status_code}")
+            logger.info(f"{GREEN}  ✅ Feature API accessible{RESET}")
+
+            # 4. Subscribe to market data
+            logger.info(f"  Subscribing to market data...")
+            self.zmq_subscriber = self.zmq_context.socket(zmq.SUB)
+            self.zmq_subscriber.connect(self.zmq_market_url)
+
+            # Subscribe to all symbols
+            for symbol in self.symbols:
+                self.zmq_subscriber.setsockopt_string(zmq.SUBSCRIBE, symbol)
+
+            logger.info(f"{GREEN}  ✅ Market data subscription ready{RESET}")
+
+            logger.info(f"{GREEN}✅ All services connected{RESET}")
+            return True
 
         except Exception as e:
-            logger.error(f"❌ Connection check error: {e}")
+            logger.error(f"{RED}❌ Connection failed: {e}{RESET}")
             return False
 
-    # ========================================================================
-    # Trading Cycle (The Tick)
-    # ========================================================================
-
-    def _tick(self):
+    def fetch_features(self, symbol: str, timestamp: str) -> Optional[np.ndarray]:
         """
-        Execute one trading cycle (tick).
-
-        Workflow:
-            1. Sync account info from gateway
-            2. Log current balance/equity
-            3. [Placeholder] Generate strategy signal
-            4. [Placeholder] Execute trade if signal present
-
-        This is the "conscious moment" where the bot:
-        - Perceives (account sync)
-        - Decides (strategy signal)
-        - Acts (trade execution)
-
-        Note:
-            Strategy integration is a placeholder for now.
-            Work Order #024 will add real strategy logic.
-        """
-        logger.info("📡 Syncing account info...")
-
-        # Step 1: Fetch account info from gateway
-        try:
-            response = self.client.send_command(Action.GET_ACCOUNT_INFO)
-
-            if response.get('status') == ResponseStatus.SUCCESS.value:
-                account_data = response.get('data', {})
-                balance = account_data.get('balance', 'N/A')
-                equity = account_data.get('equity', 'N/A')
-                margin = account_data.get('margin', 'N/A')
-
-                logger.info(
-                    f"💰 Pulse. Balance: {balance}, "
-                    f"Equity: {equity}, Margin: {margin}"
-                )
-            else:
-                error_msg = response.get('error', 'Unknown error')
-                logger.warning(f"⚠️  Account sync failed: {error_msg}")
-
-        except Exception as e:
-            logger.error(f"❌ Account sync error: {e}")
-
-        # Step 2: Strategy signal generation (Work Order #024)
-        if self.strategy:
-            logger.debug("🧠 Running ML strategy analysis...")
-
-            try:
-                # Prepare tick data for strategy
-                # Note: In production, this would come from actual market data
-                # For now, we use the account sync as a placeholder
-                tick_data = {
-                    "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
-                    "close": 1.0850,  # Placeholder: should come from market data
-                    "open": 1.0845,
-                    "high": 1.0855,
-                    "low": 1.0840,
-                    "volume": 1000
-                }
-
-                # Get signal from ML strategy
-                signal = self.strategy.predict(tick_data)
-
-                logger.info(f"📊 ML Signal: {signal}")
-
-                # Execute trade based on signal
-                if signal == "BUY":
-                    logger.info("🟢 BUY signal detected - executing trade")
-                    self.execute_trade(action="BUY", volume=0.01)
-                elif signal == "SELL":
-                    logger.info("🔴 SELL signal detected - executing trade")
-                    self.execute_trade(action="SELL", volume=0.01)
-                else:
-                    logger.debug("⏸️  HOLD signal - no action taken")
-
-            except Exception as e:
-                logger.error(f"❌ Strategy analysis error: {e}")
-                import traceback
-                traceback.print_exc()
-
-        else:
-            logger.debug("🧠 No strategy engine configured")
-
-        logger.info("✅ Tick completed")
-
-    # ========================================================================
-    # Trade Execution
-    # ========================================================================
-
-    def execute_trade(
-        self,
-        action: str,
-        volume: float,
-        price: float = 0.0,
-        sl: float = 0.0,
-        tp: float = 0.0
-    ) -> Dict[str, Any]:
-        """
-        Execute a trade order via ZmqClient.
+        Fetch features from Feature Serving API
 
         Args:
-            action: Trade action ("BUY" or "SELL")
-            volume: Trade volume (lots)
-            price: Entry price (0.0 for market order)
-            sl: Stop loss price (optional)
-            tp: Take profit price (optional)
+            symbol: Trading symbol
+            timestamp: Current timestamp
 
         Returns:
-            Response from gateway with order details
-
-        Example:
-            >>> result = bot.execute_trade(action="BUY", volume=0.01)
-            >>> if result['status'] == 'SUCCESS':
-            ...     print(f"Order placed: {result['data']['ticket']}")
+            Feature array (18 features) or None if failed
         """
-        logger.info(
-            f"📤 Executing trade: {action} {volume} lots of {self.symbol}"
-        )
-
-        payload = {
-            "symbol": self.symbol,
-            "action": action,
-            "volume": volume,
-            "price": price,
-            "sl": sl,
-            "tp": tp
-        }
-
         try:
-            response = self.client.send_command(Action.OPEN_ORDER, payload)
-
-            if response.get('status') == ResponseStatus.SUCCESS.value:
-                logger.info(f"✅ Trade executed: {response.get('data')}")
-            else:
-                error_msg = response.get('error', 'Unknown error')
-                logger.error(f"❌ Trade failed: {error_msg}")
-
-            return response
-
-        except Exception as e:
-            logger.error(f"❌ Trade execution error: {e}")
-            return {
-                'status': ResponseStatus.ERROR.value,
-                'error': str(e)
+            # Call Feature API
+            payload = {
+                "symbol": symbol,
+                "timestamp": timestamp
             }
 
+            response = requests.post(
+                f"{self.api_url}/features/latest",
+                json=payload,
+                timeout=2
+            )
 
-# ============================================================================
-# Convenience Factory
-# ============================================================================
+            if response.status_code != 200:
+                logger.warning(f"{YELLOW}⚠️  API returned {response.status_code}{RESET}")
+                return None
 
-def get_trading_bot(zmq_client, **kwargs) -> TradingBot:
-    """
-    Create and return TradingBot instance.
+            data = response.json()
 
-    Args:
-        zmq_client: ZmqClient instance (required)
-        **kwargs: Additional parameters passed to TradingBot
+            if data.get('status') != 'success':
+                logger.warning(f"{YELLOW}⚠️  API error: {data.get('message')}{RESET}")
+                return None
 
-    Returns:
-        TradingBot instance
+            # Extract feature values
+            feature_values = data.get('features', {})
 
-    Example:
-        >>> from src.mt5_bridge import get_zmq_client
-        >>> client = get_zmq_client()
-        >>> bot = get_trading_bot(zmq_client=client, symbol="GBPUSD.s")
-    """
-    return TradingBot(zmq_client=zmq_client, **kwargs)
+            # Build feature array in correct order
+            features = []
+            for col in self.feature_cols:
+                value = feature_values.get(col)
+                if value is None:
+                    logger.warning(f"{YELLOW}⚠️  Missing feature: {col}{RESET}")
+                    return None
+                features.append(value)
+
+            features_array = np.array(features).reshape(1, -1)
+
+            logger.info(f"{GREEN}[FEAT] Fetched {len(features)} features for {symbol}{RESET}")
+
+            return features_array
+
+        except requests.Timeout:
+            logger.error(f"{RED}❌ Feature API timeout{RESET}")
+            return None
+        except Exception as e:
+            logger.error(f"{RED}❌ Feature fetch error: {e}{RESET}")
+            return None
+
+    def predict_signal(self, features: np.ndarray) -> int:
+        """
+        Generate trading signal using XGBoost model
+
+        Args:
+            features: Feature array (1, 18)
+
+        Returns:
+            Signal: 1 (BUY), 0 (HOLD), -1 (SELL)
+        """
+        try:
+            # Scale features
+            features_scaled = self.scaler.fit_transform(features)
+
+            # Predict
+            prediction = self.model.predict(features_scaled)[0]
+            proba = self.model.predict_proba(features_scaled)[0]
+
+            # Convert to signal
+            # prediction = 1 means price up -> BUY
+            # prediction = 0 means price down -> SELL
+            if prediction == 1:
+                signal = 1  # BUY
+                confidence = proba[1]
+            else:
+                signal = -1  # SELL
+                confidence = proba[0]
+
+            logger.info(
+                f"{CYAN}[PRED] Signal: "
+                f"{'BUY' if signal == 1 else 'SELL'} "
+                f"(confidence: {confidence:.2f}){RESET}"
+            )
+
+            return signal
+
+        except Exception as e:
+            logger.error(f"{RED}❌ Prediction error: {e}{RESET}")
+            return 0  # HOLD on error
+
+    def execute_signal(self, symbol: str, signal: int, price: float):
+        """
+        Execute trading signal
+
+        Args:
+            symbol: Trading symbol
+            signal: 1 (BUY), 0 (HOLD), -1 (SELL)
+            price: Current market price
+        """
+        if signal == 0:
+            logger.info(f"{YELLOW}[HOLD] No action for {symbol}{RESET}")
+            return
+
+        with self.order_lock:
+            try:
+                side = "BUY" if signal == 1 else "SELL"
+
+                logger.info(f"{BLUE}[EXEC] Sending order: {side} {self.volume} {symbol} @ MARKET{RESET}")
+
+                response = self.mt5_client.send_order(
+                    symbol=symbol,
+                    side=side,
+                    volume=self.volume,
+                    order_type="MARKET"
+                )
+
+                if response.get("status") == "ok":
+                    ticket = response.get("ticket")
+                    fill_price = response.get("price", price)
+                    logger.info(
+                        f"{GREEN}[FILL] Order #{ticket} filled @ {fill_price}{RESET}"
+                    )
+                else:
+                    error_msg = response.get("message", "Unknown error")
+                    logger.error(f"{RED}[REJECT] Order rejected: {error_msg}{RESET}")
+
+            except Exception as e:
+                logger.error(f"{RED}❌ Execution error: {e}{RESET}")
+
+    def on_tick(self, tick: Dict[str, Any]):
+        """
+        Handle incoming market tick
+
+        Args:
+            tick: Tick data dictionary
+        """
+        try:
+            symbol = tick.get("symbol")
+            timestamp = tick.get("timestamp")
+            price = tick.get("last", tick.get("bid", 0.0))
+
+            logger.info(f"{CYAN}[TICK] {symbol} @ {price} ({timestamp}){RESET}")
+
+            # 1. Fetch features
+            features = self.fetch_features(symbol, timestamp)
+            if features is None:
+                logger.warning(f"{YELLOW}⚠️  Skipping tick (no features){RESET}")
+                return
+
+            # 2. Generate signal
+            signal = self.predict_signal(features)
+
+            # 3. Execute signal
+            self.execute_signal(symbol, signal, price)
+
+        except Exception as e:
+            logger.error(f"{RED}❌ Tick processing error: {e}{RESET}")
+
+    def run(self, duration_seconds: int = 60):
+        """
+        Main event loop
+
+        Args:
+            duration_seconds: Run duration in seconds (0 = infinite)
+        """
+        logger.info(f"{BLUE}{'=' * 80}{RESET}")
+        logger.info(f"{BLUE}🤖 Trading Bot Started{RESET}")
+        logger.info(f"{BLUE}{'=' * 80}{RESET}")
+
+        if not self.connect():
+            logger.error(f"{RED}❌ Failed to connect services{RESET}")
+            return
+
+        self.running = True
+        start_time = time.time()
+
+        logger.info(f"{CYAN}🔄 Entering main loop...{RESET}")
+        logger.info(f"  Duration: {duration_seconds} seconds")
+        print()
+
+        try:
+            while self.running:
+                # Check duration
+                if duration_seconds > 0:
+                    elapsed = time.time() - start_time
+                    if elapsed >= duration_seconds:
+                        logger.info(f"{YELLOW}⏰ Duration limit reached{RESET}")
+                        break
+
+                # Poll for market data (timeout 1 second)
+                try:
+                    if self.zmq_subscriber.poll(1000):
+                        message = self.zmq_subscriber.recv_string()
+                        tick_data = json.loads(message.split(' ', 1)[1])
+                        self.on_tick(tick_data)
+
+                except zmq.Again:
+                    # Timeout, continue
+                    pass
+
+        except KeyboardInterrupt:
+            logger.info(f"\n{YELLOW}🛑 KeyboardInterrupt received{RESET}")
+
+        finally:
+            self.shutdown()
+
+        logger.info(f"{GREEN}{'=' * 80}{RESET}")
+        logger.info(f"{GREEN}✅ Trading Bot Stopped{RESET}")
+        logger.info(f"{GREEN}{'=' * 80}{RESET}")
+
+    def shutdown(self):
+        """Clean shutdown of all connections"""
+        logger.info(f"{CYAN}🔌 Shutting down...{RESET}")
+
+        self.running = False
+
+        if self.zmq_subscriber:
+            self.zmq_subscriber.close()
+
+        if self.mt5_client:
+            self.mt5_client.close()
+
+        if self.zmq_context:
+            self.zmq_context.term()
+
+        logger.info(f"{GREEN}✅ Shutdown complete{RESET}")
 
 
-# ============================================================================
-# Direct Execution (for testing)
-# ============================================================================
-
+# Example usage
 if __name__ == "__main__":
-    # This is for manual testing only
-    logging.basicConfig(
-        level=logging.INFO,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-    )
-
-    print("=" * 70)
-    print("🤖 TradingBot - Direct Execution Mode")
-    print("=" * 70)
+    print("=" * 80)
+    print("🤖 TradingBot - Task #018.01")
+    print("=" * 80)
     print()
-    print("⚠️  This requires:")
-    print("  1. Windows Gateway running on 172.19.141.255")
-    print("  2. ZMQ ports 5555/5556 accessible")
+    print("This module provides the TradingBot class for real-time trading.")
     print()
-    print("To test, run:")
-    print("  python3 src/main.py")
+    print("To run paper trading simulation:")
+    print("  python3 scripts/run_paper_trading.py")
     print()
-    print("=" * 70)
+    print("=" * 80)
