@@ -1,0 +1,362 @@
+# Docker Compose Configuration for MT5 Trading System (Production)
+# Task #022.01: Full-Stack Docker Deployment
+# Protocol: v2.2 (Configuration-as-Code)
+#
+# SECURITY & PERFORMANCE NOTES:
+# 1. Database and Redis ports are NOT exposed to host (use SSH tunneling for admin)
+# 2. NO full SQL logging enabled (log_statement=all removed for HFT performance)
+# 3. All service-to-service communication via internal Docker network (mt5-net)
+# 4. Health checks implemented with proper timeout & retry configurations
+# 5. Resource limits enforced on all services to prevent resource exhaustion
+
+version: '3.9'
+
+# ============================================================================
+# Services
+# ============================================================================
+
+services:
+
+  # ========================================================================
+  # Database: PostgreSQL
+  # ========================================================================
+  db:
+    image: postgres:14-alpine
+    container_name: mt5-db
+
+    # Network configuration
+    networks:
+      - mt5-net
+
+    # Environment variables
+    environment:
+      POSTGRES_USER: ${DB_USER:-mt5_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-changeme}
+      POSTGRES_DB: ${DB_NAME:-mt5}
+
+    # Volume mounts
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+
+    # Port exposure (NOT exposed in production - use SSH tunneling for DB admin)
+    # ports:
+    #   - "5432:5432"
+
+    # Health check
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-mt5_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+    # Restart policy
+    restart: unless-stopped
+
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ========================================================================
+  # Cache: Redis
+  # ========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: mt5-redis
+
+    networks:
+      - mt5-net
+
+    environment:
+      # Redis configuration via environment
+      REDIS_MAXMEMORY: 512mb
+      REDIS_MAXMEMORY_POLICY: allkeys-lru
+
+    volumes:
+      - redis_data:/data
+
+    # Port exposure (NOT exposed in production - only accessible via mt5-net)
+    # ports:
+    #   - "6379:6379"
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+    restart: unless-stopped
+
+    command: redis-server --appendonly yes --maxmemory 512mb --maxmemory-policy allkeys-lru
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ========================================================================
+  # Feature API: FastAPI Service
+  # ========================================================================
+  feature_api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    image: mt5-api:latest
+    container_name: mt5-feature-api
+
+    networks:
+      - mt5-net
+
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      REDIS_URL: redis://redis:6379
+      DATABASE_URL: postgresql://${DB_USER:-mt5_user}:${DB_PASSWORD:-changeme}@db:5432/${DB_NAME:-mt5}
+      FEATURE_API_PORT: 8000
+      PYTHONUNBUFFERED: "1"
+
+    volumes:
+      - ./models:/app/models:ro
+      - ./logs:/app/logs
+      - logs_volume:/data/logs
+
+    ports:
+      - "8000:8000"
+
+    # Depends on database and cache
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+    restart: unless-stopped
+
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ========================================================================
+  # Strategy Runner: Multi-Strategy Orchestration
+  # ========================================================================
+  strategy_runner:
+    build:
+      context: .
+      dockerfile: Dockerfile.strategy
+    image: mt5-strategy:latest
+    container_name: mt5-strategy-runner
+
+    networks:
+      - mt5-net
+
+    environment:
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+      CONFIG_PATH: /app/config/strategies.yaml
+      FEATURE_API_URL: http://feature_api:8000
+      ZMQ_MARKET_HOST: 0.0.0.0
+      ZMQ_MARKET_PORT: 5556
+      ZMQ_EXEC_HOST: 0.0.0.0
+      ZMQ_EXEC_PORT: 5555
+      PYTHONUNBUFFERED: "1"
+
+    volumes:
+      - ./config:/app/config:ro
+      - ./models:/app/models:ro
+      - ./logs:/app/logs
+      - logs_volume:/data/logs
+      - ./data/models:/data/models:ro
+      - ./data/config:/data/config:ro
+
+    # Port exposure
+    ports:
+      - "5556:5556"  # ZMQ PUB/SUB for market data
+      - "5555:5555"  # ZMQ REQ/REP for order execution
+      - "9090:9090"  # Prometheus metrics
+
+    # Depends on feature API
+    depends_on:
+      feature_api:
+        condition: service_started
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '1.0'
+          memory: 1G
+
+    restart: unless-stopped
+
+    # Logging
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "5"
+
+  # ========================================================================
+  # Metrics: Prometheus
+  # ========================================================================
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: mt5-prometheus
+
+    networks:
+      - mt5-net
+
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+
+    ports:
+      - "9091:9090"
+
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+    restart: unless-stopped
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ========================================================================
+  # Visualization: Grafana
+  # ========================================================================
+  grafana:
+    image: grafana/grafana:latest
+    container_name: mt5-grafana
+
+    networks:
+      - mt5-net
+
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
+      GF_USERS_ALLOW_SIGN_UP: "false"
+
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ./config/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+
+    ports:
+      - "3000:3000"
+
+    # Depends on Prometheus
+    depends_on:
+      - prometheus
+
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+
+    restart: unless-stopped
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+# ============================================================================
+# Networks
+# ============================================================================
+
+networks:
+  mt5-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+    labels:
+      description: "MT5 Trading System Network"
+
+# ============================================================================
+# Volumes
+# ============================================================================
+
+volumes:
+  postgres_data:
+    driver: local
+    labels:
+      description: "PostgreSQL Data"
+
+  redis_data:
+    driver: local
+    labels:
+      description: "Redis Cache Data"
+
+  prometheus_data:
+    driver: local
+    labels:
+      description: "Prometheus Time Series Data"
+
+  grafana_data:
+    driver: local
+    labels:
+      description: "Grafana Dashboard Data"
+
+  logs_volume:
+    driver: local
+    labels:
+      description: "Application Logs"

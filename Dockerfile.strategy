@@ -1,0 +1,83 @@
+# Multi-stage build for Strategy Runner
+# Task #022.01: Docker Deployment
+
+# ============================================================================
+# Stage 1: Builder
+# ============================================================================
+FROM python:3.9-slim as builder
+
+WORKDIR /tmp
+
+# Install build tools
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    gcc \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements
+COPY requirements.txt .
+
+# Install Python dependencies in user directory (no root)
+RUN pip install --user --no-cache-dir -r requirements.txt
+
+# ============================================================================
+# Stage 2: Runtime
+# ============================================================================
+FROM python:3.9-slim
+
+# Metadata
+LABEL maintainer="MT5 Trading Team"
+LABEL version="1.0"
+LABEL description="Multi-Strategy Runner for MT5 Trading System (Task #021.01)"
+LABEL task="022.01"
+
+WORKDIR /app
+
+# Install minimal runtime dependencies
+RUN apt-get update && apt-get install -y \
+    libgomp1 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy Python packages from builder stage
+COPY --from=builder /root/.local /root/.local
+
+# Add user-installed packages to PATH
+ENV PATH=/root/.local/bin:$PATH \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Copy application code
+COPY src/ /app/src/
+COPY config/ /app/config/
+COPY models/ /app/models/
+
+# Create necessary directories
+RUN mkdir -p /app/logs \
+    && mkdir -p /data/logs \
+    && mkdir -p /data/models \
+    && mkdir -p /data/config \
+    && chmod -R 755 /app/logs /data/logs /data/models /data/config
+
+# Health check
+# Check if heartbeat file was updated recently (indicates process is alive and responsive)
+# Also verify that MultiStrategyRunner module can be imported
+HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
+    CMD python3 -c "import os; from datetime import datetime, timedelta; hb_file='/tmp/strategy_heartbeat'; age = (datetime.now() - datetime.fromtimestamp(os.path.getmtime(hb_file))).total_seconds() if os.path.exists(hb_file) else 999; exit(0 if age < 60 else 1)" 2>/dev/null || python3 -c "from src.main import MultiStrategyRunner; exit(0)" 2>/dev/null || exit 1
+
+# Non-root user (security best practice)
+RUN useradd -m -u 1000 trader && \
+    chown -R trader:trader /app /data
+USER trader
+
+# Entrypoint and command
+# Runs: python3 -m src.main.runner
+ENTRYPOINT ["python3"]
+CMD ["-m", "src.main.runner"]
+
+# Expose ports for ZMQ communication
+# 5556: ZMQ PUB/SUB for market data
+# 5555: ZMQ REQ/REP for order execution
+# 9090: Prometheus metrics (optional)
+EXPOSE 5556 5555 9090

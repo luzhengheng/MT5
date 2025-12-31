@@ -1,0 +1,78 @@
+# Multi-stage build for Feature API
+# Task #022.01: Docker Deployment
+
+# ============================================================================
+# Stage 1: Builder
+# ============================================================================
+FROM python:3.9-slim as builder
+
+WORKDIR /tmp
+
+# Install build tools
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    gcc \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements
+COPY requirements.txt .
+
+# Install Python dependencies in user directory (no root)
+RUN pip install --user --no-cache-dir -r requirements.txt
+
+# ============================================================================
+# Stage 2: Runtime
+# ============================================================================
+FROM python:3.9-slim
+
+# Metadata
+LABEL maintainer="MT5 Trading Team"
+LABEL version="1.0"
+LABEL description="Feature Serving API for MT5 Trading System (Task #018.02)"
+LABEL task="022.01"
+
+WORKDIR /app
+
+# Install minimal runtime dependencies
+RUN apt-get update && apt-get install -y \
+    libgomp1 \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy Python packages from builder stage
+COPY --from=builder /root/.local /root/.local
+
+# Add user-installed packages to PATH
+ENV PATH=/root/.local/bin:$PATH \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Copy application code
+COPY src/ /app/src/
+COPY models/ /app/models/
+
+# Create necessary directories
+RUN mkdir -p /app/logs \
+    && mkdir -p /data/logs \
+    && mkdir -p /data/models \
+    && chmod -R 755 /app/logs /data/logs /data/models
+
+# Health check
+# Check that API is responding to health endpoint
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
+
+# Non-root user (security best practice)
+RUN useradd -m -u 1000 apiuser && \
+    chown -R apiuser:apiuser /app /data
+USER apiuser
+
+# Entrypoint and command
+# Runs: uvicorn src.api.feature_server:app --host 0.0.0.0 --port 8000
+ENTRYPOINT ["python3"]
+CMD ["-m", "uvicorn", "src.api.feature_server:app", "--host", "0.0.0.0", "--port", "8000"]
+
+# Expose port for HTTP API
+# 8000: FastAPI Feature Serving API
+EXPOSE 8000
