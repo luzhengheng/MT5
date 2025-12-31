@@ -20,7 +20,6 @@ offline_store:
   database: mt5_crs
   user: trader
   password: password
-  schema: public
 
 online_store:
   type: sqlite
