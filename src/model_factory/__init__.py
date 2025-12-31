@@ -8,8 +8,10 @@ Model Factory Package
 
 from src.model_factory.data_loader import APIDataLoader
 from src.model_factory.baseline_trainer import BaselineTrainer
+from src.model_factory.optimizer import HyperparameterOptimizer
 
 __all__ = [
     "APIDataLoader",
-    "BaselineTrainer"
+    "BaselineTrainer",
+    "HyperparameterOptimizer"
 ]
