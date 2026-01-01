@@ -24,7 +24,7 @@ strategies:
     symbol: EURUSD
 
     # Model configuration
-    model_path: models/baseline_v1.json
+    model_path: models/deep_v1.json
     model_type: xgboost
 
     # ====================================================================
