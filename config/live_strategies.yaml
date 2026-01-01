@@ -14,32 +14,76 @@ gateway:
   retry_attempts: 3
 
 strategies:
-  - name: "Production_Strategy_V1"
+  # Strategy 1: EURUSD Production (Validated & Active)
+  - name: "EURUSD_Production_V1"
     active: true
-    symbols: ["EURUSD", "GBPUSD"]
+    symbols: ["EURUSD"]
     timeframe: "H1"
 
     # 1. 显式模型绑定 (Model Binding)
     model:
       type: "xgboost"
-      # 指向具体的模型文件，不要让系统去猜
-      path: "models/baseline_v1.json"
+      # EURUSD模型已验证，可用于实盘交易
+      path: "models/deep_v1.json"
       min_confidence: 0.6
 
     # 2. 显式硬性风控 (Hard Risk Limits)
-    # 架构师要求：必须看到最大的亏损是多少
     risk:
-      profile: "conservative"     # 仅作为日志标签
-      max_lot_size: 0.01          # [硬限制] 单笔最大手数
-      stop_loss_pips: 20          # [硬限制] 强制止损点数
-      max_daily_loss_usd: 50.0    # [硬限制] 当日最大亏损额 (美元)
-      max_leverage: 30            # [硬限制] 计算仓位时的最大杠杆限制
+      profile: "conservative"
+      max_lot_size: 0.01
+      stop_loss_pips: 20
+      max_daily_loss_usd: 50.0
+      max_leverage: 30
 
     logging:
       level: "INFO"
-      log_file: "/app/logs/trading.log"
+      log_file: "/app/logs/eurusd_production.log"
+
+  # Strategy 2: GBPUSD Validation (Passive Mode - Task #012)
+  - name: "GBPUSD_Validation_V1"
+    active: true
+    passive_mode: true  # 🛡️ Log-only, NO TRADES until validation complete
+    symbols: ["GBPUSD"]
+    timeframe: "H1"
+
+    # 1. 模型配置 (使用EURUSD模型进行验证)
+    model:
+      type: "xgboost"
+      # ⚠️ WARNING: This model was trained on EURUSD only
+      # Distribution shift validation required before going live
+      path: "models/deep_v1.json"
+      min_confidence: 0.6
+
+    # 2. 风控参数 (与EURUSD相同，用于验证阶段)
+    risk:
+      profile: "conservative"
+      max_lot_size: 0.01
+      stop_loss_pips: 20
+      max_daily_loss_usd: 50.0
+      max_leverage: 30
+
+    # 3. 验证要求 (Task #012)
+    validation:
+      require_explicit_approval: true
+      min_observation_hours: 24
+      validation_script: "scripts/verify_market_data.py --symbol GBPUSD --baseline EURUSD"
+      approval_criteria:
+        - "DQ Score > 85"
+        - "No significant distribution shift (p-value > 0.05)"
+        - "Average signal confidence > 0.6"
+        - "At least 10 signals in 24 hours"
+
+    logging:
+      level: "INFO"
+      log_file: "/app/logs/gbpusd_validation.log"
 
 metadata:
-  version: "1.1.0"
+  version: "1.2.0"
   last_updated: "2026-01-02"
   approved_by: "AI_Architect_Gemini"
+  task: "TASK_012"
+  changes:
+    - "Split EURUSD and GBPUSD into separate strategies"
+    - "Added passive_mode for GBPUSD validation"
+    - "Updated EURUSD to use deep_v1.json model"
+    - "Added validation criteria for GBPUSD go-live decision"

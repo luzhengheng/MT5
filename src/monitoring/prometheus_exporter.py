@@ -28,6 +28,7 @@ class PrometheusMetrics:
     def __init__(self):
         self.metrics = {}
         self.dq_calculator = DQScoreCalculator()
+        self.strategy_metrics = {}  # Cache for strategy-specific metrics
 
     def update_metrics(self):
         """更新所有指标"""
@@ -68,11 +69,114 @@ class PrometheusMetrics:
             self.metrics['exporter_last_update_timestamp'] = time.time()
             self.metrics['exporter_health'] = 1  # 1=健康, 0=不健康
 
+            # 3. 添加策略监控指标 (Task #012)
+            self._update_strategy_metrics()
+
             logger.info(f"指标更新完成: {len(self.metrics)} 个指标")
 
         except Exception as e:
             logger.error(f"更新指标失败: {e}")
             self.metrics['exporter_health'] = 0
+
+    def _update_strategy_metrics(self):
+        """
+        更新策略监控指标 (Task #012)
+
+        监控内容:
+        - strategy_last_tick_timestamp: 最后tick时间戳
+        - strategy_signal_confidence: 信号置信度
+        - strategy_trades_per_hour: 每小时交易数
+        """
+        try:
+            # 读取配置文件获取活跃策略
+            config_path = Path("/opt/mt5-crs/config/live_strategies.yaml")
+            if not config_path.exists():
+                logger.warning("live_strategies.yaml not found, skipping strategy metrics")
+                return
+
+            import yaml
+            with open(config_path, 'r') as f:
+                config = yaml.safe_load(f)
+
+            if not config or 'strategies' not in config:
+                return
+
+            # 为每个配置的symbol创建默认指标
+            for strategy in config['strategies']:
+                if not strategy.get('active', False):
+                    continue
+
+                symbols = strategy.get('symbols', [])
+                for symbol in symbols:
+                    # 默认指标 (如果没有实时数据，使用默认值)
+                    # 实际值将由trading engine实时更新
+
+                    # 1. Last tick timestamp (默认为当前时间)
+                    metric_name = f'strategy_last_tick_timestamp{{symbol="{symbol}"}}'
+                    if metric_name not in self.strategy_metrics:
+                        self.metrics[metric_name] = time.time()
+                    else:
+                        self.metrics[metric_name] = self.strategy_metrics[metric_name]
+
+                    # 2. Signal confidence (默认为0，等待实际信号)
+                    for signal_type in ['BUY', 'SELL', 'HOLD']:
+                        metric_name = f'strategy_signal_confidence{{symbol="{symbol}",signal="{signal_type}"}}'
+                        if metric_name not in self.strategy_metrics:
+                            self.metrics[metric_name] = 0.0
+                        else:
+                            self.metrics[metric_name] = self.strategy_metrics[metric_name]
+
+                    # 3. Trades per hour (默认为0)
+                    metric_name = f'strategy_trades_per_hour{{symbol="{symbol}"}}'
+                    if metric_name not in self.strategy_metrics:
+                        self.metrics[metric_name] = 0.0
+                    else:
+                        self.metrics[metric_name] = self.strategy_metrics[metric_name]
+
+                    # 4. Strategy active status
+                    is_passive = strategy.get('passive_mode', False)
+                    metric_name = f'strategy_passive_mode{{symbol="{symbol}"}}'
+                    self.metrics[metric_name] = 1.0 if is_passive else 0.0
+
+        except Exception as e:
+            logger.error(f"更新策略指标失败: {e}")
+
+    def update_strategy_tick(self, symbol: str, timestamp: float):
+        """
+        外部调用: 更新策略的tick时间戳
+
+        Args:
+            symbol: 交易品种 (EURUSD, GBPUSD)
+            timestamp: Unix时间戳
+        """
+        metric_name = f'strategy_last_tick_timestamp{{symbol="{symbol}"}}'
+        self.strategy_metrics[metric_name] = timestamp
+        logger.debug(f"Updated {metric_name} = {timestamp}")
+
+    def update_strategy_signal(self, symbol: str, signal: str, confidence: float):
+        """
+        外部调用: 更新策略信号置信度
+
+        Args:
+            symbol: 交易品种
+            signal: 信号类型 (BUY, SELL, HOLD)
+            confidence: 置信度 (0.0-1.0)
+        """
+        metric_name = f'strategy_signal_confidence{{symbol="{symbol}",signal="{signal}"}}'
+        self.strategy_metrics[metric_name] = confidence
+        logger.debug(f"Updated {metric_name} = {confidence}")
+
+    def update_strategy_trade_rate(self, symbol: str, trades_per_hour: float):
+        """
+        外部调用: 更新策略交易频率
+
+        Args:
+            symbol: 交易品种
+            trades_per_hour: 每小时交易数
+        """
+        metric_name = f'strategy_trades_per_hour{{symbol="{symbol}"}}'
+        self.strategy_metrics[metric_name] = trades_per_hour
+        logger.debug(f"Updated {metric_name} = {trades_per_hour}")
 
     def to_prometheus_format(self) -> str:
         """
@@ -113,6 +217,19 @@ class PrometheusMetrics:
 
         lines.append('# HELP exporter_health 导出器健康状态 (1=健康, 0=不健康)')
         lines.append('# TYPE exporter_health gauge')
+
+        # Task #012 新增指标
+        lines.append('# HELP strategy_last_tick_timestamp 策略最后tick时间戳 (Unix timestamp)')
+        lines.append('# TYPE strategy_last_tick_timestamp gauge')
+
+        lines.append('# HELP strategy_signal_confidence 策略信号置信度 (0.0-1.0)')
+        lines.append('# TYPE strategy_signal_confidence gauge')
+
+        lines.append('# HELP strategy_trades_per_hour 策略每小时交易数')
+        lines.append('# TYPE strategy_trades_per_hour gauge')
+
+        lines.append('# HELP strategy_passive_mode 策略被动模式状态 (1=passive, 0=active)')
+        lines.append('# TYPE strategy_passive_mode gauge')
 
         # 添加指标值
         for metric_name, value in sorted(self.metrics.items()):
