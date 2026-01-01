@@ -32,3 +32,4 @@ metadata:
   description: "MT5 Cryptocurrency and Forex Feature Store - Powered by Feast"
   owner: "Trading Research System"
   version: "1.0.0"
+entity_key_serialization_version: 3

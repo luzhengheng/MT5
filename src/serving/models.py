@@ -9,7 +9,7 @@ Data Models for Feature Serving API
 """
 
 from typing import List, Dict, Optional
-from pydantic import BaseModel, Field, validator
+from pydantic.v1 import BaseModel, Field, validator
 from datetime import datetime
 import re
 

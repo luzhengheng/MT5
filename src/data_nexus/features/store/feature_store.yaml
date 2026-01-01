@@ -23,7 +23,7 @@ offline_store:
   database: ${POSTGRES_DB}
   user: ${POSTGRES_USER}
   password: ${POSTGRES_PASSWORD}
-  schema: public
+#   schema: public
 
 # ============================================================================
 # ONLINE STORE: Redis (Hot Path)
@@ -42,3 +42,4 @@ online_store:
 #
 # Entity: ticker (stock/forex symbol)
 # Feature View: daily_ohlcv_stats (OHLC values from market_data table)
+entity_key_serialization_version: 3
