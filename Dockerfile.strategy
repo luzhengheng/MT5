@@ -81,3 +81,9 @@ CMD ["-m", "src.main.runner"]
 # 5555: ZMQ REQ/REP for order execution
 # 9090: Prometheus metrics (optional)
 EXPOSE 5556 5555 9090
+
+RUN pip install PyYAML
+
+RUN pip install numpy pandas
+
+RUN pip install pyzmq
