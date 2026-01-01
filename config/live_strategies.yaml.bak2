@@ -1,0 +1,115 @@
+# Live Trading Strategy Configuration
+# Task #025.01: Live Trading Integration & Pipeline Final Verification
+# Protocol: v2.2 (Configuration-as-Code)
+#
+# ============================================================================
+# CONSERVATIVE PILOT STRATEGY FOR LIVE TRADING
+# ============================================================================
+# This configuration is designed for SAFE production testing:
+# - Single asset (EURUSD) for focus and risk management
+# - Micro lot size (0.01) for minimal capital exposure
+# - Conservative risk limits (2% max drawdown)
+# - 24-hour operation for system stability testing
+#
+# WARNING: This is a pilot strategy. Do NOT use larger lot sizes until
+# the system has been proven stable under live trading conditions.
+# ============================================================================
+
+strategies:
+  # ========================================================================
+  # Live EURUSD Pilot Strategy
+  # ========================================================================
+  - name: live_eurusd_pilot
+    enabled: true
+    symbol: EURUSD
+
+    # Model configuration
+    model_path: models/baseline_v1.json
+    model_type: xgboost
+
+    # ====================================================================
+    # Risk Management - CONSERVATIVE FOR PILOT PHASE
+    # ====================================================================
+    risk:
+      # Position sizing - MICRO LOT for safety
+      lot_size: 0.01                # 0.01 lots = ~$100 per standard lot
+      min_lot_size: 0.001           # Minimum position
+      max_lot_size: 0.05            # Maximum position (5x initial)
+
+      # Loss limits
+      max_loss_per_trade: 10.0      # $10 max loss per trade
+      max_daily_loss: 50.0          # $50 max daily loss
+      max_drawdown: 0.02            # 2% account drawdown limit
+
+      # Win/Loss targets
+      take_profit_pips: 50           # Take profit at +50 pips
+      stop_loss_pips: 20             # Stop loss at -20 pips
+
+    # ====================================================================
+    # Signal Generation
+    # ====================================================================
+    signal:
+      # Model output thresholds
+      buy_threshold: 0.55            # >0.55 probability for BUY signal
+      sell_threshold: 0.45           # <0.45 probability for SELL signal
+      hold_threshold: 0.10           # Neutral zone width
+
+      # Signal filtering
+      min_signal_strength: 0.6       # Only trade strong signals (>60% confidence)
+      confirmation_candles: 1        # Require 1 confirmation before trade
+
+    # ====================================================================
+    # Operational Schedule
+    # ====================================================================
+    schedule: "24h"                  # Continuous operation
+    trading_hours: "00:00-23:59"     # All hours enabled
+
+    # Market conditions
+    max_slippage: 2.0                # Max acceptable slippage (pips)
+    max_spread: 2.5                  # Skip trades if spread > 2.5 pips
+
+    # ====================================================================
+    # Monitoring & Logging
+    # ====================================================================
+    monitoring:
+      log_level: "INFO"              # Log level for this strategy
+      heartbeat_interval: 30          # Heartbeat every 30 seconds
+      report_interval: 300            # Metrics report every 5 minutes
+
+    # ====================================================================
+    # Strategy Metadata
+    # ====================================================================
+    metadata:
+      description: "Conservative EURUSD pilot strategy for live testing"
+      version: "1.0"
+      author: "MT5-CRS System"
+      created: "2026-01-01"
+
+      # Notes for operators
+      notes: |
+        This is a PILOT strategy designed for safe production testing.
+        - Uses micro lot size (0.01) for minimal risk
+        - Trades only EURUSD for focused risk management
+        - 24-hour operation enables continuous system validation
+        - Conservative thresholds ensure signal quality
+
+        Before expanding to multiple strategies or larger lot sizes:
+        1. Verify 7 days of live trading stability
+        2. Check P&L is positive or minimal loss
+        3. Confirm all risk limits are being respected
+        4. Review logs for execution quality
+
+        To adjust:
+        - lot_size: Change position size (carefully!)
+        - buy_threshold: Adjust signal sensitivity
+        - max_daily_loss: Tighten risk controls as needed
+
+        DO NOT:
+        - Exceed 0.05 lot size without explicit approval
+        - Disable stop-loss protections
+        - Remove daily loss limits
+        - Trade outside 00:00-23:59 window without testing first
+
+# ============================================================================
+# End of live_strategies.yaml
+# ============================================================================
