@@ -534,10 +534,137 @@ def audit_task_017():
     return results
 
 
+def audit_task_018():
+    """
+    Task #018 深度审计函数
+    验证回测引擎与数据泄露诊断
+    """
+    results = {
+        "backtest_script": False,
+        "verify_log": False,
+        "sharpe_ratio_found": False,
+        "leakage_diagnosis": False,
+        "completion_report": False,
+        "quick_start": False,
+        "sync_guide": False
+    }
+
+    print("==================================================")
+    print("🔍 AUDIT: Task #018 BACKTESTING & LEAKAGE CHECK")
+    print("==================================================")
+
+    # 1. 检查回测脚本
+    print("\n[1/7] Checking Backtest Script...")
+    script_path = "src/backtesting/vbt_runner.py"
+    if os.path.exists(script_path):
+        try:
+            with open(script_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            if 'vbt.Portfolio.from_signals' in content:
+                print(f"[✔] {script_path} exists with VectorBT logic")
+                results["backtest_script"] = True
+            else:
+                print(f"[!] {script_path} exists but missing VectorBT call")
+        except Exception as e:
+            print(f"[✘] Failed to read {script_path}: {e}")
+    else:
+        print(f"[✘] {script_path} missing")
+
+    # 2. 检查验证日志
+    print("\n[2/7] Checking Verification Log...")
+    log_path = "docs/archive/tasks/TASK_018/VERIFY_LOG.log"
+    if os.path.exists(log_path):
+        print(f"[✔] {log_path} exists")
+        results["verify_log"] = True
+    else:
+        print(f"[✘] {log_path} missing")
+
+    # 3. 检查 Sharpe Ratio
+    print("\n[3/7] Checking Sharpe Ratio in Log...")
+    if os.path.exists(log_path):
+        try:
+            with open(log_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            if 'Sharpe Ratio' in content:
+                import re
+                match = re.search(r'Sharpe Ratio[:\s]+([0-9.]+)', content)
+                if match:
+                    sharpe = float(match.group(1))
+                    print(f"[✔] Found Sharpe Ratio: {sharpe:.4f}")
+                    results["sharpe_ratio_found"] = True
+                else:
+                    print(f"[!] 'Sharpe Ratio' keyword found but no value")
+            else:
+                print(f"[✘] 'Sharpe Ratio' not found in log")
+        except Exception as e:
+            print(f"[✘] Failed to parse log: {e}")
+
+    # 4. 检查泄露诊断
+    print("\n[4/7] Checking Leakage Diagnosis...")
+    if os.path.exists(log_path):
+        try:
+            with open(log_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            if 'VERDICT' in content and ('LEAKED' in content or 'SAFE' in content):
+                print(f"[✔] Leakage diagnosis present")
+                results["leakage_diagnosis"] = True
+            else:
+                print(f"[!] Leakage diagnosis missing")
+        except Exception as e:
+            print(f"[✘] Failed to check diagnosis: {e}")
+
+    # 5. 检查完成报告
+    print("\n[5/7] Checking Completion Report...")
+    report_path = "docs/archive/tasks/TASK_018/COMPLETION_REPORT.md"
+    if os.path.exists(report_path):
+        try:
+            with open(report_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            if 'Leakage Diagnosis' in content or '泄露诊断' in content:
+                print(f"[✔] {report_path} exists with leakage analysis")
+                results["completion_report"] = True
+            else:
+                print(f"[!] {report_path} exists but missing leakage section")
+        except Exception as e:
+            print(f"[✘] Failed to read report: {e}")
+    else:
+        print(f"[✘] {report_path} missing")
+
+    # 6. 检查快速启动指南
+    print("\n[6/7] Checking Quick Start Guide...")
+    quick_path = "docs/archive/tasks/TASK_018/QUICK_START.md"
+    if os.path.exists(quick_path):
+        print(f"[✔] {quick_path} exists")
+        results["quick_start"] = True
+    else:
+        print(f"[✘] {quick_path} missing")
+
+    # 7. 检查同步指南
+    print("\n[7/7] Checking Sync Guide...")
+    sync_path = "docs/archive/tasks/TASK_018/SYNC_GUIDE.md"
+    if os.path.exists(sync_path):
+        print(f"[✔] {sync_path} exists")
+        results["sync_guide"] = True
+    else:
+        print(f"[✘] {sync_path} missing")
+
+    # 汇总结果
+    print("\n" + "=" * 50)
+    passed_count = sum(1 for v in results.values() if v)
+    total_count = len(results)
+
+    print(f"📊 Audit Summary: {passed_count}/{total_count} checks passed")
+    for item, status in results.items():
+        symbol = "✓" if status else "✗"
+        print(f"    {symbol} {item}")
+
+    return results
+
+
 def audit():
     """主审计入口函数"""
-    # 运行 Task 017 审计 (最新任务)
-    results = audit_task_017()
+    # 运行 Task 018 审计 (最新任务)
+    results = audit_task_018()
 
     # 计算全局统计
     global passed, failed
