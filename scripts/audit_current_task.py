@@ -305,7 +305,10 @@ def audit_task_016():
         "training_script": False,
         "training_data": False,
         "model_file": False,
-        "metrics_log": False
+        "completion_report": False,
+        "quick_start": False,
+        "sync_guide": False,
+        "verify_log": False
     }
 
     print("==================================================")
@@ -313,7 +316,7 @@ def audit_task_016():
     print("==================================================")
 
     # 1. 检查数据集创建脚本
-    print("\n[1/5] Checking Dataset Script...")
+    print("\n[1/8] Checking Dataset Script...")
     dataset_path = "src/training/create_dataset.py"
     if os.path.exists(dataset_path):
         print(f"[✔] {dataset_path} exists")
@@ -322,7 +325,7 @@ def audit_task_016():
         print(f"[✘] {dataset_path} missing")
 
     # 2. 检查训练脚本
-    print("\n[2/5] Checking Training Script...")
+    print("\n[2/8] Checking Training Script...")
     train_path = "src/training/train_baseline.py"
     if os.path.exists(train_path):
         try:
@@ -339,7 +342,7 @@ def audit_task_016():
         print(f"[✘] {train_path} missing")
 
     # 3. 检查训练数据集
-    print("\n[3/5] Checking Training Dataset...")
+    print("\n[3/8] Checking Training Dataset...")
     data_path = "data/training_set.parquet"
     if os.path.exists(data_path):
         file_size = os.path.getsize(data_path)
@@ -352,7 +355,7 @@ def audit_task_016():
         print(f"[✘] Training dataset missing: {data_path}")
 
     # 4. 检查模型文件
-    print("\n[4/5] Checking Model File...")
+    print("\n[4/8] Checking Model File...")
     model_path = "models/baseline_v1.txt"
     if os.path.exists(model_path):
         file_size = os.path.getsize(model_path)
@@ -364,25 +367,50 @@ def audit_task_016():
     else:
         print(f"[✘] Model file missing: {model_path}")
 
-    # 5. 检查指标日志
-    print("\n[5/5] Checking Metrics Log...")
-    log_path = "docs/archive/logs/TASK_016_METRICS.log"
-    if os.path.exists(log_path):
+    # 5. 检查完成报告
+    print("\n[5/8] Checking Completion Report...")
+    report_path = "docs/archive/tasks/TASK_016/COMPLETION_REPORT.md"
+    if os.path.exists(report_path):
+        print(f"[✔] {report_path} exists")
+        results["completion_report"] = True
+    else:
+        print(f"[✘] {report_path} missing")
+
+    # 6. 检查快速启动指南
+    print("\n[6/8] Checking Quick Start Guide...")
+    quick_path = "docs/archive/tasks/TASK_016/QUICK_START.md"
+    if os.path.exists(quick_path):
+        print(f"[✔] {quick_path} exists")
+        results["quick_start"] = True
+    else:
+        print(f"[✘] {quick_path} missing")
+
+    # 7. 检查同步指南
+    print("\n[7/8] Checking Sync Guide...")
+    sync_path = "docs/archive/tasks/TASK_016/SYNC_GUIDE.md"
+    if os.path.exists(sync_path):
+        print(f"[✔] {sync_path} exists")
+        results["sync_guide"] = True
+    else:
+        print(f"[✘] {sync_path} missing")
+
+    # 8. 检查验证日志
+    print("\n[8/8] Checking Verification Log...")
+    verify_path = "docs/archive/tasks/TASK_016/VERIFY_LOG.log"
+    if os.path.exists(verify_path):
         try:
-            with open(log_path, 'r', encoding='utf-8') as f:
+            with open(verify_path, 'r', encoding='utf-8') as f:
                 content = f.read()
-
             has_mse = "MSE:" in content or "mse" in content.lower()
-
             if has_mse:
-                print(f"[✔] Metrics log complete")
-                results["metrics_log"] = True
+                print(f"[✔] Verification log complete")
+                results["verify_log"] = True
             else:
-                print(f"[!] Metrics log exists but missing MSE metric")
+                print(f"[!] Verification log exists but missing MSE metric")
         except Exception as e:
             print(f"[✘] Failed to read log: {e}")
     else:
-        print(f"[✘] Metrics log missing: {log_path}")
+        print(f"[✘] Verification log missing: {verify_path}")
 
     # 汇总结果
     print("\n" + "=" * 50)

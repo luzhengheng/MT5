@@ -1,6 +1,6 @@
 {
   "model_type": "LightGBM",
-  "train_date": "2026-01-03T00:08:01.047933",
+  "train_date": "2026-01-03T00:47:40.569175",
   "features": [
     "sma_7",
     "sma_14",
