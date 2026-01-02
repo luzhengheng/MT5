@@ -425,10 +425,119 @@ def audit_task_016():
     return results
 
 
+def audit_task_017():
+    """
+    Task #017 深度审计函数
+    验证历史工单归档标准化
+    """
+    results = {
+        "archive_script": False,
+        "task_directories": False,
+        "completion_report": False,
+        "quick_start": False,
+        "sync_guide": False,
+        "verify_log": False,
+        "docs_cleanup": False
+    }
+
+    print("==================================================")
+    print("🔍 AUDIT: Task #017 ARCHIVE STANDARDIZATION")
+    print("==================================================")
+
+    # 1. 检查归档脚本
+    print("\n[1/7] Checking Archive Script...")
+    script_path = "scripts/maintenance/archive_refactor.py"
+    if os.path.exists(script_path):
+        print(f"[✔] {script_path} exists")
+        results["archive_script"] = True
+    else:
+        print(f"[✘] {script_path} missing")
+
+    # 2. 检查任务目录数量
+    print("\n[2/7] Checking Task Directories...")
+    archive_dir = "docs/archive/tasks"
+    if os.path.exists(archive_dir):
+        task_dirs = [d for d in os.listdir(archive_dir) if d.startswith("TASK_")]
+        if len(task_dirs) >= 15:
+            print(f"[✔] Found {len(task_dirs)} task directories (>= 15)")
+            results["task_directories"] = True
+        else:
+            print(f"[✘] Only {len(task_dirs)} task directories (need >= 15)")
+    else:
+        print(f"[✘] Archive directory missing: {archive_dir}")
+
+    # 3. 检查 TASK_017 完成报告
+    print("\n[3/7] Checking Completion Report...")
+    report_path = "docs/archive/tasks/TASK_017/COMPLETION_REPORT.md"
+    if os.path.exists(report_path):
+        print(f"[✔] {report_path} exists")
+        results["completion_report"] = True
+    else:
+        print(f"[✘] {report_path} missing")
+
+    # 4. 检查快速启动指南
+    print("\n[4/7] Checking Quick Start Guide...")
+    quick_path = "docs/archive/tasks/TASK_017/QUICK_START.md"
+    if os.path.exists(quick_path):
+        print(f"[✔] {quick_path} exists")
+        results["quick_start"] = True
+    else:
+        print(f"[✘] {quick_path} missing")
+
+    # 5. 检查同步指南
+    print("\n[5/7] Checking Sync Guide...")
+    sync_path = "docs/archive/tasks/TASK_017/SYNC_GUIDE.md"
+    if os.path.exists(sync_path):
+        print(f"[✔] {sync_path} exists")
+        results["sync_guide"] = True
+    else:
+        print(f"[✘] {sync_path} missing")
+
+    # 6. 检查验证日志
+    print("\n[6/7] Checking Verification Log...")
+    verify_path = "docs/archive/tasks/TASK_017/VERIFY_LOG.log"
+    if os.path.exists(verify_path):
+        try:
+            with open(verify_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            has_stats = "Files Moved:" in content
+            if has_stats:
+                print(f"[✔] Verification log complete")
+                results["verify_log"] = True
+            else:
+                print(f"[!] Verification log exists but missing statistics")
+        except Exception as e:
+            print(f"[✘] Failed to read log: {e}")
+    else:
+        print(f"[✘] Verification log missing: {verify_path}")
+
+    # 7. 检查 docs/ 根目录清理
+    print("\n[7/7] Checking docs/ Root Cleanup...")
+    if os.path.exists("docs"):
+        legacy_files = [f for f in os.listdir("docs") if f.startswith("TASK_0") and f.endswith(".md")]
+        if len(legacy_files) == 0:
+            print(f"[✔] docs/ root is clean (no TASK_0*.md files)")
+            results["docs_cleanup"] = True
+        else:
+            print(f"[!] Found {len(legacy_files)} legacy TASK files in docs/ root")
+
+    # 汇总结果
+    print("\n" + "=" * 50)
+    passed_count = sum(1 for v in results.values() if v)
+    total_count = len(results)
+
+    print(f"📊 Audit Summary: {passed_count}/{total_count} checks passed")
+    for item, status in results.items():
+        symbol = "✓" if status else "✗"
+        print(f"    {symbol} {item}")
+
+    return results
+
+
 def audit():
     """主审计入口函数"""
-    # 运行 Task 016 审计 (最新任务)
-    results = audit_task_016()
+    # 运行 Task 017 审计 (最新任务)
+    results = audit_task_017()
 
     # 计算全局统计
     global passed, failed
