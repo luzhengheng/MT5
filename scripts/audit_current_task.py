@@ -295,10 +295,112 @@ def audit_task_015():
     return results
 
 
+def audit_task_016():
+    """
+    Task #016 深度审计函数
+    验证模型训练环境搭建与基线模型
+    """
+    results = {
+        "dataset_script": False,
+        "training_script": False,
+        "training_data": False,
+        "model_file": False,
+        "metrics_log": False
+    }
+
+    print("==================================================")
+    print("🔍 AUDIT: Task #016 MODEL TRAINING & BASELINE")
+    print("==================================================")
+
+    # 1. 检查数据集创建脚本
+    print("\n[1/5] Checking Dataset Script...")
+    dataset_path = "src/training/create_dataset.py"
+    if os.path.exists(dataset_path):
+        print(f"[✔] {dataset_path} exists")
+        results["dataset_script"] = True
+    else:
+        print(f"[✘] {dataset_path} missing")
+
+    # 2. 检查训练脚本
+    print("\n[2/5] Checking Training Script...")
+    train_path = "src/training/train_baseline.py"
+    if os.path.exists(train_path):
+        try:
+            with open(train_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            if 'lightgbm' in content.lower() or 'lgb' in content:
+                print(f"[✔] {train_path} exists with LightGBM")
+                results["training_script"] = True
+            else:
+                print(f"[!] {train_path} exists but missing LightGBM")
+        except Exception as e:
+            print(f"[✘] Failed to read {train_path}: {e}")
+    else:
+        print(f"[✘] {train_path} missing")
+
+    # 3. 检查训练数据集
+    print("\n[3/5] Checking Training Dataset...")
+    data_path = "data/training_set.parquet"
+    if os.path.exists(data_path):
+        file_size = os.path.getsize(data_path)
+        if file_size > 0:
+            print(f"[✔] Training dataset exists ({file_size} bytes)")
+            results["training_data"] = True
+        else:
+            print(f"[!] Training dataset exists but empty")
+    else:
+        print(f"[✘] Training dataset missing: {data_path}")
+
+    # 4. 检查模型文件
+    print("\n[4/5] Checking Model File...")
+    model_path = "models/baseline_v1.txt"
+    if os.path.exists(model_path):
+        file_size = os.path.getsize(model_path)
+        if file_size > 0:
+            print(f"[✔] Model file exists ({file_size} bytes)")
+            results["model_file"] = True
+        else:
+            print(f"[!] Model file exists but empty")
+    else:
+        print(f"[✘] Model file missing: {model_path}")
+
+    # 5. 检查指标日志
+    print("\n[5/5] Checking Metrics Log...")
+    log_path = "docs/archive/logs/TASK_016_METRICS.log"
+    if os.path.exists(log_path):
+        try:
+            with open(log_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            has_mse = "MSE:" in content or "mse" in content.lower()
+
+            if has_mse:
+                print(f"[✔] Metrics log complete")
+                results["metrics_log"] = True
+            else:
+                print(f"[!] Metrics log exists but missing MSE metric")
+        except Exception as e:
+            print(f"[✘] Failed to read log: {e}")
+    else:
+        print(f"[✘] Metrics log missing: {log_path}")
+
+    # 汇总结果
+    print("\n" + "=" * 50)
+    passed_count = sum(1 for v in results.values() if v)
+    total_count = len(results)
+
+    print(f"📊 Audit Summary: {passed_count}/{total_count} checks passed")
+    for item, status in results.items():
+        symbol = "✓" if status else "✗"
+        print(f"    {symbol} {item}")
+
+    return results
+
+
 def audit():
     """主审计入口函数"""
-    # 运行 Task 015 审计 (最新任务)
-    results = audit_task_015()
+    # 运行 Task 016 审计 (最新任务)
+    results = audit_task_016()
 
     # 计算全局统计
     global passed, failed

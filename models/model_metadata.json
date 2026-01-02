@@ -1,0 +1,34 @@
+{
+  "model_type": "LightGBM",
+  "train_date": "2026-01-03T00:08:01.047933",
+  "features": [
+    "sma_7",
+    "sma_14",
+    "sma_30",
+    "rsi_14",
+    "rsi_21",
+    "macd",
+    "macd_signal",
+    "macd_hist",
+    "bbands_upper",
+    "bbands_middle",
+    "bbands_lower",
+    "bbands_width",
+    "atr_14",
+    "stochastic_k",
+    "stochastic_d"
+  ],
+  "metrics": {
+    "mse": 6.656137807002417e-08,
+    "mae": 0.00020873970213814216
+  },
+  "params": {
+    "objective": "regression",
+    "metric": "mse",
+    "num_leaves": 31,
+    "learning_rate": 0.05,
+    "verbose": -1
+  },
+  "train_size": 1704,
+  "test_size": 427
+}
