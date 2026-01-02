@@ -63,40 +63,56 @@ cat docs/archive/manifest_20260102_154445.json | jq '.statistics'
 ### 当前 HUB 状态
 ```bash
 HUB_REPO: /opt/mt5-crs
-GIT_HASH:  $(git rev-parse HEAD)
+GIT_HASH:  a16b4ab2dff6cf73c285ef9543df30f4e4f96274
 ```
 
-### 节点状态检查 (待执行)
-
+### 节点状态检查
 #### 节点清单
 | 节点 | 角色 | 地址 | 项目路径 | 状态 |
 |:---|:---|:---|:---|:---|
-| **INF** | 推理 (大脑) | www.crestive.net | /opt/mt5-crs | ⏳ 待同步 |
-| **GTW** | 网关 (手脚) | gtw.crestive.net | C:/mt5-crs | ⏳ 待同步 |
-| **GPU** | 训练 (核武) | www.guangzhoupeak.com | /opt/mt5-crs | ⏳ 待同步 |
+| **INF** | 推理 (大脑) | 172.19.141.250 | /opt/mt5-crs | ⚠️ SSH 认证失败 |
+| **GTW** | 网关 (手脚) | 172.19.141.255 | C:/mt5-crs | ⚠️ SSH 认证失败 |
+| **GPU** | 训练 (核武) | www.guangzhoupeak.com | /opt/mt5-crs | ⚠️ SSH 认证失败 |
 
-### 同步指令 (Operator 执行)
+### 问题诊断
+**SSH 认证失败**: 从 HUB 连接各节点时出现 `Permission denied (publickey)` 错误。
+
+**根本原因**:
+1. `~/.ssh/config` 中引用了不存在的 `~/.ssh/id_ed25519` 密钥
+2. 节点可能未配置 HUB 的 SSH 公钥
+
+### 解决方案
+已创建详细同步指南: [docs/logs/TASK_013_SYNC_GUIDE.md](docs/logs/TASK_013_SYNC_GUIDE.md)
+
+**快速修复步骤**:
+
+1. **清理 SSH 配置**:
 ```bash
-# 同步所有节点
-./scripts/maintenance/sync_nodes.sh
-
-# 或逐节点同步
-./scripts/maintenance/sync_nodes.sh inf
-./scripts/maintenance/sync_nodes.sh gtw
-./scripts/maintenance/sync_nodes.sh gpu
+# 编辑 ~/.ssh/config，删除第 37 行
+vi ~/.ssh/config
+# 删除: IdentityFile ~/.ssh/id_ed25519
 ```
 
-### 预期输出
-```
-========================================
-SYNCHRONIZATION SUMMARY
-========================================
-HUB Hash: c5dc941...
+2. **手动同步节点** (推荐):
+```bash
+# 登录 INF
+ssh root@172.19.141.250
+cd /opt/mt5-crs && git fetch origin && git reset --hard origin/main && git clean -fd
 
-INF: ✓ SYNCED
-GTW: ✓ SYNCED
-GPU: ✓ SYNCED
-========================================
+# 登录 GTW
+ssh Administrator@172.19.141.255
+cd C:/mt5-crs && git fetch origin && git reset --hard origin/main && git clean -fd
+
+# 登录 GPU
+ssh root@www.guangzhoupeak.com
+cd /opt/mt5-crs && git fetch origin && git reset --hard origin/main && git clean -fd
+```
+
+3. **验证一致性**:
+```bash
+# 在各节点执行
+git rev-parse HEAD
+# 应输出: a16b4ab2dff6cf73c285ef9543df30f4e4f96274
 ```
 
 ---
@@ -167,9 +183,9 @@ python3 scripts/maintenance/organize_hub_v3.4.py --execute
 
 **Architect**: Gemini (审查通过)
 **Coding Agent**: Claude Code (执行完成)
-**Operator**: 待执行全网同步验证
+**Operator**: 需要手动执行 SSH 修复和节点同步
 
-**状态**: 🟢 HUB 完成审计通过 | 🟡 待全网同步验证
+**状态**: 🟢 HUB 完成审计通过 | 🟡 待 Operator 执行全网同步 (详见 TASK_013_SYNC_GUIDE.md)
 
 ---
 
