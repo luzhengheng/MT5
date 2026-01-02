@@ -48,7 +48,7 @@ pf = vbt.Portfolio.from_signals(
     exits=exits,
     fees=0.0001,      # 0.01% 手续费
     slippage=0.0001,  # 0.01% 滑点
-    freq='1h'
+    freq='1D'         # 日线数据
 )
 
 # 输出统计

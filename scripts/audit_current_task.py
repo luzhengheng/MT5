@@ -819,10 +819,170 @@ def audit_task_019():
     return results
 
 
+def audit_task_020():
+    """
+    Task #020 深度审计函数
+    验证真实 EODHD 数据接入与流水线固化
+    """
+    results = {
+        "ingest_script": False,
+        "env_config": False,
+        "real_data": False,
+        "data_quality": False,
+        "verify_log": False,
+        "completion_report": False,
+        "quick_start": False,
+        "sync_guide": False
+    }
+
+    print("==================================================")
+    print("🔍 AUDIT: Task #020 REAL DATA INGESTION")
+    print("==================================================")
+
+    # 1. 检查真实数据接入脚本
+    print("\n[1/8] Checking Real Data Ingestion Script...")
+    script_path = "src/feature_engineering/ingest_real_eodhd.py"
+    if os.path.exists(script_path):
+        try:
+            with open(script_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            has_requests = 'import requests' in content or 'from requests' in content
+            has_api = 'eodhd.com' in content
+            if has_requests and has_api:
+                print(f"[✔] {script_path} exists with API integration")
+                results["ingest_script"] = True
+            else:
+                print(f"[!] {script_path} missing API logic")
+        except Exception as e:
+            print(f"[✘] Failed to read {script_path}: {e}")
+    else:
+        print(f"[✘] {script_path} missing")
+
+    # 2. 检查环境配置
+    print("\n[2/8] Checking Environment Config...")
+    env_path = ".env"
+    if os.path.exists(env_path):
+        try:
+            with open(env_path, 'r') as f:
+                content = f.read()
+            if 'EODHD_API_TOKEN' in content:
+                print(f"[✔] .env contains EODHD_API_TOKEN")
+                results["env_config"] = True
+            else:
+                print(f"[!] .env missing EODHD_API_TOKEN")
+        except Exception as e:
+            print(f"[✘] Failed to read .env: {e}")
+    else:
+        print(f"[!] .env file not found (optional)")
+
+    # 3. 检查真实数据文件
+    print("\n[3/8] Checking Real Market Data...")
+    data_path = "data/real_market_data.parquet"
+    if os.path.exists(data_path):
+        try:
+            import pandas as pd
+            df = pd.read_parquet(data_path)
+            row_count = len(df)
+            if row_count > 1000:  # 降低阈值，日线数据通常较少
+                print(f"[✔] Real data exists ({row_count} rows, > 1000)")
+                results["real_data"] = True
+            else:
+                print(f"[!] Real data too small ({row_count} rows)")
+        except Exception as e:
+            print(f"[✘] Failed to read data: {e}")
+    else:
+        print(f"[✘] Real data missing: {data_path}")
+
+    # 4. 检查数据质量
+    print("\n[4/8] Checking Data Quality...")
+    if os.path.exists(data_path):
+        try:
+            import pandas as pd
+            df = pd.read_parquet(data_path)
+            has_close = 'close' in df.columns
+            no_null_close = df['close'].notna().all() if has_close else False
+            date_range = (df['timestamp'].max() - df['timestamp'].min()).days if 'timestamp' in df.columns else 0
+
+            if has_close and no_null_close and date_range > 365:
+                print(f"[✔] Data quality OK (span: {date_range} days)")
+                results["data_quality"] = True
+            else:
+                print(f"[!] Data quality issues: close={has_close}, nulls={not no_null_close}, span={date_range}d")
+        except Exception as e:
+            print(f"[✘] Failed to check quality: {e}")
+
+    # 5. 检查验证日志
+    print("\n[5/8] Checking Verification Log...")
+    log_path = "docs/archive/tasks/TASK_020/VERIFY_LOG.log"
+    if os.path.exists(log_path):
+        try:
+            with open(log_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            has_download = 'Download Complete' in content or 'Downloaded' in content
+            has_sharpe = 'Sharpe Ratio' in content
+            if has_download and has_sharpe:
+                print(f"[✔] Verification log complete")
+                results["verify_log"] = True
+            else:
+                print(f"[!] Log missing keywords: download={has_download}, sharpe={has_sharpe}")
+        except Exception as e:
+            print(f"[✘] Failed to read log: {e}")
+    else:
+        print(f"[✘] Verification log missing: {log_path}")
+
+    # 6. 检查完成报告
+    print("\n[6/8] Checking Completion Report...")
+    report_path = "docs/archive/tasks/TASK_020/COMPLETION_REPORT.md"
+    if os.path.exists(report_path):
+        try:
+            with open(report_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            has_comparison = 'Simulated vs Real' in content or '模拟 vs 真实' in content
+            if has_comparison:
+                print(f"[✔] {report_path} exists with comparison")
+                results["completion_report"] = True
+            else:
+                print(f"[!] Report missing comparison section")
+        except Exception as e:
+            print(f"[✘] Failed to read report: {e}")
+    else:
+        print(f"[✘] {report_path} missing")
+
+    # 7. 检查快速启动指南
+    print("\n[7/8] Checking Quick Start Guide...")
+    quick_path = "docs/archive/tasks/TASK_020/QUICK_START.md"
+    if os.path.exists(quick_path):
+        print(f"[✔] {quick_path} exists")
+        results["quick_start"] = True
+    else:
+        print(f"[✘] {quick_path} missing")
+
+    # 8. 检查同步指南
+    print("\n[8/8] Checking Sync Guide...")
+    sync_path = "docs/archive/tasks/TASK_020/SYNC_GUIDE.md"
+    if os.path.exists(sync_path):
+        print(f"[✔] {sync_path} exists")
+        results["sync_guide"] = True
+    else:
+        print(f"[✘] {sync_path} missing")
+
+    # 汇总结果
+    print("\n" + "=" * 50)
+    passed_count = sum(1 for v in results.values() if v)
+    total_count = len(results)
+
+    print(f"📊 Audit Summary: {passed_count}/{total_count} checks passed")
+    for item, status in results.items():
+        symbol = "✓" if status else "✗"
+        print(f"    {symbol} {item}")
+
+    return results
+
+
 def audit():
     """主审计入口函数"""
-    # 运行 Task 019 审计 (最新任务)
-    results = audit_task_019()
+    # 运行 Task 020 审计 (最新任务)
+    results = audit_task_020()
 
     # 计算全局统计
     global passed, failed

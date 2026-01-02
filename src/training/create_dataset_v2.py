@@ -12,8 +12,14 @@ print("=" * 60)
 
 # 1. 加载原始数据
 print("\n[1/5] Loading raw market data...")
-df = pd.read_parquet('data/raw_market_data.parquet')
-print(f"  Loaded {len(df)} rows")
+# 优先使用真实数据，如果不存在则使用模拟数据
+import os
+if os.path.exists('data/real_market_data.parquet'):
+    df = pd.read_parquet('data/real_market_data.parquet')
+    print(f"  Loaded {len(df)} rows (real data)")
+else:
+    df = pd.read_parquet('data/raw_market_data.parquet')
+    print(f"  Loaded {len(df)} rows (simulated data)")
 
 # 2. 计算技术指标（使用滚动窗口，确保无泄露）
 print("\n[2/5] Computing technical indicators (rolling windows)...")
