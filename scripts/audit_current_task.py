@@ -661,10 +661,168 @@ def audit_task_018():
     return results
 
 
+def audit_task_019():
+    """
+    Task #019 深度审计函数
+    验证数据泄露修复与真实数据接入
+    """
+    results = {
+        "ingest_script": False,
+        "dataset_v2_script": False,
+        "raw_data": False,
+        "training_data": False,
+        "model_file": False,
+        "sharpe_fixed": False,
+        "completion_report": False,
+        "quick_start": False,
+        "sync_guide": False,
+        "verify_log": False
+    }
+
+    print("==================================================")
+    print("🔍 AUDIT: Task #019 DATA LEAKAGE FIX")
+    print("==================================================")
+
+    # 1. 检查数据接入脚本
+    print("\n[1/10] Checking Data Ingestion Script...")
+    ingest_path = "src/feature_engineering/ingest_eodhd.py"
+    if os.path.exists(ingest_path):
+        print(f"[✔] {ingest_path} exists")
+        results["ingest_script"] = True
+    else:
+        print(f"[✘] {ingest_path} missing")
+
+    # 2. 检查 v2 数据集脚本
+    print("\n[2/10] Checking Dataset v2 Script...")
+    dataset_path = "src/training/create_dataset_v2.py"
+    if os.path.exists(dataset_path):
+        try:
+            with open(dataset_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            if '.rolling(' in content:
+                print(f"[✔] {dataset_path} exists with rolling windows")
+                results["dataset_v2_script"] = True
+            else:
+                print(f"[!] {dataset_path} exists but missing rolling windows")
+        except Exception as e:
+            print(f"[✘] Failed to read {dataset_path}: {e}")
+    else:
+        print(f"[✘] {dataset_path} missing")
+
+    # 3. 检查原始数据
+    print("\n[3/10] Checking Raw Market Data...")
+    raw_path = "data/raw_market_data.parquet"
+    if os.path.exists(raw_path):
+        file_size = os.path.getsize(raw_path)
+        if file_size > 100000:
+            print(f"[✔] Raw data exists ({file_size} bytes, > 100KB)")
+            results["raw_data"] = True
+        else:
+            print(f"[!] Raw data too small ({file_size} bytes)")
+    else:
+        print(f"[✘] Raw data missing: {raw_path}")
+
+    # 4. 检查训练数据集
+    print("\n[4/10] Checking Training Dataset...")
+    train_path = "data/training_set.parquet"
+    if os.path.exists(train_path):
+        file_size = os.path.getsize(train_path)
+        if file_size > 100000:
+            print(f"[✔] Training data exists ({file_size} bytes, > 100KB)")
+            results["training_data"] = True
+        else:
+            print(f"[!] Training data too small ({file_size} bytes)")
+    else:
+        print(f"[✘] Training data missing: {train_path}")
+
+    # 5. 检查模型文件
+    print("\n[5/10] Checking Model File...")
+    model_path = "models/baseline_v1.txt"
+    if os.path.exists(model_path):
+        file_size = os.path.getsize(model_path)
+        if file_size > 0:
+            print(f"[✔] Model file exists ({file_size} bytes)")
+            results["model_file"] = True
+        else:
+            print(f"[!] Model file empty")
+    else:
+        print(f"[✘] Model file missing: {model_path}")
+
+    # 6. 检查 Sharpe Ratio 修复
+    print("\n[6/10] Checking Sharpe Ratio Fix...")
+    log_path = "docs/archive/tasks/TASK_019/VERIFY_LOG.log"
+    if os.path.exists(log_path):
+        try:
+            with open(log_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            import re
+            match = re.search(r'Sharpe Ratio[\s:]+([0-9.]+)', content)
+            if match:
+                sharpe = float(match.group(1))
+                if sharpe < 5.0:
+                    print(f"[✔] Sharpe Ratio fixed: {sharpe:.4f} < 5.0")
+                    results["sharpe_fixed"] = True
+                else:
+                    print(f"[✘] Sharpe Ratio still too high: {sharpe:.4f}")
+            else:
+                print(f"[!] Sharpe Ratio not found in log")
+        except Exception as e:
+            print(f"[✘] Failed to parse log: {e}")
+    else:
+        print(f"[✘] Verification log missing: {log_path}")
+
+    # 7. 检查完成报告
+    print("\n[7/10] Checking Completion Report...")
+    report_path = "docs/archive/tasks/TASK_019/COMPLETION_REPORT.md"
+    if os.path.exists(report_path):
+        print(f"[✔] {report_path} exists")
+        results["completion_report"] = True
+    else:
+        print(f"[✘] {report_path} missing")
+
+    # 8. 检查快速启动指南
+    print("\n[8/10] Checking Quick Start Guide...")
+    quick_path = "docs/archive/tasks/TASK_019/QUICK_START.md"
+    if os.path.exists(quick_path):
+        print(f"[✔] {quick_path} exists")
+        results["quick_start"] = True
+    else:
+        print(f"[✘] {quick_path} missing")
+
+    # 9. 检查同步指南
+    print("\n[9/10] Checking Sync Guide...")
+    sync_path = "docs/archive/tasks/TASK_019/SYNC_GUIDE.md"
+    if os.path.exists(sync_path):
+        print(f"[✔] {sync_path} exists")
+        results["sync_guide"] = True
+    else:
+        print(f"[✘] {sync_path} missing")
+
+    # 10. 检查验证日志
+    print("\n[10/10] Checking Verification Log...")
+    if os.path.exists(log_path):
+        print(f"[✔] {log_path} exists")
+        results["verify_log"] = True
+    else:
+        print(f"[✘] {log_path} missing")
+
+    # 汇总结果
+    print("\n" + "=" * 50)
+    passed_count = sum(1 for v in results.values() if v)
+    total_count = len(results)
+
+    print(f"📊 Audit Summary: {passed_count}/{total_count} checks passed")
+    for item, status in results.items():
+        symbol = "✓" if status else "✗"
+        print(f"    {symbol} {item}")
+
+    return results
+
+
 def audit():
     """主审计入口函数"""
-    # 运行 Task 018 审计 (最新任务)
-    results = audit_task_018()
+    # 运行 Task 019 审计 (最新任务)
+    results = audit_task_019()
 
     # 计算全局统计
     global passed, failed
