@@ -12,14 +12,16 @@ print("=" * 60)
 
 # 1. 加载原始数据
 print("\n[1/5] Loading raw market data...")
-# 优先使用真实数据，如果不存在则使用模拟数据
+# 优先使用小时线数据（更多样本），如果不存在则使用日线
 import os
-if os.path.exists('data/real_market_data.parquet'):
-    df = pd.read_parquet('data/real_market_data.parquet')
-    print(f"  Loaded {len(df)} rows (real data)")
-else:
+if os.path.exists('data/raw_market_data.parquet'):
     df = pd.read_parquet('data/raw_market_data.parquet')
-    print(f"  Loaded {len(df)} rows (simulated data)")
+    print(f"  Loaded {len(df)} rows (hourly simulated data)")
+elif os.path.exists('data/real_market_data.parquet'):
+    df = pd.read_parquet('data/real_market_data.parquet')
+    print(f"  Loaded {len(df)} rows (daily real data)")
+else:
+    raise FileNotFoundError("No market data found")
 
 # 2. 计算技术指标（使用滚动窗口，确保无泄露）
 print("\n[2/5] Computing technical indicators (rolling windows)...")

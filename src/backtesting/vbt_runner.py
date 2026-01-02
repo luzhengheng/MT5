@@ -38,8 +38,8 @@ print(f"  Predictions: min={pred_y.min():.6f}, max={pred_y.max():.6f}, mean={pre
 
 # 5. 生成交易信号
 print("\n[5/5] Running backtest...")
-entries = pred_y > 0.0001   # 做多信号（降低阈值）
-exits = pred_y < -0.0001    # 平仓信号（降低阈值）
+entries = pred_y > 0.00001   # 做多信号（调整为小时线阈值）
+exits = pred_y < -0.00001    # 平仓信号（调整为小时线阈值）
 
 # 执行回测
 pf = vbt.Portfolio.from_signals(
@@ -48,7 +48,7 @@ pf = vbt.Portfolio.from_signals(
     exits=exits,
     fees=0.0001,      # 0.01% 手续费
     slippage=0.0001,  # 0.01% 滑点
-    freq='1D'         # 日线数据
+    freq='1h'         # Hourly data (auto-detect from data)
 )
 
 # 输出统计

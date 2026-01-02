@@ -28,18 +28,18 @@ def main():
 
     print(f"🔹 Train size: {len(X_train)}, Test size: {len(X_test)}")
 
-    # Train LightGBM with early stopping (prevent overfitting)
+    # Train LightGBM with early stopping (adjusted for hourly data)
     params = {
         'objective': 'regression',
         'metric': 'mse',
-        'num_leaves': 20,
-        'learning_rate': 0.05,
-        'max_depth': 6,
-        'min_child_samples': 10,
-        'reg_alpha': 0.02,
-        'reg_lambda': 0.02,
-        'feature_fraction': 0.85,
-        'bagging_fraction': 0.85,
+        'num_leaves': 25,
+        'learning_rate': 0.08,         # Higher for hourly data
+        'max_depth': 7,
+        'min_child_samples': 20,
+        'reg_alpha': 0.01,             # Lighter regularization
+        'reg_lambda': 0.01,
+        'feature_fraction': 0.9,
+        'bagging_fraction': 0.9,
         'bagging_freq': 5,
         'verbose': -1
     }
@@ -57,7 +57,7 @@ def main():
         train_data,
         num_boost_round=150,
         valid_sets=[val_data],
-        callbacks=[lgb.early_stopping(stopping_rounds=25, verbose=False)]
+        callbacks=[lgb.early_stopping(stopping_rounds=35, verbose=False)]
     )
 
     print(f"   Stopped at iteration: {model.best_iteration}")
