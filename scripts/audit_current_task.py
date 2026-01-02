@@ -178,9 +178,127 @@ def audit_task_014():
     return results
 
 
+def audit_task_015():
+    """
+    Task #015 深度审计函数
+    验证实时特征管道搭建与数据入库
+
+    Returns:
+        dict: 审计结果字典
+    """
+    results = {
+        "definitions_file": False,
+        "feature_keywords": False,
+        "ingestion_script": False,
+        "verify_log": False,
+        "parquet_data": False
+    }
+
+    print("==================================================")
+    print("🔍 AUDIT: Task #015 FEATURE PIPELINE & INGESTION")
+    print("==================================================")
+
+    # 1. 检查 definitions.py 文件
+    print("\n[1/5] Checking Feature Definitions...")
+    defs_path = "src/feature_store/definitions.py"
+    if os.path.exists(defs_path):
+        try:
+            with open(defs_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+                
+            # 检查是否包含至少 5 个 FeatureView
+            feature_view_count = content.count("FeatureView(")
+            
+            if feature_view_count >= 5:
+                print(f"[✔] {defs_path} contains {feature_view_count} FeatureViews")
+                results["definitions_file"] = True
+            else:
+                print(f"[✘] {defs_path} only has {feature_view_count} FeatureViews (need >= 5)")
+        except Exception as e:
+            print(f"[✘] Failed to read {defs_path}: {e}")
+    else:
+        print(f"[✘] {defs_path} missing")
+
+    # 2. 检查关键技术指标关键词
+    print("\n[2/5] Checking Technical Indicator Keywords...")
+    if os.path.exists(defs_path):
+        try:
+            with open(defs_path, 'r', encoding='utf-8') as f:
+                content = f.read().lower()
+            
+            has_rsi = "rsi" in content
+            has_sma = "sma" in content
+            has_macd = "macd" in content
+            
+            if has_rsi and has_sma:
+                print(f"[✔] Found required keywords: rsi={has_rsi}, sma={has_sma}, macd={has_macd}")
+                results["feature_keywords"] = True
+            else:
+                print(f"[✘] Missing keywords: rsi={has_rsi}, sma={has_sma}")
+        except Exception as e:
+            print(f"[✘] Failed to check keywords: {e}")
+    else:
+        print(f"[✘] Cannot check keywords (file missing)")
+
+    # 3. 检查入库脚本
+    print("\n[3/5] Checking Ingestion Script...")
+    ingest_path = "src/feature_engineering/ingest_stream.py"
+    if os.path.exists(ingest_path):
+        print(f"[✔] {ingest_path} exists")
+        results["ingestion_script"] = True
+    else:
+        print(f"[✘] {ingest_path} missing")
+
+    # 4. 检查验证日志
+    print("\n[4/5] Checking Verification Logs...")
+    log_path = "docs/archive/logs/TASK_015_VERIFY.log"
+    if os.path.exists(log_path):
+        try:
+            with open(log_path, 'r', encoding='utf-8') as f:
+                log_content = f.read()
+            
+            has_success = "Materialization successful" in log_content
+            
+            if has_success:
+                print(f"[✔] Verification log complete")
+                results["verify_log"] = True
+            else:
+                print(f"[!] Verification log exists but missing 'Materialization successful'")
+        except Exception as e:
+            print(f"[✘] Failed to read log: {e}")
+    else:
+        print(f"[!] Verification log not found (may not have run yet)")
+
+    # 5. 检查 Parquet 数据文件
+    print("\n[5/5] Checking Parquet Data...")
+    parquet_path = "data/sample_features.parquet"
+    if os.path.exists(parquet_path):
+        file_size = os.path.getsize(parquet_path)
+        if file_size > 0:
+            print(f"[✔] Parquet data exists ({file_size} bytes)")
+            results["parquet_data"] = True
+        else:
+            print(f"[!] Parquet file exists but empty")
+    else:
+        print(f"[!] Parquet data not found: {parquet_path}")
+
+    # 汇总结果
+    print("\n" + "=" * 50)
+    passed_count = sum(1 for v in results.values() if v)
+    total_count = len(results)
+
+    print(f"📊 Audit Summary: {passed_count}/{total_count} checks passed")
+    for item, status in results.items():
+        symbol = "✓" if status else "✗"
+        print(f"    {symbol} {item}")
+
+    return results
+
+
 def audit():
     """主审计入口函数"""
-    results = audit_task_014()
+    # 运行 Task 015 审计 (最新任务)
+    results = audit_task_015()
 
     # 计算全局统计
     global passed, failed
