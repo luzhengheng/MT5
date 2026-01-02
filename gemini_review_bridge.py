@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Gemini Review Bridge v3.3 (Insightful Edition)
-架构目标: 
+Gemini Review Bridge v3.4 (Robust Edition)
+架构目标:
 1. 穿透 Cloudflare (Titanium Shield).
 2. 精准提取 JSON 用于控制脚本流程 (Pass/Fail).
 3. 保留并展示 AI 的架构点评，供 Claude 学习改进.
+4. 🆕 双重检查机制：检测未暂存变更并强制添加.
+5. 🆕 强力编码处理：防止管道缓冲和编码错误导致的崩溃.
 """
 import os
 import sys
@@ -47,8 +49,21 @@ def log(msg, level="INFO"):
     print(f"[{timestamp}] {colors.get(level, RESET)}{prefix}{msg}{RESET}")
 
 def run_cmd(cmd, shell=True):
+    """
+    🆕 v3.4: 强化的命令执行函数
+    - 使用 encoding='utf-8', errors='replace' 防止编码崩溃
+    - 确保所有输出都能被正确捕获
+    """
     try:
-        result = subprocess.run(cmd, shell=shell, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        result = subprocess.run(
+            cmd,
+            shell=shell,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            encoding='utf-8',
+            errors='replace'
+        )
         return result.returncode, result.stdout.strip(), result.stderr.strip()
     except Exception as e:
         return 1, "", str(e)
@@ -162,7 +177,7 @@ def external_ai_review(diff_content):
             if result:
                 status = result.get("status", "FAIL")
                 
-                # --- 🔥 关键：展示 AI 的“话痨”部分给 Claude 看 ---
+                # --- 🔥 关键：展示 AI 的"话痨"部分给 Claude 看 ---
                 if comments:
                     print(f"\n{BLUE}================ 🧠 架构师点评 (AI Feedback) ================{RESET}")
                     print(f"{CYAN}{comments}{RESET}")
@@ -207,18 +222,50 @@ def external_ai_review(diff_content):
         return None
 
 # ==============================================================================
-# 🚀 主流程
+# 🚀 主流程 (v3.4 Robust Edition)
 # ==============================================================================
 def main():
-    print(f"{CYAN}🛡️ Gemini Review Bridge v3.3 (Insightful Edition){RESET}")
-    
-    # 0. 自动暂存
-    run_cmd("git add .")
+    print(f"{CYAN}🛡️ Gemini Review Bridge v3.4 (Robust Edition){RESET}")
+
+    # 🆕 v3.4: 双重检查机制 (Double Check Logic)
+    print(f"{BLUE}🐛 [DEBUG] 开始检查 Git 状态...{RESET}")
+
+    # Check 1: 检查是否有未暂存的变更
+    rc1, raw_status, _ = run_cmd("git status --porcelain")
+
+    if not raw_status:
+        log("工作区干净，无代码变更。", "WARN")
+        sys.exit(0)
+
+    print(f"{BLUE}🐛 [DEBUG] 检测到以下文件变更:{RESET}")
+    for line in raw_status.splitlines():
+        print(f"{BLUE}    {line}{RESET}")
+
+    # Check 2: 执行强制暂存
+    print(f"{BLUE}🐛 [DEBUG] 执行 Git 暂存 (git add -A)...{RESET}")
+    run_cmd("git add -A")
+
+    # Check 3: 验证暂存区是否有文件
+    rc2, staged_files, _ = run_cmd("git diff --cached --name-only")
+
+    if not staged_files:
+        log("异常：git status 显示有变更，但暂存区为空", "ERROR")
+        log("这可能是 Git 索引损坏，请运行: git reset && git status", "ERROR")
+        sys.exit(1)
+
+    print(f"{BLUE}🐛 [DEBUG] 已暂存 {len(staged_files.splitlines())} 个文件{RESET}")
+
+    # 获取 diff 内容
     _, diff, _ = run_cmd("git diff --cached")
-    
+
     if not diff:
         log("工作区干净，无代码变更。", "WARN")
         sys.exit(0)
+
+    print(f"{GREEN}✅ [INFO] 检测到以下文件变更...{RESET}")
+    for line in staged_files.splitlines():
+        print(f"{GREEN}    + {line}{RESET}")
+    print()
 
     # 1. 本地审计 (Claude 自测)
     if not phase_local_audit():

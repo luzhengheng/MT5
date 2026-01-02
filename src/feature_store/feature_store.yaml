@@ -1,34 +1,8 @@
-# Feast Feature Store 配置文件
-# 项目: MT5-CRS (MetaTrader 5 - Cryptocurrency Trading System)
-# 版本: v1.0 (Task #014 合规)
-# 用途: 定义在线/离线特征存储后端
-#
-# 架构说明:
-# - Online Store (Redis): 毫秒级特征获取，用于实时推理
-# - Offline Store (File/Parquet): 批量历史数据读取，用于模型训练
-# - Registry (SQLite): 元数据存储，Feature View 定义和 Schema
-
-# 项目名称 (必需) - Task #014 验收标准
 project: mt5_crs
-
-# 元数据注册表路径 (必需)
 registry: data/registry.db
-
-# 提供商类型 (必需)
 provider: local
-
-# 在线存储配置 (用于实时推理)
-# Task #014 验收标准: type 必须为 redis
 online_store:
-  type: redis
-  connection_string: "localhost:6379"
-  redis_port: 6379
-  redis_ssl: false
-
-# 离线存储配置 (用于模型训练)
-# Task #014 验收标准: type 必须为 file (Parquet 格式)
+    type: redis
+    connection_string: "localhost:6379"
 offline_store:
-  type: file
-
-# 实体键序列化版本
-entity_key_serialization_version: 3
+    type: file
