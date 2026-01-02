@@ -69,14 +69,8 @@ df['stochastic_d'] = df['stochastic_k'].rolling(window=3).mean()
 
 print(f"  Computed 15 technical indicators")
 
-# 3. 计算 Target（预测下一期收益率）
-print("\n[3/5] Computing target (future return)...")
-# 关键修复：使用 shift(-1) 获取未来价格，但这是合理的（我们在预测未来）
-df['target'] = (df['close'].shift(-1) - df['close']) / df['close']
-print(f"  Target: next-period return")
-
-# 4. 选择特征列并清理
-print("\n[4/5] Preparing final dataset...")
+# 3. 滞后特征（修复数据泄露）
+print("\n[3/5] Lagging features (leakage fix)...")
 feature_cols = [
     'sma_7', 'sma_14', 'sma_30',
     'rsi_14', 'rsi_21',
@@ -85,6 +79,17 @@ feature_cols = [
     'atr_14',
     'stochastic_k', 'stochastic_d'
 ]
+for col in feature_cols:
+    df[col] = df[col].shift(1)
+print(f"  All features shifted by 1 period (using t-1 data at time t)")
+
+# 4. 计算 Target（预测下一期收益率）
+print("\n[4/5] Computing target (future return)...")
+df['target'] = (df['close'].shift(-1) - df['close']) / df['close']
+print(f"  Target: next-period return")
+
+# 5. 选择特征列并清理
+print("\n[5/5] Preparing final dataset...")
 
 # 关键修复：保留 close 价格列供回测使用
 output_cols = feature_cols + ['close', 'target', 'timestamp', 'ticker']
@@ -108,6 +113,7 @@ print("\n" + "=" * 60)
 print("LEAKAGE VERIFICATION")
 print("=" * 60)
 print("✓ All indicators use rolling windows (no future data)")
+print("✓ All features shifted by 1 period (using t-1 at time t)")
 print("✓ Target uses shift(-1) (predicting future, not leaking)")
 print("✓ Close price column preserved for backtesting")
 print("=" * 60)
