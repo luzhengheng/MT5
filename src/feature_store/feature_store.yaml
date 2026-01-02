@@ -1,35 +1,34 @@
-# Feast Feature Store Configuration
-# ====================================
-# 配置 Feast 特征仓库以支持 TimescaleDB 离线存储
+# Feast Feature Store 配置文件
+# 项目: MT5-CRS (MetaTrader 5 - Cryptocurrency Trading System)
+# 版本: v1.0 (Task #014 合规)
+# 用途: 定义在线/离线特征存储后端
 #
-# 项目信息:
-# - 名称: mt5_feature_store
-# - 类型: 离线特征存储 (Offline-only)
-# - 数据源: PostgreSQL/TimescaleDB
-# - 注册表: 本地 SQLite (Protocol v2.2 合规 - 本地存储)
+# 架构说明:
+# - Online Store (Redis): 毫秒级特征获取，用于实时推理
+# - Offline Store (File/Parquet): 批量历史数据读取，用于模型训练
+# - Registry (SQLite): 元数据存储，Feature View 定义和 Schema
 
-project: mt5_feature_store
-registry_type: sqlite
-registry_path: "./registry.db"
+# 项目名称 (必需) - Task #014 验收标准
+project: mt5_crs
 
+# 元数据注册表路径 (必需)
+registry: data/registry.db
+
+# 提供商类型 (必需)
 provider: local
-offline_store:
-  type: postgres
-  host: localhost
-  port: 5432
-  database: mt5_crs
-  user: trader
-  password: password
 
+# 在线存储配置 (用于实时推理)
+# Task #014 验收标准: type 必须为 redis
 online_store:
-  type: sqlite
-  path: ./online_store.db
+  type: redis
+  connection_string: "localhost:6379"
+  redis_port: 6379
+  redis_ssl: false
 
-repo_path: ./
+# 离线存储配置 (用于模型训练)
+# Task #014 验收标准: type 必须为 file (Parquet 格式)
+offline_store:
+  type: file
 
-# 项目元数据
-metadata:
-  description: "MT5 Cryptocurrency and Forex Feature Store - Powered by Feast"
-  owner: "Trading Research System"
-  version: "1.0.0"
+# 实体键序列化版本
 entity_key_serialization_version: 3

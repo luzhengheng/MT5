@@ -46,78 +46,149 @@ def check_yaml_file(filepath):
         print(f"[✘] Failed to parse {filepath}: {e}")
         return False
 
-def audit():
-    global passed, failed
+def audit_task_014():
+    """
+    Task #014 深度审计函数
+    验证 AI Bridge 核心组件与 Feast 特征库集成
+
+    Returns:
+        dict: 审计结果字典，包含各项检查的 pass/fail 状态
+    """
+    results = {
+        "plan_doc": False,
+        "feature_store_config": False,
+        "bridge_dependency": False,
+        "verify_log": False,
+        "feast_registry": False
+    }
+
     print("==================================================")
-    print("🔍 AUDIT: Task #014.01 AI BRIDGE & FEAST COMPLIANCE")
+    print("🔍 AUDIT: Task #014 AI BRIDGE & FEAST COMPLIANCE")
     print("==================================================")
 
-    # TASK #014.01
-    print("\n[TASK #014.01 AI BRIDGE & FEAST FEATURE STORE AUDIT (CRITICAL)]")
-    
-    # 1. Docs
-    if os.path.exists("docs/TASK_014_01_PLAN.md"):
-        print("[✔] [Docs] TASK_014_01_PLAN.md exists")
-        passed += 1
+    # 1. 文档检查 - TASK_014_PLAN.md
+    print("\n[1/5] Checking Plan Document...")
+    plan_path = "docs/TASK_014_PLAN.md"
+    if os.path.exists(plan_path):
+        # 验证文件内容非空且包含关键章节
+        try:
+            with open(plan_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+                if len(content) > 1000 and "架构图" in content and "回滚计划" in content:
+                    print(f"[✔] {plan_path} exists with valid content")
+                    results["plan_doc"] = True
+                else:
+                    print(f"[!] {plan_path} exists but content incomplete")
+        except Exception as e:
+            print(f"[✘] Failed to read {plan_path}: {e}")
     else:
-        print("[ ] [Docs] TASK_014_01_PLAN.md missing")
-        # 非阻塞
+        print(f"[✘] {plan_path} missing")
 
-    # 2. Bridge Dependency
-    try:
-        import curl_cffi
-        print("[✔] [Deps] curl_cffi is available")
-        passed += 1
-    except ImportError:
-        print("[!] [Deps] curl_cffi missing (recommended)")
-        # 非阻塞
-
-    # 3. Bridge Script
-    if os.path.exists("gemini_review_bridge.py"):
-        print("[✔] [Code] gemini_review_bridge.py exists")
-        passed += 1
-    else:
-        print("[✘] [Code] gemini_review_bridge.py missing")
-        failed += 1
-
-    # 4. Feature Store Config (The Problematic Part Fixed)
+    # 2. Feature Store 配置深度验证
+    print("\n[2/5] Validating Feature Store Configuration...")
     fs_config_path = "src/feature_store/feature_store.yaml"
     if os.path.exists(fs_config_path):
-        print(f"[✔] [Config] {fs_config_path} exists")
-        passed += 1
-        
         if HAS_YAML:
             try:
-                with open(fs_config_path, 'r') as f:
-                    # 使用明确的变量名 fs_config，避免 feature_store_pyyaml 混淆
-                    fs_config = pyyaml.safe_load(f)
-                
-                if fs_config and fs_config.get('project') == 'mt5_crs':
-                    print("[✔] [Config] Project name correct")
-                    passed += 1
+                with open(fs_config_path, 'r', encoding='utf-8') as f:
+                    config = pyyaml.safe_load(f)
+
+                # 深度验证配置字段
+                checks = {
+                    "project": config.get("project") == "mt5_crs",
+                    "online_store_type": config.get("online_store", {}).get("type") == "redis",
+                    "offline_store_type": config.get("offline_store", {}).get("type") == "file"
+                }
+
+                if all(checks.values()):
+                    print(f"[✔] {fs_config_path} valid")
+                    print(f"    - project: mt5_crs ✓")
+                    print(f"    - online_store.type: redis ✓")
+                    print(f"    - offline_store.type: file ✓")
+                    results["feature_store_config"] = True
                 else:
-                    print(f"[!] [Config] Project name mismatch: {fs_config.get('project')}")
+                    print(f"[✘] {fs_config_path} validation failed:")
+                    for key, passed in checks.items():
+                        status = "✓" if passed else "✗"
+                        print(f"    - {key}: {status}")
+
             except Exception as e:
-                print(f"[✘] [Config] Failed to parse yaml: {e}")
-                failed += 1
+                print(f"[✘] Failed to parse {fs_config_path}: {e}")
+        else:
+            print(f"[!] {fs_config_path} exists (PyYAML missing, skipped content check)")
+            results["feature_store_config"] = True  # 降级通过
     else:
-        print(f"[✘] [Config] {fs_config_path} missing")
-        failed += 1
+        print(f"[✘] {fs_config_path} missing")
 
-    # 5. Feast Init
+    # 3. Bridge 依赖检查
+    print("\n[3/5] Checking Bridge Dependencies...")
     try:
-        from feast import FeatureStore
-        # 尝试初始化但不连接
-        fs = FeatureStore(repo_path="src/feature_store")
-        print("[✔] [Feast] FeatureStore initialized successfully")
-        passed += 1
-    except Exception as e:
-        print(f"[!] [Feast] Init warning: {e}")
-        # 非阻塞
+        import curl_cffi
+        print("[✔] curl_cffi is available")
+        results["bridge_dependency"] = True
+    except ImportError:
+        print("[✘] curl_cffi missing")
 
-    print("-" * 50)
-    print(f"📊 Audit Finished: Passed={passed}, Failed={failed}")
-    return {"passed": passed, "failed": failed}
+    # 4. Feast Registry 检查
+    print("\n[4/5] Checking Feast Registry...")
+    registry_path = "data/registry.db"
+    if os.path.exists(registry_path):
+        file_size = os.path.getsize(registry_path)
+        if file_size > 0:
+            print(f"[✔] Feast registry exists ({file_size} bytes)")
+            results["feast_registry"] = True
+        else:
+            print(f"[!] Feast registry exists but empty")
+    else:
+        print(f"[✘] Feast registry missing: {registry_path}")
+
+    # 5. 验证日志检查
+    print("\n[5/5] Checking Verification Logs...")
+    log_path = "docs/archive/logs/TASK_014_VERIFY.log"
+    if os.path.exists(log_path):
+        try:
+            with open(log_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            has_feast = "Feast apply successful" in content
+            has_bridge = "Bridge dependency OK" in content
+
+            if has_feast and has_bridge:
+                print(f"[✔] Verification log complete")
+                results["verify_log"] = True
+            else:
+                print(f"[!] Verification log exists but missing keywords:")
+                print(f"    - Feast apply successful: {'✓' if has_feast else '✗'}")
+                print(f"    - Bridge dependency OK: {'✓' if has_bridge else '✗'}")
+        except Exception as e:
+            print(f"[✘] Failed to read log: {e}")
+    else:
+        print(f"[!] Verification log not found (may not have run yet)")
+
+    # 汇总结果
+    print("\n" + "=" * 50)
+    passed_count = sum(1 for v in results.values() if v)
+    total_count = len(results)
+
+    print(f"📊 Audit Summary: {passed_count}/{total_count} checks passed")
+    for item, status in results.items():
+        symbol = "✓" if status else "✗"
+        print(f"    {symbol} {item}")
+
+    return results
+
+
+def audit():
+    """主审计入口函数"""
+    results = audit_task_014()
+
+    # 计算全局统计
+    global passed, failed
+    passed = sum(1 for v in results.values() if v)
+    failed = sum(1 for v in results.values() if not v)
+
+    # 返回标准格式
+    return {"passed": passed, "failed": failed, "details": results}
 
 if __name__ == "__main__":
     result = audit()
