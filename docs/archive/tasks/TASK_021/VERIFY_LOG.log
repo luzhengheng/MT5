@@ -1,0 +1,63 @@
+============================================================
+TASK #021: Walk-Forward Analysis
+============================================================
+
+[1/6] Loading data...
+  Loaded 4021 samples (2015-01-01 00:00:00 to 2026-01-03 00:00:00)
+
+[2/6] Engineering features...
+  Features ready: 3991 samples after dropna
+
+[3/6] Configuring Walk-Forward...
+  Generated 7 rolling windows
+
+[4/6] Running Walk-Forward validation...
+  Window 1/7: Train 2015-01-30 to 2018-01-28, Test 2018-01-29 to 2019-01-28
+  Window 2/7: Train 2016-01-30 to 2019-01-28, Test 2019-01-29 to 2020-01-28
+  Window 3/7: Train 2017-01-29 to 2020-01-28, Test 2020-01-29 to 2021-01-27
+  Window 4/7: Train 2018-01-29 to 2021-01-27, Test 2021-01-28 to 2022-01-27
+  Window 5/7: Train 2019-01-29 to 2022-01-27, Test 2022-01-28 to 2023-01-27
+  Window 6/7: Train 2020-01-29 to 2023-01-27, Test 2023-01-28 to 2024-01-27
+  Window 7/7: Train 2021-01-28 to 2024-01-27, Test 2024-01-28 to 2025-01-26
+
+[5/6] Running OOS backtest...
+
+============================================================
+OOS BACKTEST RESULTS
+============================================================
+Start                                                 0
+End                                                2554
+Period                               2555 days 00:00:00
+Start Value                                       100.0
+End Value                                     106.52369
+Total Return [%]                                6.52369
+Benchmark Return [%]                           3.547335
+Max Gross Exposure [%]                            100.0
+Total Fees Paid                                4.509219
+Max Drawdown [%]                                0.55416
+Max Drawdown Duration                 126 days 00:00:00
+Total Trades                                        218
+Total Closed Trades                                 217
+Total Open Trades                                     1
+Open Trade PnL                                -0.367759
+Win Rate [%]                                  64.976959
+Best Trade [%]                                 0.282677
+Worst Trade [%]                               -0.280354
+Avg Winning Trade [%]                          0.073934
+Avg Losing Trade [%]                          -0.049369
+Avg Winning Trade Duration    3 days 17:01:16.595744680
+Avg Losing Trade Duration     5 days 03:09:28.421052631
+Profit Factor                                  2.774867
+Expectancy                                     0.031758
+Sharpe Ratio                                   1.053545
+Calmar Ratio                                   1.636539
+Omega Ratio                                    1.239861
+Sortino Ratio                                   1.73866
+dtype: object
+
+============================================================
+ROBUSTNESS ANALYSIS
+============================================================
+OOS Sharpe Ratio: 1.0535
+✅ VERDICT: Strategy ROBUST - Good generalization
+============================================================

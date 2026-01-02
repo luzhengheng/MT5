@@ -2,49 +2,48 @@
 (Role: Project Manager / System Architect)  
   
 **TASK #[ID]: [任务名称]**  
-**Protocol**: v3.8 (Deep Verification & Asset Persistence)  
+**Protocol**: v3.9 (Double-Gated Audit)  
 **Priority**: [High/Critical]  
   
 ## 1. 目标与实质 (Substance)  
 * **核心目标**: [简述]  
-* **实质验收标准**: [例如：模型MSE < 0.001，API 响应 < 50ms]  
-* **归档路径**: `docs/archive/tasks/TASK_[ID]/` (系统自动管理)  
+* **实质验收标准**: [例如：模型MSE < 0.001，Sharpe > 1.0]  
+* **归档路径**: `docs/archive/tasks/TASK_[ID]/`  
   
 ## 2. 深度交付物矩阵 (Deliverable Matrix) ⭐ 必须严格执行  
-*审计脚本将逐项检查以下文件是否存在、内容是否合规。*  
+*审计脚本将逐项检查以下文件。Gate 1 失败将导致流程终止。*  
   
-| 类型 | 文件路径 | **深度技术验收逻辑 (Verification Logic)** |  
+| 类型 | 文件路径 | **深度技术验收逻辑 (Gate 1 Criteria)** |  
 | :--- | :--- | :--- |  
-| **代码** | `src/...` | 1. 语法正确。<br>2. **实质**: 审计脚本需尝试 import 该模块并实例化主要类。 |  
-| **证据** | `.../VERIFY_LOG.log` | **包含实质指标**: 必须包含 "SUCCESS" 及具体的业务指标 (如 Accuracy, Latency)。 |  
-| **报告** | `.../COMPLETION_REPORT.md` | 包含 "Summary", "Technical Decisions", "Next Steps"。 |  
-| **文档** | `.../QUICK_START.md` | 包含代码块 (```bash ... ```)，说明如何启动功能。 |  
-| **部署** | `.../SYNC_GUIDE.md` | 列出受影响的节点 (INF/GTW) 及需要执行的同步命令。 |  
+| **代码** | `src/...` | 1. 语法检查。<br>2. **实质**: 尝试 import 并实例化，确保无运行时错误。 |  
+| **证据** | `.../VERIFY_LOG.log` | **指标验证**: 正则匹配 Log 中的关键数值 (如 `Accuracy: 0.85+`)。 |  
+| **报告** | `.../COMPLETION_REPORT.md` | 必须包含 "Root Cause" (如涉及修复) 和 "Final Conclusion"。 |  
+| **文档** | `.../QUICK_START.md` | 包含可复制粘贴的运行指令。 |  
+| **部署** | `.../SYNC_GUIDE.md` | 明确列出环境变更 (ENV, pip, apt)。 |  
   
 ## 3. 执行计划 (Implementation Plan)  
   
 ### Step 1: 初始化与审计逻辑 (TDD)  
-* [ ] 创建归档目录: `mkdir -p docs/archive/tasks/TASK_[ID]/`  
-* [ ] **升级审计脚本**: 修改 `audit_current_task.py`，增加 `audit_task_[ID]()`。  
-    * *要求*: 必须编写代码去读取 `VERIFY_LOG.log` 中的数字，或者尝试加载生成的模型/数据。  
+* [ ] 创建归档目录。  
+* [ ] **编写审计逻辑**: 修改 `audit_current_task.py`。  
+    * *要求*: 必须编写“能让代码挂掉”的测试逻辑（例如：如果日志里 Sharpe < 0，抛出异常）。  
   
 ### Step 2: 开发与实质验证  
-* **开发动作**: 编写核心业务代码。  
-* **留痕执行**: 运行脚本时，**务必**保存到档案袋。  
-    * *Command*: `python3 src/main.py | tee docs/archive/tasks/TASK_[ID]/VERIFY_LOG.log`  
+* **开发**: 编写业务代码。  
+* **自测与留痕**:  
+    * Command: `python3 src/main.py | tee docs/archive/tasks/TASK_[ID]/VERIFY_LOG.log`  
+* **资产沉淀**: 编写 Report, QuickStart, SyncGuide。  
   
-### Step 3: 资产沉淀 (The Quad-Artifacts)  
-* **生成报告**: 根据 Step 2 的结果，编写 `COMPLETION_REPORT.md`。  
-* **编写手册**: 创建 `QUICK_START.md` (给人类看) 和 `SYNC_GUIDE.md` (给运维看)。  
-  
-### Step 4: 深度审查闭环  
-* **Trigger**: `python3 gemini_review_bridge.py`  
-* **Local Audit**:   
-    * 脚本将检查 `docs/archive/tasks/TASK_[ID]/` 下是否有 4 个文件。  
-    * 脚本将校验 Log 中的指标是否达标。  
-* **External AI**: 架构师验收“形式与实质”是否统一。  
+### Step 3: 双重门禁审查 (The Double-Gate Loop)  
+* **执行指令**: `python3 gemini_review_bridge.py`  
+    * **Gate 1 (Local)**: 脚本自动运行 `audit_current_task.py`。  
+        * *If Fail*: ❌ 报错退出 -> **回到 Step 2 修改代码** -> 重试。  
+        * *If Pass*: ✅ 进入 Gate 2。  
+    * **Gate 2 (External)**: AI 架构师审查逻辑与架构。  
+        * *If Reject*: ❌ 给出修改建议 -> **回到 Step 2 修改代码** -> 重试。  
+        * *If Pass*: ✅ **自动触发 Git Commit**。  
   
 ## 4. 完成定义 (Definition of Done)  
-1.  代码功能通过深度验证（无 Mock，真实运行）。  
-2.  **档案袋** `docs/archive/tasks/TASK_[ID]/` 中包含完整的“四大金刚”文件。  
-3.  外部 AI 审查通过。  
+1.  **Gate 1 通过**: 本地脚本对“四大金刚”和代码逻辑验证无误。  
+2.  **Gate 2 通过**: 外部 AI 确认方案符合蓝图且无逻辑漏洞。  
+3.  **Git 历史洁净**: 仅包含通过双重审查的最终提交。  

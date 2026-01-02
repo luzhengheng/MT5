@@ -141,7 +141,7 @@ def external_ai_review(diff_content):
     # Prompt: 明确要求 JSON 在前，评论在后
     prompt = f"""
     你是一位严厉的 Python 架构师。请审查以下 Git Diff:
-    {diff_content[:15000]}
+    {diff_content[:40000]}
     
     **输出格式要求 (严格遵守)**:
     1. 第一部分：必须是一个标准的 JSON 对象。

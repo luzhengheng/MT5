@@ -979,10 +979,140 @@ def audit_task_020():
     return results
 
 
+def audit_task_021():
+    """
+    Task #021 深度审计函数
+    验证 Walk-Forward Analysis 样本外滚动验证
+    """
+    results = {
+        "walk_forward_script": False,
+        "verify_log": False,
+        "multiple_test_periods": False,
+        "oos_sharpe": False,
+        "completion_report": False,
+        "quick_start": False,
+        "sync_guide": False
+    }
+
+    print("==================================================")
+    print("🔍 AUDIT: Task #021 WALK-FORWARD VALIDATION")
+    print("==================================================")
+
+    # 1. 检查 Walk-Forward 脚本
+    print("\n[1/7] Checking Walk-Forward Script...")
+    script_path = "src/backtesting/walk_forward.py"
+    if os.path.exists(script_path):
+        try:
+            with open(script_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            has_rolling = 'rolling' in content.lower() or 'TimeSeriesSplit' in content
+            has_model_reset = 'LGBMRegressor(' in content or 'lgb.train' in content
+            if has_rolling and has_model_reset:
+                print(f"[✔] {script_path} exists with rolling logic")
+                results["walk_forward_script"] = True
+            else:
+                print(f"[!] {script_path} missing rolling/model reset logic")
+        except Exception as e:
+            print(f"[✘] Failed to read {script_path}: {e}")
+    else:
+        print(f"[✘] {script_path} missing")
+
+    # 2. 检查验证日志
+    print("\n[2/7] Checking Verification Log...")
+    log_path = "docs/archive/tasks/TASK_021/VERIFY_LOG.log"
+    if os.path.exists(log_path):
+        print(f"[✔] {log_path} exists")
+        results["verify_log"] = True
+    else:
+        print(f"[✘] {log_path} missing")
+
+    # 3. 检查多个测试周期
+    print("\n[3/7] Checking Multiple Test Periods...")
+    if os.path.exists(log_path):
+        try:
+            with open(log_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            import re
+            test_periods = len(re.findall(r'Test Period|Year \d{4}|Window \d+', content))
+            if test_periods >= 3:
+                print(f"[✔] Found {test_periods} test periods (>= 3)")
+                results["multiple_test_periods"] = True
+            else:
+                print(f"[✘] Only {test_periods} test periods (need >= 3)")
+        except Exception as e:
+            print(f"[✘] Failed to parse log: {e}")
+
+    # 4. 检查 OOS Sharpe Ratio
+    print("\n[4/7] Checking OOS Sharpe Ratio...")
+    if os.path.exists(log_path):
+        try:
+            with open(log_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            import re
+            match = re.search(r'OOS Sharpe Ratio[:\s]+([0-9.-]+)', content, re.IGNORECASE)
+            if match:
+                sharpe = float(match.group(1))
+                print(f"[✔] Found OOS Sharpe: {sharpe:.4f}")
+                results["oos_sharpe"] = True
+            else:
+                print(f"[!] OOS Sharpe not found in log")
+        except Exception as e:
+            print(f"[✘] Failed to parse Sharpe: {e}")
+
+    # 5. 检查完成报告
+    print("\n[5/7] Checking Completion Report...")
+    report_path = "docs/archive/tasks/TASK_021/COMPLETION_REPORT.md"
+    if os.path.exists(report_path):
+        try:
+            with open(report_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            has_robustness = 'Robustness' in content or '鲁棒性' in content
+            has_decay = 'Decay' in content or '衰减' in content
+            if has_robustness and has_decay:
+                print(f"[✔] {report_path} exists with robustness analysis")
+                results["completion_report"] = True
+            else:
+                print(f"[!] Report missing robustness/decay analysis")
+        except Exception as e:
+            print(f"[✘] Failed to read report: {e}")
+    else:
+        print(f"[✘] {report_path} missing")
+
+    # 6. 检查快速启动指南
+    print("\n[6/7] Checking Quick Start Guide...")
+    quick_path = "docs/archive/tasks/TASK_021/QUICK_START.md"
+    if os.path.exists(quick_path):
+        print(f"[✔] {quick_path} exists")
+        results["quick_start"] = True
+    else:
+        print(f"[✘] {quick_path} missing")
+
+    # 7. 检查同步指南
+    print("\n[7/7] Checking Sync Guide...")
+    sync_path = "docs/archive/tasks/TASK_021/SYNC_GUIDE.md"
+    if os.path.exists(sync_path):
+        print(f"[✔] {sync_path} exists")
+        results["sync_guide"] = True
+    else:
+        print(f"[✘] {sync_path} missing")
+
+    # 汇总结果
+    print("\n" + "=" * 50)
+    passed_count = sum(1 for v in results.values() if v)
+    total_count = len(results)
+
+    print(f"📊 Audit Summary: {passed_count}/{total_count} checks passed")
+    for item, status in results.items():
+        symbol = "✓" if status else "✗"
+        print(f"    {symbol} {item}")
+
+    return results
+
+
 def audit():
     """主审计入口函数"""
-    # 运行 Task 020 审计 (最新任务)
-    results = audit_task_020()
+    # 运行 Task 021 审计 (最新任务)
+    results = audit_task_021()
 
     # 计算全局统计
     global passed, failed
