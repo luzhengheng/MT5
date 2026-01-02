@@ -1,0 +1,278 @@
+{
+  "timestamp": "20260102_154445",
+  "operation": "archive",
+  "dry_run": false,
+  "statistics": {
+    "tier_2": 30,
+    "tier_3": 0,
+    "tier_4": 3,
+    "tier_5": 0,
+    "total": 33
+  },
+  "files": [
+    {
+      "name": "SYSTEM_HANDOVER_REPORT.md",
+      "original": "SYSTEM_HANDOVER_REPORT.md",
+      "archive": "docs/archive/reports/SYSTEM_HANDOVER_REPORT.md",
+      "sha256": "16e55ab97bd88743e1e5a7cfedd9b3e2ebd915befd3506a150ec2dde4e0b96b6",
+      "operation": "move",
+      "timestamp": "2026-01-02T15:44:45.051965"
+    },
+    {
+      "name": "TASK_026_99_EXECUTION_SUMMARY.md",
+      "original": "TASK_026_99_EXECUTION_SUMMARY.md",
+      "archive": "docs/archive/reports/TASK_026_99_EXECUTION_SUMMARY.md",
+      "sha256": "95c3aaad1ce615174506e296c2e2fd9330816e0ef1a73cd1a6a4fc157a62da16",
+      "operation": "move",
+      "timestamp": "2026-01-02T15:44:45.052106"
+    },
+    {
+      "name": "TASK_014_RELEASE_SUMMARY.md",
+      "original": "TASK_014_RELEASE_SUMMARY.md",
+      "archive": "docs/archive/reports/TASK_014_RELEASE_SUMMARY.md",
+      "sha256": "db55fe175148867ca5d47fe683983723f44f4f042698f0884ef093bdf9baf13b",
+      "operation": "move",
+      "timestamp": "2026-01-02T15:44:45.052372"
+    },
+    {
+      "name": "bridge_test_v3_output.log",
+      "original": "bridge_test_v3_output.log",
+      "archive": "docs/archive/logs/bridge_test_v3_output.log",
+      "sha256": "5d0f6b2ed495a1704b8ad775b7d3b6fbf90c7650e254e7cfbba9282ff559b2d9",
+      "operation": "move",
+      "timestamp": "2026-01-02T15:44:45.052489"
+    },
+    {
+      "name": "TASK_012_01_COMPLETION_REPORT.md",
+      "original": "TASK_012_01_COMPLETION_REPORT.md",
+      "archive": "docs/archive/reports/TASK_012_01_COMPLETION_REPORT.md",
+      "sha256": "eda61df534ab04ae3caf23fce1e2dfac9c318a088a1de513dcbf0478db5be664",
+      "operation": "move",
+      "timestamp": "2026-01-02T15:44:45.052633"
+    },
+    {
+      "name": "TASK_022_COMPLETION_SUMMARY.md",
+      "original": "TASK_022_COMPLETION_SUMMARY.md",
+      "archive": "docs/archive/reports/TASK_022_COMPLETION_SUMMARY.md",
+      "sha256": "67eb228653550d82b1c4093a18fb22ac74d98f8c7d86e907bf8a09b6fc13e89e",
+      "operation": "move",
+      "timestamp": "2026-01-02T15:44:45.052713"
+    },
+    {
+      "name": "TASK_011_21_COMPLETION_REPORT.md",
+      "original": "TASK_011_21_COMPLETION_REPORT.md",
+      "archive": "docs/archive/reports/TASK_011_21_COMPLETION_REPORT.md",
+      "sha256": "2c65441d850bbb6f931f8fab3712bff0068271cf252bfefce55a6bbc6aafeefc",
+      "operation": "move",
+      "timestamp": "2026-01-02T15:44:45.052778"
+    },
+    {
+      "name": "TASK_011_22_COMPLETION_REPORT.md",
+      "original": "TASK_011_22_COMPLETION_REPORT.md",
+      "archive": "docs/archive/reports/TASK_011_22_COMPLETION_REPORT.md",
+      "sha256": "bbea6ee98c193d76118221302bd56cf05d2afbbdf5714f87c9b392dceb72f063",
+      "operation": "move",
+      "timestamp": "2026-01-02T15:44:45.052848"
+    },
+    {
+      "name": "bridge_test_final.log",
+      "original": "bridge_test_final.log",
+      "archive": "docs/archive/logs/bridge_test_final.log",
+      "sha256": "ebedc8f159efe2e8ae04a85987b5e61f63b23a257f5df319d714c7828adc28f5",
+      "operation": "move",
+      "timestamp": "2026-01-02T15:44:45.052900"
+    },
+    {
+      "name": "TASK_013_01_COMPLETION_REPORT.md",
+      "original": "TASK_013_01_COMPLETION_REPORT.md",
+      "archive": "docs/archive/reports/TASK_013_01_COMPLETION_REPORT.md",
+      "sha256": "48e5c5c023c555bd84d6e719056f293b343526b6d88680b330b384313af5f460",
+      "operation": "move",
+      "timestamp": "2026-01-02T15:44:45.052975"
+    },
+    {
+      "name": "TASK_040_9_FINAL_REPORT.md",
+      "original": "TASK_040_9_FINAL_REPORT.md",
+      "archive": "docs/archive/reports/TASK_040_9_FINAL_REPORT.md",
+      "sha256": "2e7b14440fed9380092922051f46502cc14307726cee8492772a2933ac08dcae",
+      "operation": "move",
+      "timestamp": "2026-01-02T15:44:45.053042"
+    },
+    {
+      "name": "FINAL_BRIDGE_TEST_REPORT.md",
+      "original": "FINAL_BRIDGE_TEST_REPORT.md",
+      "archive": "docs/archive/reports/FINAL_BRIDGE_TEST_REPORT.md",
+      "sha256": "c55814a919637a120f7ee5969115fe2adeffa19f4a0c97eabfb31ac681449302",
+      "operation": "move",
+      "timestamp": "2026-01-02T15:44:45.053096"
+    },
+    {
+      "name": "EXPORT_SUMMARY.md",
+      "original": "EXPORT_SUMMARY.md",
+      "archive": "docs/archive/reports/EXPORT_SUMMARY.md",
+      "sha256": "eb0c9c39c7a48dc4d8cd0340b5374143680f8e2a0c5f748d37f31d04e0583997",
+      "operation": "move",
+      "timestamp": "2026-01-02T15:44:45.053728"
+    },
+    {
+      "name": "TASK_011_23_COMPLETION_REPORT.md",
+      "original": "TASK_011_23_COMPLETION_REPORT.md",
+      "archive": "docs/archive/reports/TASK_011_23_COMPLETION_REPORT.md",
+      "sha256": "3713244e342aabd56c92896577e76b77bbe64ff8b1c386cdf3808d5bab66710a",
+      "operation": "move",
+      "timestamp": "2026-01-02T15:44:45.053846"
+    },
+    {
+      "name": "DEBUGGER_FINAL_REPORT.md",
+      "original": "DEBUGGER_FINAL_REPORT.md",
+      "archive": "docs/archive/reports/DEBUGGER_FINAL_REPORT.md",
+      "sha256": "d27b8959d6df5ebe66605b89ba55c9b62755d29d29c03b32084112578ebe60ff",
+      "operation": "move",
+      "timestamp": "2026-01-02T15:44:45.053905"
+    },
+    {
+      "name": "BOOTSTRAP_FIX_REPORT.md",
+      "original": "BOOTSTRAP_FIX_REPORT.md",
+      "archive": "docs/archive/reports/BOOTSTRAP_FIX_REPORT.md",
+      "sha256": "5654dd41c962ca3f0f825e52394bf6b089a4e324d419e7441ca10dab1de0e6a9",
+      "operation": "move",
+      "timestamp": "2026-01-02T15:44:45.053959"
+    },
+    {
+      "name": "BRIDGE_TEST_REPORT.md",
+      "original": "BRIDGE_TEST_REPORT.md",
+      "archive": "docs/archive/reports/BRIDGE_TEST_REPORT.md",
+      "sha256": "aaaf708ee6a31f9fe58cb77233c084c36d61ed1e9c2020e323cebb306824e165",
+      "operation": "move",
+      "timestamp": "2026-01-02T15:44:45.054005"
+    },
+    {
+      "name": "TASK_012_02_COMPLETION_REPORT.md",
+      "original": "TASK_012_02_COMPLETION_REPORT.md",
+      "archive": "docs/archive/reports/TASK_012_02_COMPLETION_REPORT.md",
+      "sha256": "27bdc9ec59edc2de7f0d42e98c8abfe72a59fef0648ea708303cf80d2da98741",
+      "operation": "move",
+      "timestamp": "2026-01-02T15:44:45.054072"
+    },
+    {
+      "name": "TASK_012_05_COMPLETION_REPORT.md",
+      "original": "TASK_012_05_COMPLETION_REPORT.md",
+      "archive": "docs/archive/reports/TASK_012_05_COMPLETION_REPORT.md",
+      "sha256": "1ec7aa7a1ead9df86c95af04ed71dd5b105cdcf37debbc0427f41eed7403f675",
+      "operation": "move",
+      "timestamp": "2026-01-02T15:44:45.054140"
+    },
+    {
+      "name": "TASK_034_COMPLETION_SUMMARY.md",
+      "original": "TASK_034_COMPLETION_SUMMARY.md",
+      "archive": "docs/archive/reports/TASK_034_COMPLETION_SUMMARY.md",
+      "sha256": "4376b56f7706fd789549f03cdac74ddc6d638240077dc52738f5ffb00c397975",
+      "operation": "move",
+      "timestamp": "2026-01-02T15:44:45.054607"
+    },
+    {
+      "name": "BRIDGE_ENHANCEMENT_REPORT.md",
+      "original": "BRIDGE_ENHANCEMENT_REPORT.md",
+      "archive": "docs/archive/reports/BRIDGE_ENHANCEMENT_REPORT.md",
+      "sha256": "427fe70a986e4fae4a2e3d9e450a4cb1133988c536a98e4b071b2b61aca0c987",
+      "operation": "move",
+      "timestamp": "2026-01-02T15:44:45.054694"
+    },
+    {
+      "name": "TASK_011_24_COMPLETION_REPORT.md",
+      "original": "TASK_011_24_COMPLETION_REPORT.md",
+      "archive": "docs/archive/reports/TASK_011_24_COMPLETION_REPORT.md",
+      "sha256": "7eae081529898eff8630004285071232a765bc83cc9f0b54d21f650d78312987",
+      "operation": "move",
+      "timestamp": "2026-01-02T15:44:45.054762"
+    },
+    {
+      "name": "TASK_011_25_COMPLETION_REPORT.md",
+      "original": "TASK_011_25_COMPLETION_REPORT.md",
+      "archive": "docs/archive/reports/TASK_011_25_COMPLETION_REPORT.md",
+      "sha256": "a7c11a845daa11d64884c57e8ba01c587fc6137b02b89b511dbe3e7f404a2c4f",
+      "operation": "move",
+      "timestamp": "2026-01-02T15:44:45.054832"
+    },
+    {
+      "name": "GEMINI_API_DIAGNOSTIC_REPORT.md",
+      "original": "GEMINI_API_DIAGNOSTIC_REPORT.md",
+      "archive": "docs/archive/reports/GEMINI_API_DIAGNOSTIC_REPORT.md",
+      "sha256": "186e1d17de2e1a3363ecae6e00df969b93307d507b140edb1c3c3aee4c30dee8",
+      "operation": "move",
+      "timestamp": "2026-01-02T15:44:45.054882"
+    },
+    {
+      "name": "TASK_040_9_COMPLETION_SUMMARY.md",
+      "original": "TASK_040_9_COMPLETION_SUMMARY.md",
+      "archive": "docs/archive/reports/TASK_040_9_COMPLETION_SUMMARY.md",
+      "sha256": "0c771cc47d21456ba232ee583ba0882a2f241f233df0c84a2d113d125ff52b7c",
+      "operation": "move",
+      "timestamp": "2026-01-02T15:44:45.054940"
+    },
+    {
+      "name": "HOW_TO_USE_GEMINI_REVIEW.md",
+      "original": "HOW_TO_USE_GEMINI_REVIEW.md",
+      "archive": "docs/archive/reports/HOW_TO_USE_GEMINI_REVIEW.md",
+      "sha256": "39244118b991a9d60484e67369bbebf922b89a242db075538cfa4eb5acd5439c",
+      "operation": "move",
+      "timestamp": "2026-01-02T15:44:45.055191"
+    },
+    {
+      "name": "TASK_027_BREAKTHROUGH_REPORT.md",
+      "original": "TASK_027_BREAKTHROUGH_REPORT.md",
+      "archive": "docs/archive/reports/TASK_027_BREAKTHROUGH_REPORT.md",
+      "sha256": "5150f6dc7faee6c8c206abbd10a5ad771920b3a9de705f9e95d44f4d5cb1fd6c",
+      "operation": "move",
+      "timestamp": "2026-01-02T15:44:45.055251"
+    },
+    {
+      "name": "TASK_033_PHASE_1_SUMMARY.md",
+      "original": "TASK_033_PHASE_1_SUMMARY.md",
+      "archive": "docs/archive/reports/TASK_033_PHASE_1_SUMMARY.md",
+      "sha256": "4fe0257e09102cfa58c587a7d7434e08713aa8d863a9b4213261d232dba1ccb0",
+      "operation": "move",
+      "timestamp": "2026-01-02T15:44:45.055306"
+    },
+    {
+      "name": "TICKET_014_BACKFILL_REPORT.md",
+      "original": "TICKET_014_BACKFILL_REPORT.md",
+      "archive": "docs/archive/reports/TICKET_014_BACKFILL_REPORT.md",
+      "sha256": "f96c1c3781d71624c7748b33bdf5fa7cc762d04da6fd5815521a611dbdb391c6",
+      "operation": "move",
+      "timestamp": "2026-01-02T15:44:45.055357"
+    },
+    {
+      "name": "bridge_test_v2_output.log",
+      "original": "bridge_test_v2_output.log",
+      "archive": "docs/archive/logs/bridge_test_v2_output.log",
+      "sha256": "f892d7f4dad760f3576c6a92ab42f0a2dbaa25b380ec462547b4b459d56ea883",
+      "operation": "move",
+      "timestamp": "2026-01-02T15:44:45.055406"
+    },
+    {
+      "name": "TASK_012_00_COMPLETION_REPORT.md",
+      "original": "TASK_012_00_COMPLETION_REPORT.md",
+      "archive": "docs/archive/reports/TASK_012_00_COMPLETION_REPORT.md",
+      "sha256": "1ce4f260ce0b9e656ef172bd0d4538e9457b66391dfac1ed5b236dfcd6d829be",
+      "operation": "move",
+      "timestamp": "2026-01-02T15:44:45.055475"
+    },
+    {
+      "name": "END_TO_END_TEST_REPORT.md",
+      "original": "END_TO_END_TEST_REPORT.md",
+      "archive": "docs/archive/reports/END_TO_END_TEST_REPORT.md",
+      "sha256": "465e49dc6f61873bbc11d8cb7bc9c2a0a235676650213172487730f859b8258c",
+      "operation": "move",
+      "timestamp": "2026-01-02T15:44:45.055529"
+    },
+    {
+      "name": "NOTION_NEXUS_DEPLOYMENT_REPORT.md",
+      "original": "NOTION_NEXUS_DEPLOYMENT_REPORT.md",
+      "archive": "docs/archive/reports/NOTION_NEXUS_DEPLOYMENT_REPORT.md",
+      "sha256": "1677af1db82a9011dd54d152707b392e59cbe81a7096e16393816200ae1e3b50",
+      "operation": "move",
+      "timestamp": "2026-01-02T15:44:45.055612"
+    }
+  ]
+}
