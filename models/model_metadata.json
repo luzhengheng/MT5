@@ -1,6 +1,6 @@
 {
   "model_type": "LightGBM",
-  "train_date": "2026-01-03T00:47:40.569175",
+  "train_date": "2026-01-03T02:22:23.208178",
   "features": [
     "sma_7",
     "sma_14",
@@ -19,8 +19,8 @@
     "stochastic_d"
   ],
   "metrics": {
-    "mse": 6.656137807002417e-08,
-    "mae": 0.00020873970213814216
+    "mse": 2.613246049053976e-07,
+    "mae": 0.00040921979368664825
   },
   "params": {
     "objective": "regression",
@@ -29,6 +29,6 @@
     "learning_rate": 0.05,
     "verbose": -1
   },
-  "train_size": 1704,
-  "test_size": 427
+  "train_size": 35036,
+  "test_size": 8759
 }

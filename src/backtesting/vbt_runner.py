@@ -29,7 +29,7 @@ feature_cols = ['sma_7', 'sma_14', 'sma_30', 'rsi_14', 'rsi_21',
                 'bbands_upper', 'bbands_middle', 'bbands_lower', 'bbands_width',
                 'atr_14', 'stochastic_k', 'stochastic_d']
 X = df[feature_cols].values
-close_price = df['bbands_middle'].values  # 使用布林带中轨作为价格代理
+close_price = df['close'].values  # 使用真实 close 价格
 
 # 4. 生成预测
 print("\n[4/5] Generating predictions...")
@@ -38,8 +38,8 @@ print(f"  Predictions: min={pred_y.min():.6f}, max={pred_y.max():.6f}, mean={pre
 
 # 5. 生成交易信号
 print("\n[5/5] Running backtest...")
-entries = pred_y > 0.0005   # 做多信号
-exits = pred_y < -0.0005    # 平仓信号
+entries = pred_y > 0.0001   # 做多信号（降低阈值）
+exits = pred_y < -0.0001    # 平仓信号（降低阈值）
 
 # 执行回测
 pf = vbt.Portfolio.from_signals(

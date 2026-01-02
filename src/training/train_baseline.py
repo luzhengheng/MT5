@@ -17,7 +17,7 @@ def main():
     print(f"📊 Loaded dataset: {len(df)} rows")
 
     # Define features and target
-    feature_cols = [col for col in df.columns if col not in ['ticker', 'event_timestamp', 'target', 'created_timestamp']]
+    feature_cols = [col for col in df.columns if col not in ['ticker', 'event_timestamp', 'target', 'created_timestamp', 'close', 'timestamp']]
     X = df[feature_cols]
     y = df['target']
 
