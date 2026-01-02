@@ -1,0 +1,227 @@
+# TASK 013: SSH 密钥配置与全网同步 - 快速操作指南
+
+**目标**: 通过密码认证配置 SSH 密钥，实现 HUB 对各节点的无密码访问和自动同步
+
+---
+
+## 🚀 方法一：使用自动化脚本 (推荐)
+
+### Step 1: 运行 SSH 密钥分发脚本
+
+```bash
+cd /opt/mt5-crs
+./scripts/maintenance/setup_ssh_keys.sh
+```
+
+**脚本会提示您输入各节点的密码**:
+- **INF (172.19.141.250)**: 输入 root 密码
+- **GTW (172.19.141.255)**: 手动配置 (见下方)
+- **GPU (www.guangzhoupeak.com)**: 输入 root 密码
+
+### Step 2: 手动配置 GTW (Windows 节点)
+
+脚本执行时，会显示您的 SSH 公钥。请在另一个终端执行:
+
+```bash
+# 1. 登录 GTW (需要输入密码)
+ssh Administrator@172.19.141.255
+
+# 2. 在 Windows 上创建 .ssh 目录
+mkdir -p C:/Users/Administrator/.ssh
+
+# 3. 创建 authorized_keys 文件
+notepad C:/Users/Administrator/.ssh/authorized_keys
+```
+
+然后将在 HUB 上显示的 SSH 公钥内容粘贴到记事本中，保存并退出。
+
+**SSH 公钥示例** (从脚本输出中复制):
+```
+ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC... root@hub
+```
+
+### Step 3: 验证 SSH 连接
+
+```bash
+# 测试 INF
+ssh root@172.19.141.250 "hostname"
+# 预期输出: sg-infer-core-01
+
+# 测试 GTW
+ssh Administrator@172.19.141.255 "hostname"
+# 预期输出: sg-mt5-gateway-01
+
+# 测试 GPU
+ssh root@www.guangzhoupeak.com "hostname"
+# 预期输出: cn-train-gpu-01
+```
+
+如果以上命令都成功且**不需要输入密码**，则配置成功！
+
+### Step 4: 执行全网同步
+
+```bash
+cd /opt/mt5-crs
+./scripts/maintenance/sync_nodes.sh
+```
+
+预期输出:
+```
+========================================
+SYNCHRONIZATION SUMMARY
+========================================
+HUB Hash: 4936444...
+
+INF: ✓ SYNCED
+GTW: ✓ SYNCED
+GPU: ✓ SYNCED
+========================================
+```
+
+---
+
+## 🔧 方法二：手动配置 (分步骤)
+
+如果自动化脚本遇到问题，可以手动执行每个步骤：
+
+### 1. 配置 INF 节点
+
+```bash
+# 使用 ssh-copy-id (需要输入 INF 的 root 密码)
+ssh-copy-id -i ~/.ssh/id_rsa.pub root@172.19.141.250
+
+# 测试连接
+ssh root@172.19.141.250 "echo 'SSH 配置成功'"
+```
+
+### 2. 配置 GTW 节点 (Windows)
+
+```bash
+# 登录 GTW
+ssh Administrator@172.19.141.255
+# 输入密码后继续
+
+# 在 Windows 上执行以下命令
+mkdir -p C:/Users/Administrator/.ssh
+echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC... root@hub" > C:/Users/Administrator/.ssh/authorized_keys
+chmod 700 C:/Users/Administrator/.ssh
+chmod 600 C:/Users/Administrator/.ssh/authorized_keys
+
+# 退出 GTW
+exit
+```
+
+**注意**: 将上面的 `ssh-rsa AAAA...` 替换为您的实际公钥内容 (在 HUB 上执行 `cat ~/.ssh/id_rsa.pub` 查看)。
+
+### 3. 配置 GPU 节点
+
+```bash
+# 使用 ssh-copy-id (需要输入 GPU 的 root 密码)
+ssh-copy-id -i ~/.ssh/id_rsa.pub root@www.guangzhoupeak.com
+
+# 测试连接
+ssh root@www.guangzhoupeak.com "echo 'SSH 配置成功'"
+```
+
+### 4. 执行同步
+
+```bash
+cd /opt/mt5-crs
+./scripts/maintenance/sync_nodes.sh
+```
+
+---
+
+## ✅ 验证同步成功
+
+同步完成后，验证所有节点的一致性:
+
+```bash
+# 获取 HUB 当前 Hash
+HUB_HASH=$(git rev-parse HEAD)
+echo "HUB Hash: $HUB_HASH"
+
+# 验证各节点
+echo "INF Hash: $(ssh root@172.19.141.250 'cd /opt/mt5-crs && git rev-parse HEAD')"
+echo "GTW Hash: $(ssh Administrator@172.19.141.255 'cd C:/mt5-crs && git rev-parse HEAD')"
+echo "GPU Hash: $(ssh root@www.guangzhoupeak.com 'cd /opt/mt5-crs && git rev-parse HEAD')"
+```
+
+所有 Hash 应该一致！
+
+---
+
+## 🔍 故障排查
+
+### 问题 1: ssh-copy-id 命令不存在
+
+**解决方案**: 手动复制公钥
+
+```bash
+# 查看公钥
+cat ~/.ssh/id_rsa.pub
+
+# 登录节点
+ssh root@172.19.141.250
+
+# 在节点上执行
+mkdir -p ~/.ssh
+echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQC... root@hub" >> ~/.ssh/authorized_keys
+chmod 700 ~/.ssh
+chmod 600 ~/.ssh/authorized_keys
+```
+
+### 问题 2: Windows GTW 节点路径问题
+
+**解决方案**: 使用 Git Bash 路径
+
+```bash
+# 在 Windows GTW 上
+cd C:/Users/Administrator/.ssh
+# 或
+cd ~/  # Git Bash 会自动映射到用户主目录
+```
+
+### 问题 3: 连接超时
+
+**检查网络**:
+```bash
+ping 172.19.141.250  # INF
+ping 172.19.141.255  # GTW
+ping www.guangzhoupeak.com  # GPU
+```
+
+**检查 SSH 服务**:
+```bash
+# 在节点上执行
+systemctl status sshd
+```
+
+---
+
+## 📝 更新验证报告
+
+同步成功后，更新 [docs/logs/TASK_013_VERIFY.md](docs/logs/TASK_013_VERIFY.md):
+
+```markdown
+### Network Check
+- [x] INF 节点 Git Hash 与 HUB 一致 (4936444)
+- [x] GTW 节点 Git Hash 与 HUB 一致 (4936444)
+- [x] GPU 节点 Git Hash 与 HUB 一致 (4936444)
+
+**状态**: 🟢 全网同步完成，所有节点状态一致
+```
+
+---
+
+## 🎉 完成
+
+完成以上步骤后，您的 MT5-CRS 分布式系统就实现了全网状态一致性！
+
+**下一步**: 可以继续执行其他开发任务，所有节点都已同步到最新状态。
+
+---
+
+**创建时间**: 2026-01-02
+**协议**: MT5-CRS Development Protocol v3.4
+**Generated by**: Claude Code
