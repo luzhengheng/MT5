@@ -28,17 +28,39 @@ def main():
 
     print(f"🔹 Train size: {len(X_train)}, Test size: {len(X_test)}")
 
-    # Train LightGBM
+    # Train LightGBM with early stopping (prevent overfitting)
     params = {
         'objective': 'regression',
         'metric': 'mse',
-        'num_leaves': 31,
+        'num_leaves': 20,
         'learning_rate': 0.05,
+        'max_depth': 6,
+        'min_child_samples': 10,
+        'reg_alpha': 0.02,
+        'reg_lambda': 0.02,
+        'feature_fraction': 0.85,
+        'bagging_fraction': 0.85,
+        'bagging_freq': 5,
         'verbose': -1
     }
 
-    train_data = lgb.Dataset(X_train, label=y_train)
-    model = lgb.train(params, train_data, num_boost_round=100)
+    # Use validation set for early stopping
+    val_split = int(len(X_train) * 0.9)
+    X_tr, X_val = X_train[:val_split], X_train[val_split:]
+    y_tr, y_val = y_train[:val_split], y_train[val_split:]
+
+    train_data = lgb.Dataset(X_tr, label=y_tr)
+    val_data = lgb.Dataset(X_val, label=y_val, reference=train_data)
+
+    model = lgb.train(
+        params,
+        train_data,
+        num_boost_round=150,
+        valid_sets=[val_data],
+        callbacks=[lgb.early_stopping(stopping_rounds=25, verbose=False)]
+    )
+
+    print(f"   Stopped at iteration: {model.best_iteration}")
 
     # Evaluate
     y_pred = model.predict(X_test)
