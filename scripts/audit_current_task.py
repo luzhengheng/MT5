@@ -1392,10 +1392,146 @@ def audit_task_003():
     return results
 
 
+def audit_task_004():
+    """
+    Task #004 深度审计函数
+    验证 Linux 到 Windows MT5 Server 的实时 ZeroMQ 连接
+    """
+    results = {
+        "verify_connection_script": False,
+        "verify_log": False,
+        "ok_from_mt5_indicator": False,
+        "completion_report": False,
+        "quick_start": False,
+        "sync_guide": False
+    }
+
+    print("==================================================")
+    print("🔍 AUDIT: Task #004 LIVE MT5 CONNECTION TEST")
+    print("==================================================")
+
+    # 1. 检查连接验证脚本
+    print("\n[1/6] Checking Verify Connection Script...")
+    script_path = "scripts/verify_connection.py"
+    if os.path.exists(script_path):
+        try:
+            with open(script_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            has_req_mode = 'zmq.REQ' in content
+            has_hardcoded_ip = '172.19.141.255' in content
+            if has_req_mode and has_hardcoded_ip:
+                print(f"[✔] {script_path} exists with REQ mode and hardcoded IP")
+                results["verify_connection_script"] = True
+            else:
+                print(f"[!] {script_path} missing REQ mode or hardcoded IP")
+                print(f"    - zmq.REQ: {'✓' if has_req_mode else '✗'}")
+                print(f"    - 172.19.141.255: {'✓' if has_hardcoded_ip else '✗'}")
+        except Exception as e:
+            print(f"[✘] Failed to read {script_path}: {e}")
+    else:
+        print(f"[✘] {script_path} missing")
+
+    # 2. 检查验证日志
+    print("\n[2/6] Checking Verification Log...")
+    log_path = "docs/archive/tasks/TASK_004_CONN_TEST/VERIFY_LOG.log"
+    if os.path.exists(log_path):
+        print(f"[✔] {log_path} exists")
+        results["verify_log"] = True
+    else:
+        print(f"[✘] {log_path} missing")
+
+    # 3. 检查 "OK_FROM_MT5" 关键指示符 (CRITICAL CHECK)
+    print("\n[3/6] Checking 'OK_FROM_MT5' Success Indicator...")
+    if os.path.exists(log_path):
+        try:
+            with open(log_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            if 'OK_FROM_MT5' in content and 'Received reply: OK_FROM_MT5' in content:
+                print(f"[✔] Found 'Received reply: OK_FROM_MT5' in log - CONNECTION CONFIRMED")
+                results["ok_from_mt5_indicator"] = True
+            else:
+                print(f"[✘] Critical: 'OK_FROM_MT5' not found in log")
+                print(f"    This indicates MT5 connection test FAILED")
+        except Exception as e:
+            print(f"[✘] Failed to read log: {e}")
+    else:
+        print(f"[!] Cannot check - verification log missing")
+
+    # 4. 检查完成报告
+    print("\n[4/6] Checking Completion Report...")
+    report_path = "docs/archive/tasks/TASK_004_CONN_TEST/COMPLETION_REPORT.md"
+    if os.path.exists(report_path):
+        try:
+            with open(report_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            has_connection = 'Connection' in content or '连接' in content or '172.19.141.255' in content
+            has_rtt = 'RTT' in content or 'Round-trip' in content or 'latency' in content.lower()
+            if has_connection:
+                print(f"[✔] {report_path} exists with connection info")
+                if has_rtt:
+                    print(f"    ✓ RTT metrics present")
+                results["completion_report"] = True
+            else:
+                print(f"[!] Report missing connection information")
+        except Exception as e:
+            print(f"[✘] Failed to read report: {e}")
+    else:
+        print(f"[✘] {report_path} missing")
+
+    # 5. 检查快速启动指南
+    print("\n[5/6] Checking Quick Start Guide...")
+    quick_path = "docs/archive/tasks/TASK_004_CONN_TEST/QUICK_START.md"
+    if os.path.exists(quick_path):
+        try:
+            with open(quick_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            has_ip_modification = 'IP' in content or '172.19.141.255' in content
+            has_run_instructions = 'python3' in content or 'verify_connection' in content
+            if has_ip_modification and has_run_instructions:
+                print(f"[✔] {quick_path} exists with IP and execution instructions")
+                results["quick_start"] = True
+            else:
+                print(f"[!] Quick start missing IP modification or run instructions")
+        except Exception as e:
+            print(f"[✘] Failed to read quick start: {e}")
+    else:
+        print(f"[✘] {quick_path} missing")
+
+    # 6. 检查同步指南
+    print("\n[6/6] Checking Sync Guide...")
+    sync_path = "docs/archive/tasks/TASK_004_CONN_TEST/SYNC_GUIDE.md"
+    if os.path.exists(sync_path):
+        try:
+            with open(sync_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            has_pyzmq = 'pyzmq' in content.lower()
+            if has_pyzmq:
+                print(f"[✔] {sync_path} exists with pyzmq dependency")
+                results["sync_guide"] = True
+            else:
+                print(f"[!] Sync guide missing pyzmq dependency info")
+        except Exception as e:
+            print(f"[✘] Failed to read sync guide: {e}")
+    else:
+        print(f"[✘] {sync_path} missing")
+
+    # 汇总结果
+    print("\n" + "=" * 50)
+    passed_count = sum(1 for v in results.values() if v)
+    total_count = len(results)
+
+    print(f"📊 Audit Summary: {passed_count}/{total_count} checks passed")
+    for item, status in results.items():
+        symbol = "✓" if status else "✗"
+        print(f"    {symbol} {item}")
+
+    return results
+
+
 def audit():
     """主审计入口函数"""
-    # 运行 Task 003 审计 (最新任务)
-    results = audit_task_003()
+    # 运行 Task 004 审计 (最新任务)
+    results = audit_task_004()
 
     # 计算全局统计
     global passed, failed
