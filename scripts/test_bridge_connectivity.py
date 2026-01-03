@@ -87,7 +87,7 @@ def test_connectivity():
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": "gemini-pro",
+                    "model": "gemini-3-pro-preview",
                     "messages": [{"role": "user", "content": test_prompt}],
                     "temperature": 0.3
                 },
@@ -102,7 +102,7 @@ def test_connectivity():
                     "Content-Type": "application/json"
                 },
                 json={
-                    "model": "gemini-pro",
+                    "model": "gemini-3-pro-preview",
                     "messages": [{"role": "user", "content": test_prompt}],
                     "temperature": 0.3
                 },
