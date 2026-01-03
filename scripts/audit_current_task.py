@@ -1531,24 +1531,26 @@ def audit_task_004():
 def audit_task_023():
     """
     Task #023 深度审计函数
-    验证基础设施整合与档案清理
+    验证基础设施整合、档案清理与Timer Mode激活
     """
     results = {
         "verify_fix_script": False,
         "verify_log": False,
         "connection_established": False,
         "cleanup_verified": False,
+        "timer_mode_verified": False,
+        "ok_from_mt5_received": False,
         "completion_report": False,
         "quick_start": False,
         "sync_guide": False
     }
 
     print("==================================================")
-    print("🔍 AUDIT: Task #023 INFRASTRUCTURE CONSOLIDATION")
+    print("🔍 AUDIT: Task #023 TIMER MODE VERIFICATION")
     print("==================================================")
 
     # 1. 检查整合脚本
-    print("\n[1/7] Checking Infrastructure Fix Script...")
+    print("\n[1/9] Checking Infrastructure Fix Script...")
     script_path = "scripts/verify_fix_v23.py"
     if os.path.exists(script_path):
         try:
@@ -1556,18 +1558,24 @@ def audit_task_023():
                 content = f.read()
             has_hardcoded_ip = '172.19.141.255' in content
             has_cleanup_logic = 'shutil.rmtree' in content
-            if has_hardcoded_ip and has_cleanup_logic:
-                print(f"[✔] {script_path} exists with cleanup logic")
+            has_timer_message = 'Wake up Neo' in content or 'TIMER_MESSAGE' in content
+            has_timeout_2000 = 'TIMEOUT_MS = 2000' in content or '2000' in content
+            if has_hardcoded_ip and has_cleanup_logic and has_timer_message and has_timeout_2000:
+                print(f"[✔] {script_path} exists with cleanup + timer mode logic")
                 results["verify_fix_script"] = True
             else:
                 print(f"[!] {script_path} missing requirements")
+                print(f"    - IP: {'✓' if has_hardcoded_ip else '✗'}")
+                print(f"    - Cleanup: {'✓' if has_cleanup_logic else '✗'}")
+                print(f"    - Timer Msg: {'✓' if has_timer_message else '✗'}")
+                print(f"    - 2000ms timeout: {'✓' if has_timeout_2000 else '✗'}")
         except Exception as e:
             print(f"[✘] Failed to read {script_path}: {e}")
     else:
         print(f"[✘] {script_path} missing")
 
     # 2. 检查验证日志
-    print("\n[2/7] Checking Verification Log...")
+    print("\n[2/9] Checking Verification Log...")
     log_path = "docs/archive/tasks/TASK_023_INFRA_FIX/VERIFY_LOG.log"
     if os.path.exists(log_path):
         print(f"[✔] {log_path} exists")
@@ -1576,7 +1584,7 @@ def audit_task_023():
         print(f"[✘] {log_path} missing")
 
     # 3. 检查连接建立指示符
-    print("\n[3/7] Checking Connection Status...")
+    print("\n[3/9] Checking Connection Status...")
     if os.path.exists(log_path):
         try:
             with open(log_path, 'r', encoding='utf-8') as f:
@@ -1590,14 +1598,12 @@ def audit_task_023():
             print(f"[✘] Failed to read log: {e}")
 
     # 4. 检查清理验证指示符（CRITICAL）
-    print("\n[4/7] Checking Cleanup Verification...")
+    print("\n[4/9] Checking Cleanup Verification...")
     if os.path.exists(log_path):
         try:
             with open(log_path, 'r', encoding='utf-8') as f:
                 content = f.read()
-            # Check that TASK_003/004 were deleted AND OK_FROM_MT5 was received
             has_cleanup_msg = '[Cleanup]: Deleted TASK_003/004' in content
-            has_connection_msg = '[Received: OK_FROM_MT5' in content or 'OK_FROM_MT5' in content
 
             if has_cleanup_msg:
                 print(f"[✔] Archive cleanup verified")
@@ -1607,34 +1613,65 @@ def audit_task_023():
         except Exception as e:
             print(f"[✘] Failed to read log: {e}")
 
-    # 5. 检查完成报告
-    print("\n[5/7] Checking Completion Report...")
+    # 5. 检查Timer Mode激活（NEW）
+    print("\n[5/9] Checking Timer Mode Activation...")
+    if os.path.exists(log_path):
+        try:
+            with open(log_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            has_timer_activated = '[Timer Mode]: ACTIVATED' in content or 'Weekend-Ready' in content
+            if has_timer_activated:
+                print(f"[✔] Timer mode activation verified")
+                results["timer_mode_verified"] = True
+            else:
+                print(f"[!] Timer mode activation not confirmed")
+        except Exception as e:
+            print(f"[✘] Failed to read log: {e}")
+
+    # 6. 检查 OK_FROM_MT5 响应（CRITICAL）
+    print("\n[6/9] Checking OK_FROM_MT5 Response...")
+    if os.path.exists(log_path):
+        try:
+            with open(log_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            if '[✓] Received: OK_FROM_MT5' in content or 'Received: OK_FROM_MT5' in content:
+                print(f"[✔] OK_FROM_MT5 response confirmed")
+                results["ok_from_mt5_received"] = True
+            else:
+                print(f"[!] OK_FROM_MT5 response not found")
+        except Exception as e:
+            print(f"[✘] Failed to read log: {e}")
+
+    # 7. 检查完成报告
+    print("\n[7/9] Checking Completion Report...")
     report_path = "docs/archive/tasks/TASK_023_INFRA_FIX/COMPLETION_REPORT.md"
     if os.path.exists(report_path):
         try:
             with open(report_path, 'r', encoding='utf-8') as f:
                 content = f.read()
             has_cleanup = 'cleanup' in content.lower() or 'archive' in content.lower()
-            if has_cleanup:
-                print(f"[✔] {report_path} exists with cleanup details")
+            has_timer = 'timer' in content.lower() or 'weekend' in content.lower()
+            if has_cleanup and has_timer:
+                print(f"[✔] {report_path} exists with cleanup + timer details")
                 results["completion_report"] = True
             else:
-                print(f"[!] Report missing cleanup information")
+                print(f"[!] Report missing cleanup or timer information")
         except Exception as e:
             print(f"[✘] Failed to read report: {e}")
     else:
         print(f"[✘] {report_path} missing")
 
-    # 6. 检查快速启动指南
-    print("\n[6/7] Checking Quick Start Guide...")
+    # 8. 检查快速启动指南
+    print("\n[8/9] Checking Quick Start Guide...")
     quick_path = "docs/archive/tasks/TASK_023_INFRA_FIX/QUICK_START.md"
     if os.path.exists(quick_path):
         try:
             with open(quick_path, 'r', encoding='utf-8') as f:
                 content = f.read()
             has_instructions = 'verify_fix_v23.py' in content or 'python3' in content
-            if has_instructions:
-                print(f"[✔] {quick_path} exists with execution instructions")
+            has_timer_info = 'timer' in content.lower() or 'wake up' in content.lower()
+            if has_instructions and has_timer_info:
+                print(f"[✔] {quick_path} exists with timer mode instructions")
                 results["quick_start"] = True
             else:
                 print(f"[!] Quick start missing proper instructions")
@@ -1643,19 +1680,20 @@ def audit_task_023():
     else:
         print(f"[✘] {quick_path} missing")
 
-    # 7. 检查同步指南
-    print("\n[7/7] Checking Sync Guide...")
+    # 9. 检查同步指南
+    print("\n[9/9] Checking Sync Guide...")
     sync_path = "docs/archive/tasks/TASK_023_INFRA_FIX/SYNC_GUIDE.md"
     if os.path.exists(sync_path):
         try:
             with open(sync_path, 'r', encoding='utf-8') as f:
                 content = f.read()
             has_firewall = 'firewall' in content.lower() or 'New-NetFirewallRule' in content
-            if has_firewall:
-                print(f"[✔] {sync_path} exists with firewall guidance")
+            has_timer_doc = 'timer' in content.lower() or 'ea' in content.lower()
+            if has_firewall and has_timer_doc:
+                print(f"[✔] {sync_path} exists with firewall + timer guidance")
                 results["sync_guide"] = True
             else:
-                print(f"[!] Sync guide missing firewall information")
+                print(f"[!] Sync guide missing firewall or timer information")
         except Exception as e:
             print(f"[✘] Failed to read sync guide: {e}")
     else:

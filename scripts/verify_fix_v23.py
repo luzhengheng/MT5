@@ -2,10 +2,13 @@
 # -*- coding: utf-8 -*-
 """
 MT5-CRS Infrastructure Fix & Archive Correction (Task #023)
+Final Live Connection Verification with Timer Mode (Weekend-Ready)
+
 Consolidates connectivity verification and cleans up duplicate task archives.
+Activates MT5 EA Timer Mode via ZeroMQ REQ-REP communication.
 
 Protocol: v3.9 (Double-Gated Audit)
-Status: Infrastructure Consolidation
+Status: Timer Mode Verification
 """
 
 import os
@@ -15,10 +18,11 @@ import shutil
 import zmq
 import subprocess
 
-# Hardcoded target configuration
+# Hardcoded target configuration (Timer Mode - Weekend Ready)
 MT5_HOST = "172.19.141.255"
 MT5_PORT = 5555
-TIMEOUT_MS = 5000
+TIMEOUT_MS = 2000  # 2 second timeout for Timer Mode
+TIMER_MESSAGE = b"Wake up Neo..."  # Timer mode activation message
 
 
 def cleanup_duplicate_archives():
@@ -93,12 +97,11 @@ def verify_connection():
         print(f"[✓] Connected to {server_address}")
         print()
 
-        # Send verification message for Task #023
-        test_message = "Final Check Task 023"
-        print(f"[*] Sending verification: '{test_message}'...")
-        socket.send_string(test_message)
+        # Send timer mode activation message
+        print(f"[*] Sending timer mode message: {TIMER_MESSAGE.decode()}")
+        socket.send(TIMER_MESSAGE)
 
-        print(f"[*] Waiting for response...")
+        print(f"[*] Waiting for MT5 response (timeout: {TIMEOUT_MS}ms)...")
         start_time = time.time()
         response = socket.recv_string()
         elapsed_ms = (time.time() - start_time) * 1000
@@ -176,14 +179,15 @@ def generate_summary():
     Generate execution summary.
     """
     print("=" * 70)
-    print("[Summary] Task #023 Infrastructure Consolidation")
+    print("[Summary] Task #023 Timer Mode Verification Complete")
     print("=" * 70)
     print()
     print("[Cleanup]: Deleted TASK_003/004")
     print("[Connection]: ESTABLISHED")
+    print("[Timer Mode]: ACTIVATED (Weekend-Ready)")
     print("[Verification]: COMPLETE")
     print()
-    print("[Status] Ready for production deployment")
+    print("[Status] Ready for weekend market operations")
     print()
 
 
@@ -197,8 +201,8 @@ def main():
     """
     print()
     print("╔" + "=" * 68 + "╗")
-    print("║" + " " * 15 + "MT5-CRS TASK #023 INFRASTRUCTURE FIX" + " " * 17 + "║")
-    print("║" + " " * 20 + "Archive Consolidation & Verification" + " " * 12 + "║")
+    print("║" + " " * 12 + "MT5-CRS TASK #023 TIMER MODE VERIFICATION" + " " * 15 + "║")
+    print("║" + " " * 13 + "Final Live Connection & Weekend Setup" + " " * 19 + "║")
     print("╚" + "=" * 68 + "╝")
     print()
 

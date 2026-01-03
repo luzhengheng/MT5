@@ -1,12 +1,23 @@
 # TASK #023 快速启动指南
 
-## 🚀 基础设施整合与验证
+## 🚀 基础设施整合与Timer Mode验证（周末准备）
 
 ### 前置条件
 - Python 3.9+ 已安装
 - pyzmq 已安装: `pip install pyzmq`
 - 可以 ping 到 Windows GTW: 172.19.141.255
+- Windows MT5 EA 已启用 Timer Mode
 - 网络拓扑确认：HUB ↔ GTW 互通
+
+### 📌 Timer Mode说明
+
+Timer Mode 是 MT5 EA 的周末交易准备模式。该模式通过接收特定的激活信号（`Wake up Neo...`）来启动。
+
+**消息流程**:
+1. Linux 发送: `b"Wake up Neo..."`
+2. MT5 EA 接收并进入 Timer Mode
+3. MT5 回复: `OK_FROM_MT5`
+4. 系统进入周末交易就绪状态
 
 ### 第一步：验证网络连接
 
