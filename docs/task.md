@@ -2,7 +2,7 @@
 (Role: Project Manager / System Architect)  
   
 **TASK #[ID]: [任务名称]**  
-**Protocol**: v3.9 (Double-Gated Audit)  
+**Protocol**: v4.0 (Sync-Enforced)  
 **Priority**: [High/Critical]  
   
 ## 1. 目标与实质 (Substance)  
@@ -26,7 +26,7 @@
 ### Step 1: 初始化与审计逻辑 (TDD)  
 * [ ] 创建归档目录。  
 * [ ] **编写审计逻辑**: 修改 `audit_current_task.py`。  
-    * *要求*: 必须编写“能让代码挂掉”的测试逻辑（例如：如果日志里 Sharpe < 0，抛出异常）。  
+    * *要求*: 必须编写“能让代码挂掉”的测试逻辑。  
   
 ### Step 2: 开发与实质验证  
 * **开发**: 编写业务代码。  
@@ -37,13 +37,17 @@
 ### Step 3: 双重门禁审查 (The Double-Gate Loop)  
 * **执行指令**: `python3 gemini_review_bridge.py`  
     * **Gate 1 (Local)**: 脚本自动运行 `audit_current_task.py`。  
-        * *If Fail*: ❌ 报错退出 -> **回到 Step 2 修改代码** -> 重试。  
-        * *If Pass*: ✅ 进入 Gate 2。  
-    * **Gate 2 (External)**: AI 架构师审查逻辑与架构。  
-        * *If Reject*: ❌ 给出修改建议 -> **回到 Step 2 修改代码** -> 重试。  
-        * *If Pass*: ✅ **自动触发 Git Commit**。  
+        * *If Fail*: ❌ 报错退出 -> **回到 Step 2 修改代码**。  
+    * **Gate 2 (External)**: AI 架构师审查。  
+        * *If Pass*: ✅ **自动触发 Git Local Commit**。  
+  
+### Step 4: 全域同步 (Global Synchronization) ⭐ 关键  
+* **Git Push**: 必须执行 `git push origin main` (或对应分支)。  
+* **Notion Update**: 更新 Notion 看板该任务状态为 "Done"。  
+    * *执行指令*: `/run git push origin main`  
   
 ## 4. 完成定义 (Definition of Done)  
-1.  **Gate 1 通过**: 本地脚本对“四大金刚”和代码逻辑验证无误。  
-2.  **Gate 2 通过**: 外部 AI 确认方案符合蓝图且无逻辑漏洞。  
-3.  **Git 历史洁净**: 仅包含通过双重审查的最终提交。  
+1.  **Gate 1 & 2 通过**: 代码逻辑验证无误且架构合规。  
+2.  **Git Remote Consistent**: 本地 Commit 已成功推送到 GitHub 远程仓库。  
+3.  **Notion Updated**: 项目管理看板状态已同步。  
+4.  **Artifacts Archived**: 四大金刚文件齐全。  
