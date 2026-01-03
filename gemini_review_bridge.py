@@ -17,6 +17,9 @@ import datetime
 import re
 from dotenv import load_dotenv
 
+# --- 日志文件配置 ---
+LOG_FILE = "VERIFY_LOG.log"
+
 # --- 核心配置 ---
 AUDIT_SCRIPT = "scripts/audit_current_task.py"
 ENABLE_AI_REVIEW = True # 开启云端大脑
@@ -43,9 +46,15 @@ BLUE = "\033[94m"  # AI 点评专用色
 RESET = "\033[0m"
 
 def log(msg, level="INFO"):
-    timestamp = datetime.datetime.now().strftime("%H:%M:%S")
+    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     colors = {"SUCCESS": GREEN, "ERROR": RED, "WARN": YELLOW, "PHASE": CYAN, "INFO": RESET}
     prefix = {'SUCCESS': '✅ ', 'ERROR': '⛔ ', 'WARN': '⚠️  ', 'PHASE': '🔹 '}.get(level, '')
+
+    # 写入日志文件
+    with open(LOG_FILE, "a", encoding="utf-8") as f:
+        f.write(f"[{timestamp}] [{level:8s}] {msg}\n")
+
+    # 打印到控制台
     print(f"[{timestamp}] {colors.get(level, RESET)}{prefix}{msg}{RESET}")
 
 def run_cmd(cmd, shell=True):
@@ -170,13 +179,14 @@ def external_ai_review(diff_content):
         
         if resp.status_code == 200:
             content = resp.json()['choices'][0]['message']['content']
-            
+            log(f"API 响应: HTTP 200, Content-Type: {resp.headers.get('content-type')}", "INFO")
+
             # 使用分离器处理
             result, comments = extract_json_and_comments(content)
-            
+
             if result:
                 status = result.get("status", "FAIL")
-                
+
                 # --- 🔥 关键：展示 AI 的"话痨"部分给 Claude 看 ---
                 if comments:
                     print(f"\n{BLUE}================ 🧠 架构师点评 (AI Feedback) ================{RESET}")
@@ -191,35 +201,37 @@ def external_ai_review(diff_content):
                     return result.get("commit_message_suggestion")
                 else:
                     log(f"AI 拒绝提交: {result.get('reason')}", "ERROR")
-                    return "FAIL" 
+                    return "FAIL"
             else:
-                log("无法解析 AI 响应格式，降级通过。", "WARN")
-                return None
+                log(f"[FATAL] AI 响应格式无效，无法解析。响应体: {content[:500]}", "ERROR")
+                log("请检查 GEMINI_API_KEY 和网络连接", "ERROR")
+                return "FATAL_ERROR"
         else:
-            log(f"API 请求失败: {resp.status_code}", "ERROR")
-            return None
+            log(f"[FATAL] API 返回错误状态码: {resp.status_code}", "ERROR")
+            log(f"响应体: {resp.text[:500]}", "ERROR")
+            return "FATAL_ERROR"
 
     except requests.ConnectTimeout:
-        log(f"连接超时: 无法连接API服务器 (timeout=60s)", "ERROR")
-        log(f"请检查网络连接和API地址: {GEMINI_BASE_URL}", "ERROR")
-        return None
+        log(f"[FATAL] 连接超时: 无法连接API服务器 (timeout=60s)", "ERROR")
+        log(f"检查项: 1) 网络连接  2) VPN 状态  3) API 地址正确性", "ERROR")
+        log(f"API 地址: {GEMINI_BASE_URL}", "ERROR")
+        return "FATAL_ERROR"
 
     except requests.ReadTimeout:
-        log(f"读取超时: API服务器响应过慢 (timeout=60s)", "ERROR")
-        log(f"请检查网络连接或稍后重试", "ERROR")
-        return None
+        log(f"[FATAL] 读取超时: API服务器响应过慢 (timeout=60s)", "ERROR")
+        log(f"API 地址: {GEMINI_BASE_URL}", "ERROR")
+        return "FATAL_ERROR"
 
     except requests.RequestException as e:
-        log(f"网络错误: {e}", "ERROR")
-        log(f"API地址: {GEMINI_BASE_URL}", "ERROR")
-        log(f"请检查网络连接并重试", "ERROR")
-        return None
+        log(f"[FATAL] 网络异常: {type(e).__name__}: {str(e)[:200]}", "ERROR")
+        log(f"API 地址: {GEMINI_BASE_URL}", "ERROR")
+        return "FATAL_ERROR"
 
     except Exception as e:
-        log(f"AI审查失败: {e}", "ERROR")
+        log(f"[FATAL] 未知错误: {type(e).__name__}: {str(e)}", "ERROR")
         import traceback
-        traceback.print_exc()
-        return None
+        log(f"堆栈跟踪:\n{traceback.format_exc()[:500]}", "ERROR")
+        return "FATAL_ERROR"
 
 # ==============================================================================
 # 🚀 主流程 (v3.4 Robust Edition)
@@ -289,19 +301,17 @@ def main():
             log("修复上述问题后重新运行finish命令", "ERROR")
             sys.exit(1)  # AI 明确拒绝，阻断提交
 
-        elif review_result is None:
+        elif review_result == "FATAL_ERROR":
+            # 硬性失败 → 立即中止（不允许继续）
             print()
-            print(f"{YELLOW}{'=' * 80}{RESET}")
-            log("AI审查服务不可用", "WARN")
-            print(f"{YELLOW}{'=' * 80}{RESET}")
-            log("可能原因:", "WARN")
-            log("  - 网络连接失败", "WARN")
-            log("  - API密钥无效或未设置", "WARN")
-            log("  - API服务器无响应", "WARN")
-            print()
-            log("将继续使用本地提交信息", "WARN")
-            print(f"{YELLOW}{'=' * 80}{RESET}")
-            print()
+            print(f"{RED}{'=' * 80}{RESET}")
+            log("[CRITICAL] AI 审查不可用，流程中止", "ERROR")
+            log("故障排查步骤:", "ERROR")
+            log("  1. 检查网络连接: ping api.yyds168.net", "ERROR")
+            log("  2. 验证 API Key: echo $GEMINI_API_KEY", "ERROR")
+            log("  3. 查看详细日志: cat VERIFY_LOG.log | tail -50", "ERROR")
+            print(f"{RED}{'=' * 80}{RESET}")
+            sys.exit(1)  # 硬性失败，阻止提交
 
         ai_commit_msg = review_result
 
