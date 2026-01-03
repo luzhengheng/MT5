@@ -1239,10 +1239,163 @@ def audit_task_022():
     return results
 
 
+def audit_task_003():
+    """
+    Task #003 深度审计函数
+    验证 Python-MT5 ZeroMQ 网络连接
+    """
+    results = {
+        "mt5_connector_class": False,
+        "env_example": False,
+        "env_file": False,
+        "verify_log": False,
+        "completion_report": False,
+        "quick_start": False,
+        "sync_guide": False
+    }
+
+    print("==================================================")
+    print("🔍 AUDIT: Task #003 MT5-ZEROMQ CONNECTION")
+    print("==================================================")
+
+    # 1. 检查 MT5Connector 类
+    print("\n[1/7] Checking MT5Connector Class...")
+    script_path = "src/client/mt5_connector.py"
+    if os.path.exists(script_path):
+        try:
+            with open(script_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            has_class = 'class MT5Client' in content
+            has_test_method = 'def test_connection' in content or 'def __init__' in content
+            if has_class and has_test_method:
+                print(f"[✔] {script_path} exists with MT5Client class")
+                results["mt5_connector_class"] = True
+            else:
+                print(f"[!] {script_path} missing proper class structure")
+        except Exception as e:
+            print(f"[✘] Failed to read {script_path}: {e}")
+    else:
+        print(f"[✘] {script_path} missing")
+
+    # 2. 检查 .env.example 模板
+    print("\n[2/7] Checking .env.example Template...")
+    env_example_path = ".env.example"
+    if os.path.exists(env_example_path):
+        try:
+            with open(env_example_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            has_host = 'MT5_HOST' in content
+            has_port = 'MT5_PORT' in content
+            if has_host and has_port:
+                print(f"[✔] {env_example_path} contains required configuration")
+                results["env_example"] = True
+            else:
+                print(f"[!] {env_example_path} missing MT5_HOST or MT5_PORT")
+        except Exception as e:
+            print(f"[✘] Failed to read {env_example_path}: {e}")
+    else:
+        print(f"[!] {env_example_path} missing (optional)")
+
+    # 3. 检查 .env 实际配置文件
+    print("\n[3/7] Checking .env Config File...")
+    env_path = ".env"
+    if os.path.exists(env_path):
+        try:
+            with open(env_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            has_host = 'MT5_HOST' in content
+            has_port = 'MT5_PORT' in content
+            if has_host and has_port:
+                print(f"[✔] {env_path} configured")
+                results["env_file"] = True
+            else:
+                print(f"[!] {env_path} missing configuration")
+        except Exception as e:
+            print(f"[✘] Failed to read {env_path}: {e}")
+    else:
+        print(f"[!] {env_path} missing (run setup to create)")
+
+    # 4. 检查验证日志
+    print("\n[4/7] Checking Verification Log...")
+    log_path = "docs/archive/tasks/TASK_003_CONN_VERIFY/VERIFY_LOG.log"
+    if os.path.exists(log_path):
+        try:
+            with open(log_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            has_success = 'OK_FROM_MT5' in content or 'Connection successful' in content
+            if has_success:
+                print(f"[✔] {log_path} shows successful connection")
+                results["verify_log"] = True
+            else:
+                print(f"[!] Verification log exists but no success indicator found")
+        except Exception as e:
+            print(f"[✘] Failed to read log: {e}")
+    else:
+        print(f"[!] {log_path} missing (run test to generate)")
+
+    # 5. 检查完成报告
+    print("\n[5/7] Checking Completion Report...")
+    report_path = "docs/archive/tasks/TASK_003_CONN_VERIFY/COMPLETION_REPORT.md"
+    if os.path.exists(report_path):
+        try:
+            with open(report_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            has_connection = 'Connection' in content or '连接' in content
+            has_ip = 'IP' in content or '192.168' in content
+            if has_connection:
+                print(f"[✔] {report_path} exists with connection details")
+                results["completion_report"] = True
+            else:
+                print(f"[!] Report missing connection information")
+        except Exception as e:
+            print(f"[✘] Failed to read report: {e}")
+    else:
+        print(f"[✘] {report_path} missing")
+
+    # 6. 检查快速启动指南
+    print("\n[6/7] Checking Quick Start Guide...")
+    quick_path = "docs/archive/tasks/TASK_003_CONN_VERIFY/QUICK_START.md"
+    if os.path.exists(quick_path):
+        print(f"[✔] {quick_path} exists")
+        results["quick_start"] = True
+    else:
+        print(f"[✘] {quick_path} missing")
+
+    # 7. 检查同步指南
+    print("\n[7/7] Checking Sync Guide...")
+    sync_path = "docs/archive/tasks/TASK_003_CONN_VERIFY/SYNC_GUIDE.md"
+    if os.path.exists(sync_path):
+        try:
+            with open(sync_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+            has_pyzmq = 'pyzmq' in content.lower()
+            if has_pyzmq:
+                print(f"[✔] {sync_path} exists with pyzmq dependency")
+                results["sync_guide"] = True
+            else:
+                print(f"[!] Sync guide missing pyzmq dependency info")
+        except Exception as e:
+            print(f"[✘] Failed to read sync guide: {e}")
+    else:
+        print(f"[✘] {sync_path} missing")
+
+    # 汇总结果
+    print("\n" + "=" * 50)
+    passed_count = sum(1 for v in results.values() if v)
+    total_count = len(results)
+
+    print(f"📊 Audit Summary: {passed_count}/{total_count} checks passed")
+    for item, status in results.items():
+        symbol = "✓" if status else "✗"
+        print(f"    {symbol} {item}")
+
+    return results
+
+
 def audit():
     """主审计入口函数"""
-    # 运行 Task 022 审计 (最新任务)
-    results = audit_task_022()
+    # 运行 Task 003 审计 (最新任务)
+    results = audit_task_003()
 
     # 计算全局统计
     global passed, failed
