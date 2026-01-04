@@ -13,6 +13,6 @@ offline_store:
   port: 5432
   database: mt5_crs
   user: trader
-  password: password
+  password: "${POSTGRES_PASSWORD}"
 
 entity_key_serialization_version: 2

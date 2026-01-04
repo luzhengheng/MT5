@@ -1,100 +1,0 @@
-
-x
-X
-ticker2Financial Instrument Ticker (e.g., EURUSD, BTCUSD)"tickerJmt5_crs_features
-ø¢êÊ°ñ¬Úø¢êÊ°ñ¬Ú
-j
-J
-symbol$Trading symbol (EURUSD, GBPUSD, etc)"symbolJmt5_crs_features
-ø¢êÊàÌ³Úø¢êÊàÌ³Ú
-G
-'
-__dummy"
-__dummy_idJmt5_crs_features
-ø¢êÊø¯ºÚø¢êÊ¨‹ÁÚ1"$5c104864-6720-4a30-a4ee-ba5855eac9ee*ø¢êÊà°ãÛ2¶
-•
-basic_featuresmt5_crs_featuressymbol"!
-
-price_last"Latest tick price"
-bid"	Bid price"
-ask"	Ask price"
-volume"Tick volume2€£:wevent_timestampZdata/placeholder.parquetŠ1feast.infra.offline_stores.file_source.FileSource¢batch_placeholder@Jx	Šfeast.data_source.PushSource¢realtime_ticksÒCevent_timestampZdata/placeholder.parquet¢batch_placeholderb
-
-symbol
-ø¢êÊ˜òÛÙø¢êÊ˜òÛÙ2ì
-Ë
-bbands_featuresmt5_crs_featuresticker"
-bbands_upper"
-bbands_middle"
-bbands_lower"
-bbands_width*
-teamquant*
-category
-volatility2€£:™event_timestamp*created_timestampZdata/sample_features.parquetŠ1feast.infra.offline_stores.file_source.FileSource¢data/sample_features.parquet@b
-
-ticker
-ø¢êÊÀˆìÙø¢êÊÀˆìÙ2É
-¨
-stochastic_featuresmt5_crs_featuresticker"
-stochastic_k"
-stochastic_d*
-teamquant*
-categorymomentum2€£:™event_timestamp*created_timestampZdata/sample_features.parquetŠ1feast.infra.offline_stores.file_source.FileSource¢data/sample_features.parquet@b
-
-ticker
-ø¢êÊ¨ì÷Ùø¢êÊ¨ì÷Ù2¶
-•
-rsi_featuresmt5_crs_featuresticker"
-
-rsi_14"
-
-rsi_21*
-teamquant*
-categorymomentum2€£:™event_timestamp*created_timestampZdata/sample_features.parquetŠ1feast.infra.offline_stores.file_source.FileSource¢data/sample_features.parquet@b
-
-ticker
-ø¢êÊğ³‚Úø¢êÊğ³‚Ú2É
-¨
-macd_featuresmt5_crs_featuresticker"
-macd"
-macd_signal"
-	macd_hist*
-teamquant*
-categorymomentum2€£:™event_timestamp*created_timestampZdata/sample_features.parquetŠ1feast.infra.offline_stores.file_source.FileSource¢data/sample_features.parquet@b
-
-ticker
-ø¢êÊ¨­ŒÚø¢êÊ¨­ŒÚ2¬
-‹
-atr_featuresmt5_crs_featuresticker"
-
-atr_14*
-teamquant*
-category
-volatility2€£:™event_timestamp*created_timestampZdata/sample_features.parquetŠ1feast.infra.offline_stores.file_source.FileSource¢data/sample_features.parquet@b
-
-ticker
-ø¢êÊø›—Úø¢êÊø›—Ú2¾
-
-sma_featuresmt5_crs_featuresticker"	
-sma_7"
-
-sma_14"
-
-sma_30*
-teamquant*
-categorytrend2€£:™event_timestamp*created_timestampZdata/sample_features.parquetŠ1feast.infra.offline_stores.file_source.FileSource¢data/sample_features.parquet@b
-
-ticker
-ø¢êÊˆÌ¡Úø¢êÊˆÌ¡Ú:
-à
-trading_featuresmt5_crs_features¹
-basic_features!
-
-price_last"Latest tick price
-bid"	Bid price
-ask"	Ask price
-volume"Tick volumeBCevent_timestampZdata/placeholder.parquet¢batch_placeholder
-ø¢êÊ ÌÈÚø¢êÊ ÌÈÚb¬event_timestamp*created_timestampZdata/sample_features.parquetŠ1feast.infra.offline_stores.file_source.FileSource¢data/sample_features.parquetªmt5_crs_featuresbŠevent_timestampZdata/placeholder.parquetŠ1feast.infra.offline_stores.file_source.FileSource¢batch_placeholderªmt5_crs_featuresb‹	Šfeast.data_source.PushSource¢realtime_ticksªmt5_crs_featuresÒCevent_timestampZdata/placeholder.parquet¢batch_placeholderŠ2
-
-mt5_crs_features
-ø¢êÊ€ü±Ëø¢êÊ€ü±Ë
