@@ -1,8 +1,18 @@
-project: mt5_crs
-registry: data/registry.db
-provider: local
+project: mt5_crs_features
+registry:
+  registry_type: file
+  path: registry.db
+
 online_store:
-    type: redis
-    connection_string: "localhost:6379"
+  type: redis
+  connection_string: "localhost:6379"
+
 offline_store:
-    type: file
+  type: postgres
+  host: localhost
+  port: 5432
+  database: mt5_crs
+  user: trader
+  password: password
+
+entity_key_serialization_version: 2
