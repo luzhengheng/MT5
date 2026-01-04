@@ -1,0 +1,27 @@
+FORCED TEST TRIGGER
+═══════════════════════════════════════════════════════════════
+
+This is a dummy file created to force a real git diff
+for testing the gemini_review_bridge.py token usage logging.
+
+Test ID: DEEP-DIVE-AUDIT-$(date +%s)
+Timestamp: $(date)
+
+Purpose: Verify that the main bridge actually calls the API
+and logs token usage properly.
+
+Expected behavior:
+1. File will be staged: git add scripts/dummy_trigger.txt
+2. Bridge will detect a real diff
+3. external_ai_review() will be called
+4. API call will be made with GEMINI_API_KEY
+5. Response will include usage metrics
+6. Token usage log will appear in VERIFY_LOG.log
+
+If this doesn't happen, it indicates:
+- GEMINI_API_KEY is not set
+- API is not being called
+- Token logging logic has a bug
+- Short-circuit in main() preventing API call
+
+═══════════════════════════════════════════════════════════════

@@ -32,18 +32,35 @@ except ImportError:
     CURL_AVAILABLE = False
     print("⚠️  [WARN] 缺少 curl_cffi，建议运行: pip install curl_cffi")
 
-load_dotenv()
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GEMINI_BASE_URL = os.getenv("GEMINI_BASE_URL", "https://api.yyds168.net/v1")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-pro-preview")
-
-# --- UI 颜色配置 ---
+# --- UI 颜色配置 (必须在使用前定义) ---
 GREEN = "\033[92m"
 RED = "\033[91m"
 YELLOW = "\033[93m"
 CYAN = "\033[96m"
 BLUE = "\033[94m"  # AI 点评专用色
 RESET = "\033[0m"
+
+# --- 环境变量初始化 (必须在所有导入后立即执行) ---
+load_dotenv()  # 从 .env 文件加载环境变量
+
+# --- 配置加载和验证 ---
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+GEMINI_BASE_URL = os.getenv("GEMINI_BASE_URL", "https://api.yyds168.net/v1")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-pro-preview")
+
+# --- 启动时的配置验证 ---
+def _verify_config():
+    """验证关键配置是否已加载"""
+    if not GEMINI_API_KEY:
+        print(f"{RED}[FATAL] GEMINI_API_KEY 未设置{RESET}")
+        print(f"{YELLOW}请检查 .env 文件或环境变量{RESET}")
+        sys.exit(1)
+
+    print(f"{GREEN}[INFO] 配置验证通过:{RESET}")
+    print(f"  ✅ API Key: 已加载 (长度: {len(GEMINI_API_KEY)})")
+    print(f"  ✅ Base URL: {GEMINI_BASE_URL}")
+    print(f"  ✅ Model: {GEMINI_MODEL}")
+    print()
 
 def log(msg, level="INFO"):
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -249,6 +266,10 @@ def external_ai_review(diff_content):
 # ==============================================================================
 def main():
     print(f"{CYAN}🛡️ Gemini Review Bridge v3.4 (Robust Edition){RESET}")
+    print()
+
+    # 🆕 v3.4: 启动时验证关键配置
+    _verify_config()
 
     # 🆕 v3.4: 双重检查机制 (Double Check Logic)
     print(f"{BLUE}🐛 [DEBUG] 开始检查 Git 状态...{RESET}")

@@ -1,0 +1,31 @@
+════════════════════════════════════════════════════════════════════════════════
+AUDIT TRIGGER FILE - TASK #025-AUDIT: ENV LOADING FIX
+════════════════════════════════════════════════════════════════════════════════
+
+Purpose: Force a real git diff to test the fixed gemini_review_bridge.py
+Timestamp: $(date)
+Test ID: ENV-LOADING-FIX-$(date +%s)
+
+Changes Made to gemini_review_bridge.py:
+1. ✅ Moved load_dotenv() to line 44 (after imports, before getenv calls)
+2. ✅ Moved UI color definitions to line 35 (before _verify_config function)
+3. ✅ Added _verify_config() function (lines 52-63) to validate API key loading
+4. ✅ Called _verify_config() in main() at startup (line 272)
+5. ✅ Hard exit (sys.exit(1)) if GEMINI_API_KEY is missing
+
+Expected Behavior:
+- Script starts
+- _verify_config() is called
+- Displays "✅ API Key: 已加载 (长度: XX)"
+- Displays "✅ Base URL: ..."
+- Displays "✅ Model: gemini-3-pro-preview"
+- Proceeds to git check
+- Makes API call with proper token
+- Logs token usage to VERIFY_LOG.log
+
+If GEMINI_API_KEY is missing:
+- Script exits immediately with [FATAL] message
+- No silent failure
+- Error is visible to operator
+
+════════════════════════════════════════════════════════════════════════════════
