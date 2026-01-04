@@ -35,7 +35,7 @@ except ImportError:
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 GEMINI_BASE_URL = os.getenv("GEMINI_BASE_URL", "https://api.yyds168.net/v1")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-pro")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-pro-preview")
 
 # --- UI 颜色配置 ---
 GREEN = "\033[92m"
@@ -178,7 +178,18 @@ def external_ai_review(diff_content):
         )
         
         if resp.status_code == 200:
-            content = resp.json()['choices'][0]['message']['content']
+            resp_data = resp.json()
+            content = resp_data['choices'][0]['message']['content']
+
+            # Extract and log token usage if available
+            usage = resp_data.get('usage', {})
+            input_tokens = usage.get('prompt_tokens', 0)
+            output_tokens = usage.get('completion_tokens', 0)
+            total_tokens = usage.get('total_tokens', 0)
+
+            if input_tokens or output_tokens:
+                log(f"[INFO] Token Usage: Input {input_tokens}, Output {output_tokens}, Total {total_tokens}", "INFO")
+
             log(f"API 响应: HTTP 200, Content-Type: {resp.headers.get('content-type')}", "INFO")
 
             # 使用分离器处理
