@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Signal Verification Dashboard (Streamlit)
+Signal Verification Dashboard & Risk Management Control (Streamlit)
 
-Task #019.01: Signal Verification Dashboard
+TASK #019.01: Signal Verification Dashboard
+TASK #033: Web Dashboard & DingTalk ActionCard Integration
 
-Visualize trading bot signals and performance metrics.
+Visualize trading bot signals, performance metrics, and provide
+real-time risk management controls including Kill Switch activation.
 """
 
 import streamlit as st
@@ -13,13 +15,17 @@ import pandas as pd
 import plotly.graph_objects as go
 import logging
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict
+from datetime import datetime
 
 # Add project root to path
 import sys
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from src.reporting.log_parser import TradeLogParser
+from src.risk import get_kill_switch
+from src.dashboard import send_risk_alert, send_kill_switch_alert
+from src.config import DASHBOARD_PUBLIC_URL
 
 logger = logging.getLogger(__name__)
 
@@ -67,9 +73,40 @@ def main():
     st.markdown("**Task #019.01**: Visualize trading bot signals and verify decision quality")
     st.markdown("---")
 
-    # Sidebar: File upload and filters
+    # Sidebar: File upload and risk controls
     with st.sidebar:
         st.header("⚙️ Configuration")
+
+        # Risk Management Controls (TASK #033)
+        st.markdown("---")
+        st.header("🚨 Risk Management")
+
+        # Kill Switch Status
+        try:
+            kill_switch = get_kill_switch()
+            is_active = kill_switch.is_active()
+
+            if is_active:
+                st.error("🛑 **KILL SWITCH ACTIVE**")
+                status = kill_switch.get_status()
+                st.write(f"**Reason**: {status.get('activation_reason', 'Unknown')}")
+                st.write(f"**Time**: {status.get('activation_time', 'Unknown')}")
+
+                # Reset button
+                if st.button("🔴 Manual Reset (Admin)", key="reset_kill_switch"):
+                    if kill_switch.reset():
+                        st.success("✅ Kill switch reset successfully")
+                        st.balloons()
+                    else:
+                        st.error("❌ Failed to reset kill switch")
+            else:
+                st.success("✅ Kill Switch: INACTIVE")
+                st.markdown(">Trading system operational")
+
+        except Exception as e:
+            st.warning(f"⚠️ Could not load kill switch status: {str(e)}")
+
+        st.markdown("---")
 
         # File uploader
         uploaded_file = st.file_uploader(

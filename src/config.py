@@ -114,6 +114,20 @@ KILL_SWITCH_LOCK_FILE = str(Path(os.getenv("KILL_SWITCH_LOCK_FILE",
                                             PROJECT_ROOT / "var/kill_switch.lock")))
 
 # ==============================================================================
+# Dashboard & Notification Configuration (TASK #033)
+# ==============================================================================
+# Public URL for dashboard access from DingTalk messages and alerts
+DASHBOARD_PUBLIC_URL = os.getenv("DASHBOARD_PUBLIC_URL", "http://www.crestive.net:8501")
+
+# DingTalk webhook configuration
+DINGTALK_WEBHOOK_URL = os.getenv("DINGTALK_WEBHOOK_URL", "")
+DINGTALK_SECRET = os.getenv("DINGTALK_SECRET", "")
+
+# Streamlit dashboard configuration
+STREAMLIT_HOST = os.getenv("STREAMLIT_HOST", "0.0.0.0")
+STREAMLIT_PORT = int(os.getenv("STREAMLIT_PORT", 8501))
+
+# ==============================================================================
 # Network Configuration
 # ==============================================================================
 # For network probing and connectivity checks
