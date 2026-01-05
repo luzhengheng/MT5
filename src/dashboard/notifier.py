@@ -161,6 +161,8 @@ class DingTalkNotifier:
 {text}
 
 **Dashboard**: Click the button below to view real-time metrics and manage the system.
+
+> [系统治理] MT5-CRS 警告服务
 """
 
         # ActionCard format
