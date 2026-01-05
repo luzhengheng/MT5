@@ -46,7 +46,8 @@ class HealthMonitor:
     def check_streamlit(self) -> bool:
         """Check if Streamlit is running"""
         try:
-            result = subprocess.run(['pgrep', '-c', 'streamlit'], capture_output=True, timeout=5)
+            # Check for streamlit process (may run as python3)
+            result = subprocess.run(['pgrep', '-f', 'streamlit.*8501'], capture_output=True, timeout=5)
             is_running = result.returncode == 0
             logger.info(f"[STREAMLIT] {'Running' if is_running else 'Stopped'}")
             return is_running
