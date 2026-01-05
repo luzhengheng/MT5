@@ -376,6 +376,189 @@ class PortfolioManager:
             })
         return history
 
+    # ========================================================================
+    # Reconciliation Methods (TASK #031 - State Reconciliation)
+    # ========================================================================
+
+    def force_add_position(self, remote_position_data: Dict) -> bool:
+        """
+        Force-add a remote position to local state (startup recovery).
+
+        Called by StateReconciler when a zombie position is detected on the gateway
+        that doesn't exist locally. Creates a synthetic Order and updates position.
+
+        Args:
+            remote_position_data: Remote position dict with:
+                - ticket: MT5 ticket number
+                - symbol: Trading symbol
+                - type: "buy" or "sell"
+                - volume: Position size in lots
+                - price_open: Entry price
+                - profit: Unrealized PnL
+                - time: Open timestamp
+
+        Returns:
+            True if position added successfully, False if error
+        """
+        try:
+            ticket = remote_position_data.get('ticket')
+            symbol = remote_position_data.get('symbol')
+            pos_type = remote_position_data.get('type', 'buy').lower()
+            volume = float(remote_position_data.get('volume', 0))
+            price_open = float(remote_position_data.get('price_open', 0))
+            open_time = remote_position_data.get('time', time.time())
+
+            # Create synthetic order as if it came from gateway
+            order_id = f"RECOVERY_{ticket}"
+            synthetic_order = Order(
+                order_id=order_id,
+                symbol=symbol,
+                action="BUY" if pos_type == "buy" else "SELL",
+                volume=volume,
+                entry_price=price_open,
+                entry_time=datetime.fromtimestamp(open_time),
+                status=OrderStatus.FILLED,
+                ticket=ticket,
+                fill_price=price_open,
+                filled_volume=volume,
+                fill_time=datetime.fromtimestamp(open_time)
+            )
+
+            # Store order
+            self.orders[order_id] = synthetic_order
+
+            # Create position
+            net_vol = volume if pos_type == "buy" else -volume
+            self.position = Position(
+                symbol=symbol,
+                net_volume=net_vol,
+                avg_entry_price=price_open,
+                current_price=price_open,
+                unrealized_pnl=remote_position_data.get('profit', 0),
+                orders=[synthetic_order]
+            )
+
+            self.logger.warning(
+                f"[RECONCILE] FORCE_ADD: Ticket {ticket}, {pos_type.upper()} {volume}L @ {price_open}"
+            )
+            return True
+
+        except Exception as e:
+            self.logger.error(f"[RECONCILE] Failed to add position: {e}")
+            return False
+
+    def force_close_position(self, ticket: int) -> bool:
+        """
+        Force-close a position (external closure detection).
+
+        Called by StateReconciler when a position exists locally but not on the
+        remote gateway (indicating external closure).
+
+        Args:
+            ticket: MT5 ticket number of position to close
+
+        Returns:
+            True if position closed, False if no position or error
+        """
+        try:
+            if self.position is None:
+                self.logger.warning(f"[RECONCILE] No position to close (ticket {ticket})")
+                return False
+
+            # Mark all orders for this ticket as canceled
+            for order in self.position.orders:
+                if order.ticket == ticket:
+                    order.status = OrderStatus.CANCELED
+                    self.logger.debug(f"[RECONCILE] Marked {order.order_id} as CANCELED")
+
+            # Close position
+            self.position = None
+            self.logger.warning(f"[RECONCILE] FORCE_CLOSE: Ticket {ticket} - position closed")
+            return True
+
+        except Exception as e:
+            self.logger.error(f"[RECONCILE] Failed to close position: {e}")
+            return False
+
+    def force_update_position(self, ticket: int, remote_position_data: Dict) -> bool:
+        """
+        Force-update position state (drift correction).
+
+        Called by StateReconciler when drift is detected (volume or price mismatch).
+        Updates local state to match remote (gateway is source of truth).
+
+        Args:
+            ticket: MT5 ticket number
+            remote_position_data: Remote position data with corrected values
+
+        Returns:
+            True if position updated, False if no position or error
+        """
+        try:
+            if self.position is None:
+                self.logger.warning(f"[RECONCILE] No position to update (ticket {ticket})")
+                return False
+
+            old_volume = self.position.net_volume
+            old_price = self.position.avg_entry_price
+
+            # Update to remote values
+            pos_type = remote_position_data.get('type', 'buy').lower()
+            new_volume = float(remote_position_data.get('volume', 0))
+            new_price = float(remote_position_data.get('price_open', 0))
+
+            self.position.net_volume = new_volume if pos_type == "buy" else -new_volume
+            self.position.avg_entry_price = new_price
+            self.position.unrealized_pnl = remote_position_data.get('profit', 0)
+
+            self.logger.warning(
+                f"[RECONCILE] DRIFT_FIX: Ticket {ticket}, "
+                f"volume {old_volume}L → {new_volume}L, "
+                f"price {old_price} → {new_price}"
+            )
+            return True
+
+        except Exception as e:
+            self.logger.error(f"[RECONCILE] Failed to update position: {e}")
+            return False
+
+    def get_local_positions(self) -> Dict[int, 'Position']:
+        """
+        Get all local positions indexed by ticket number.
+
+        Used by StateReconciler to build a ticket-indexed map of current positions.
+
+        Returns:
+            Dict[ticket -> Position] for positions with tickets
+        """
+        positions = {}
+
+        if self.position is not None:
+            # Get ticket from first filled order
+            for order in self.position.orders:
+                if order.ticket is not None and order.status == OrderStatus.FILLED:
+                    positions[order.ticket] = self.position
+                    break
+
+        return positions
+
+    def find_order_by_ticket(self, ticket: int) -> Optional[Order]:
+        """
+        Find order by MT5 ticket number.
+
+        Used by StateReconciler to locate orders for reconciliation.
+
+        Args:
+            ticket: MT5 ticket number to search for
+
+        Returns:
+            Order object if found, None otherwise
+        """
+        for order in self.orders.values():
+            if order.ticket == ticket:
+                return order
+        return None
+
 
 # ============================================================================
 # Utility Functions

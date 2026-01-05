@@ -90,6 +90,11 @@ DEFAULT_VOLUME = float(os.getenv("DEFAULT_VOLUME", 0.01))
 ORDER_MAGIC = int(os.getenv("ORDER_MAGIC", 20260105))
 
 # ==============================================================================
+# State Reconciliation Configuration (TASK #031)
+# ==============================================================================
+SYNC_INTERVAL_SEC = int(os.getenv("SYNC_INTERVAL_SEC", 15))  # Reconciliation poll interval
+
+# ==============================================================================
 # Network Configuration
 # ==============================================================================
 # For network probing and connectivity checks

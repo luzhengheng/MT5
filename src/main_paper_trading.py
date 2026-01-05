@@ -149,6 +149,78 @@ class ExecutionGateway:
                 "error": str(e)
             }
 
+    def get_positions(self) -> Dict:
+        """
+        Query gateway for all open positions (TASK #031 Reconciliation)
+
+        Sends GET_POSITIONS request to Windows gateway and receives list of
+        all currently open positions. Used for state reconciliation.
+
+        Request format:
+        {
+            "action": "GET_POSITIONS",
+            "symbol": "EURUSD"  # optional filter by symbol
+        }
+
+        Response format:
+        {
+            "status": "SUCCESS",
+            "positions": [
+                {
+                    "ticket": 123456,
+                    "symbol": "EURUSD",
+                    "type": "buy",      # or "sell"
+                    "volume": 0.01,
+                    "price_open": 1.0543,
+                    "profit": 10.5,
+                    "time": 1704153600
+                },
+                ...
+            ],
+            "error": null
+        }
+
+        Returns:
+            Dict with status and positions list. Returns empty positions if
+            gateway is offline or returns error.
+
+        Example:
+            >>> gateway = ExecutionGateway()
+            >>> response = gateway.get_positions()
+            >>> for pos in response.get("positions", []):
+            ...     print(f"Ticket {pos['ticket']}: {pos['type']} {pos['volume']}")
+        """
+        if not self.socket:
+            if not self.connect():
+                self.logger.warning("Cannot connect to gateway for GET_POSITIONS")
+                return {"status": "FAILED", "positions": [], "error": "Gateway not connected"}
+
+        try:
+            # Build GET_POSITIONS request
+            request = {
+                "action": "GET_POSITIONS",
+                "symbol": "*"  # Query all positions (optional - gateway may support filtering)
+            }
+
+            # Send request
+            self.socket.send_json(request)
+            self.logger.debug(f"[GET_POSITIONS] Sent request to {self.url}")
+
+            # Receive response with timeout
+            response = self.socket.recv_json()
+            self.logger.debug(f"[GET_POSITIONS] Received response: {len(response.get('positions', []))} positions")
+            return response
+
+        except zmq.error.Again:
+            error_msg = f"GET_POSITIONS timeout ({self.timeout_ms}ms)"
+            self.logger.warning(error_msg)
+            return {"status": "FAILED", "positions": [], "error": error_msg}
+
+        except Exception as e:
+            error_msg = f"GET_POSITIONS error: {str(e)}"
+            self.logger.error(error_msg)
+            return {"status": "FAILED", "positions": [], "error": error_msg}
+
     def disconnect(self):
         """Close gateway connection"""
         if self.socket:
