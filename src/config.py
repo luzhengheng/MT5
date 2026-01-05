@@ -95,6 +95,25 @@ ORDER_MAGIC = int(os.getenv("ORDER_MAGIC", 20260105))
 SYNC_INTERVAL_SEC = int(os.getenv("SYNC_INTERVAL_SEC", 15))  # Reconciliation poll interval
 
 # ==============================================================================
+# Risk Management Configuration (TASK #032)
+# ==============================================================================
+# Maximum daily loss before system stops trading (in USD equivalent)
+RISK_MAX_DAILY_LOSS = float(os.getenv("RISK_MAX_DAILY_LOSS", -50.0))
+
+# Maximum orders per minute to prevent runaway algorithms
+RISK_MAX_ORDER_RATE = int(os.getenv("RISK_MAX_ORDER_RATE", 5))
+
+# Maximum position size per symbol (in lots)
+RISK_MAX_POSITION_SIZE = float(os.getenv("RISK_MAX_POSITION_SIZE", 1.0))
+
+# Risk check webhook URL for alerts
+RISK_WEBHOOK_URL = os.getenv("RISK_WEBHOOK_URL", "http://localhost:8888/risk_alert")
+
+# Kill switch lock file path (prevents recursive reactivation)
+KILL_SWITCH_LOCK_FILE = str(Path(os.getenv("KILL_SWITCH_LOCK_FILE",
+                                            PROJECT_ROOT / "var/kill_switch.lock")))
+
+# ==============================================================================
 # Network Configuration
 # ==============================================================================
 # For network probing and connectivity checks
