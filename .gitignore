@@ -73,6 +73,7 @@ models/*.txt
 models/*.pkl
 models/*.joblib
 models/*_v*.json
+models/xgboost_price_predictor.json
 data/training_set.parquet
 data/sample_features.parquet
 !models/model_metadata.json

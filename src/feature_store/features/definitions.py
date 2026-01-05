@@ -58,9 +58,45 @@ basic_features = FeatureView(
 )
 
 # ============================================================================
-# FeatureService: Trading Features
+# Batch Source: Historical Market Data for Training
+# ============================================================================
+# NOTE: Feast 0.49.0 doesn't have native PostgreSQL source support
+# We configure this as FileSource for Feast compatibility, but training code
+# will use Feast's PostgreSQL offline store backend (configured in feature_store.yaml)
+# to retrieve historical features via get_historical_features() API
+market_data_batch = FileSource(
+    name="market_data_batch",
+    path="data/market_data.parquet",  # Placeholder - actual data from PostgreSQL offline store
+    timestamp_field="time",
+)
+
+# ============================================================================
+# BatchFeatureView: Historical Market Data Features for Training
+# ============================================================================
+# This feature view is registered with Feast for compatibility with SDK
+# During training, get_historical_features() will query PostgreSQL (offline store)
+# automatically through the configured FeatureStore instance
+market_data_features = FeatureView(
+    name="market_data_features",
+    entities=[symbol],
+    ttl=timedelta(days=30),  # Keep features for 30 days
+    online=False,  # Only offline (training) - use realtime_ticks for online serving
+    source=market_data_batch,
+    schema=[
+        # OHLCV features from raw market data (from PostgreSQL market_data table)
+        Field(name="open", dtype=Float32, description="Opening price"),
+        Field(name="high", dtype=Float32, description="High price"),
+        Field(name="low", dtype=Float32, description="Low price"),
+        Field(name="close", dtype=Float32, description="Closing price"),
+        Field(name="volume", dtype=Int64, description="Trading volume"),
+        Field(name="adjusted_close", dtype=Float32, description="Adjusted closing price"),
+    ],
+)
+
+# ============================================================================
+# FeatureService: Trading Features (expanded)
 # ============================================================================
 trading_features = FeatureService(
     name="trading_features",
-    features=[basic_features]
+    features=[basic_features, market_data_features]
 )

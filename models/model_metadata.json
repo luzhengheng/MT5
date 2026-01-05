@@ -1,41 +1,42 @@
 {
-  "model_type": "LightGBM",
-  "train_date": "2026-01-03T04:19:42.235975",
+  "model_type": "XGBoost",
+  "model_version": "1.0.0",
+  "symbol": "AUDCAD.FOREX",
+  "lookback_days": 90,
   "features": [
-    "sma_7",
-    "sma_14",
-    "sma_30",
+    "price_range",
+    "price_change",
+    "price_change_pct",
+    "sma_5",
+    "sma_10",
+    "sma_20",
+    "ema_5",
+    "ema_10",
+    "momentum_5",
+    "momentum_10",
+    "volatility_5",
+    "volatility_10",
     "rsi_14",
-    "rsi_21",
-    "macd",
-    "macd_signal",
-    "macd_hist",
-    "bbands_upper",
-    "bbands_middle",
-    "bbands_lower",
-    "bbands_width",
-    "atr_14",
-    "stochastic_k",
-    "stochastic_d"
+    "volume_sma_5",
+    "volume_change"
   ],
-  "metrics": {
-    "mse": 2.4848783685965703e-07,
-    "mae": 0.000398466920655279
-  },
+  "train_date": "2026-01-05T12:27:49.976028",
   "params": {
-    "objective": "regression",
-    "metric": "mse",
-    "num_leaves": 25,
-    "learning_rate": 0.08,
-    "max_depth": 7,
-    "min_child_samples": 20,
-    "reg_alpha": 0.01,
-    "reg_lambda": 0.01,
-    "feature_fraction": 0.9,
-    "bagging_fraction": 0.9,
-    "bagging_freq": 5,
-    "verbose": -1
+    "objective": "binary:logistic",
+    "max_depth": 5,
+    "eta": 0.1,
+    "subsample": 0.8,
+    "colsample_bytree": 0.8,
+    "eval_metric": "logloss",
+    "seed": 42,
+    "num_boost_round": 100
   },
-  "train_size": 35035,
-  "test_size": 8759
+  "metrics": {
+    "accuracy": 0.6153846153846154,
+    "precision": 0.5454545454545454,
+    "recall": 1.0,
+    "f1_score": 0.7058823529411765,
+    "test_samples": 13
+  },
+  "model_file": "models/xgboost_price_predictor.json"
 }
