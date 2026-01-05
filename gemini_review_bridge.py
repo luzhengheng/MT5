@@ -15,6 +15,7 @@ import subprocess
 import json
 import datetime
 import re
+import uuid
 from dotenv import load_dotenv
 
 # --- 日志文件配置 ---
@@ -157,27 +158,28 @@ def phase_local_audit():
 # ==============================================================================
 # 🧠 Phase 2: 外部 AI 深度审查 (核心逻辑)
 # ==============================================================================
-def external_ai_review(diff_content):
+def external_ai_review(diff_content, session_id):
     if not CURL_AVAILABLE or not GEMINI_API_KEY:
         log("跳过 AI 审查 (缺少配置或依赖)", "WARN")
-        return None
+        return None, session_id
 
     log("启动 curl_cffi 引擎，请求架构师审查...", "PHASE")
-    
+
     # Prompt: 明确要求 JSON 在前，评论在后
     prompt = f"""
     你是一位严厉的 Python 架构师。请审查以下 Git Diff:
     {diff_content[:40000]}
-    
+
     **输出格式要求 (严格遵守)**:
     1. 第一部分：必须是一个标准的 JSON 对象。
     2. 第二部分（可选）：JSON 结束后，你可以用 Markdown 写出详细的改进建议、风险警告或重构思路。
-    
+
     JSON 结构：
     {{
         "status": "PASS" | "FAIL",
         "reason": "一句话总结",
-        "commit_message_suggestion": "feat(scope): ..."
+        "commit_message_suggestion": "feat(scope): ...",
+        "session_id": "{session_id}"
     }}
     """
     
@@ -214,6 +216,7 @@ def external_ai_review(diff_content):
 
             if result:
                 status = result.get("status", "FAIL")
+                returned_session_id = result.get("session_id", session_id)
 
                 # --- 🔥 关键：展示 AI 的"话痨"部分给 Claude 看 ---
                 if comments:
@@ -226,46 +229,52 @@ def external_ai_review(diff_content):
 
                 if status == "PASS":
                     log(f"AI 审查通过: {result.get('reason')}", "SUCCESS")
-                    return result.get("commit_message_suggestion")
+                    return result.get("commit_message_suggestion"), returned_session_id
                 else:
                     log(f"AI 拒绝提交: {result.get('reason')}", "ERROR")
-                    return "FAIL"
+                    return "FAIL", returned_session_id
             else:
                 log(f"[FATAL] AI 响应格式无效，无法解析。响应体: {content[:500]}", "ERROR")
                 log("请检查 GEMINI_API_KEY 和网络连接", "ERROR")
-                return "FATAL_ERROR"
+                return "FATAL_ERROR", session_id
         else:
             log(f"[FATAL] API 返回错误状态码: {resp.status_code}", "ERROR")
             log(f"响应体: {resp.text[:500]}", "ERROR")
-            return "FATAL_ERROR"
+            return "FATAL_ERROR", session_id
 
     except requests.ConnectTimeout:
         log(f"[FATAL] 连接超时: 无法连接API服务器 (timeout=60s)", "ERROR")
         log(f"检查项: 1) 网络连接  2) VPN 状态  3) API 地址正确性", "ERROR")
         log(f"API 地址: {GEMINI_BASE_URL}", "ERROR")
-        return "FATAL_ERROR"
+        return "FATAL_ERROR", session_id
 
     except requests.ReadTimeout:
         log(f"[FATAL] 读取超时: API服务器响应过慢 (timeout=60s)", "ERROR")
         log(f"API 地址: {GEMINI_BASE_URL}", "ERROR")
-        return "FATAL_ERROR"
+        return "FATAL_ERROR", session_id
 
     except requests.RequestException as e:
         log(f"[FATAL] 网络异常: {type(e).__name__}: {str(e)[:200]}", "ERROR")
         log(f"API 地址: {GEMINI_BASE_URL}", "ERROR")
-        return "FATAL_ERROR"
+        return "FATAL_ERROR", session_id
 
     except Exception as e:
         log(f"[FATAL] 未知错误: {type(e).__name__}: {str(e)}", "ERROR")
         import traceback
         log(f"堆栈跟踪:\n{traceback.format_exc()[:500]}", "ERROR")
-        return "FATAL_ERROR"
+        return "FATAL_ERROR", session_id
 
 # ==============================================================================
 # 🚀 主流程 (v3.4 Robust Edition)
 # ==============================================================================
 def main():
-    print(f"{CYAN}🛡️ Gemini Review Bridge v3.4 (Robust Edition){RESET}")
+    # 🆕 v3.5: Anti-Hallucination Proof of Execution (PoE) Mechanism
+    session_id = str(uuid.uuid4())
+    session_start_time = datetime.datetime.now().isoformat()
+
+    print(f"{CYAN}🛡️ Gemini Review Bridge v3.5 (Anti-Hallucination Edition){RESET}")
+    print(f"{CYAN}⚡ [PROOF] AUDIT SESSION ID: {session_id}{RESET}")
+    print(f"{CYAN}⚡ [PROOF] SESSION START: {session_start_time}{RESET}")
     print()
 
     # 🆕 v3.4: 启动时验证关键配置
@@ -323,7 +332,7 @@ def main():
         log("=" * 80, "INFO")
         print()
 
-        review_result = external_ai_review(diff)
+        review_result, session_id = external_ai_review(diff, session_id)
 
         if review_result == "FAIL":
             print()
@@ -359,12 +368,22 @@ def main():
     # 4. 执行提交
     log(f"执行提交: {commit_msg}", "INFO")
     code, out, err = run_cmd(f'git commit -m "{commit_msg}"')
-    
+
     if code == 0:
         log("代码已成功提交！", "SUCCESS")
+        # 🆕 v3.5: Log session completion proof
+        session_end_time = datetime.datetime.now().isoformat()
+        print(f"{CYAN}⚡ [PROOF] SESSION COMPLETED: {session_id}{RESET}")
+        print(f"{CYAN}⚡ [PROOF] SESSION END: {session_end_time}{RESET}")
+        log(f"[PROOF] Session {session_id} completed successfully", "INFO")
         sys.exit(0)
     else:
         log(f"提交失败: {err}", "ERROR")
+        # 🆕 v3.5: Log session failure proof
+        session_end_time = datetime.datetime.now().isoformat()
+        print(f"{RED}⚡ [PROOF] SESSION FAILED: {session_id}{RESET}")
+        print(f"{RED}⚡ [PROOF] SESSION END: {session_end_time}{RESET}")
+        log(f"[PROOF] Session {session_id} failed", "ERROR")
         sys.exit(1)
 
 if __name__ == "__main__":
