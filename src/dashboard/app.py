@@ -83,18 +83,24 @@ def main():
     """Main Streamlit application"""
 
     # Authentication (TASK #036: Application-Layer Authentication)
-    # TASK #036-FIX: Fixed API signature - location must be keyword argument
-    name, authentication_status, username = authenticator.login(location='main', key='Login')
+    # TASK #036-REFIX: Use Session State pattern instead of return values
+    authenticator.login(location='main', key='Login')
 
-    if authentication_status == False:
+    # Check authentication status from session state
+    if st.session_state.get("authentication_status") is False:
         st.error('Username/password is incorrect')
         return
-    elif authentication_status == None:
+    elif st.session_state.get("authentication_status") is None:
         st.warning('Please enter your username and password')
         return
 
+    # User is authenticated - render dashboard
     # Logout button in sidebar
     authenticator.logout(button_name='Logout', location='sidebar', key='Logout')
+
+    # Get user info from session state
+    name = st.session_state.get("name", "User")
+    username = st.session_state.get("username", "unknown")
 
     # Title
     st.title("🤖 Signal Verification Dashboard")
