@@ -45,7 +45,7 @@ authenticator = Authenticate(
 
 # Configure Streamlit page
 st.set_page_config(
-    page_title="Signal Dashboard",
+    page_title="信号仪表盘",
     page_icon="🤖",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -88,33 +88,33 @@ def main():
 
     # Check authentication status from session state
     if st.session_state.get("authentication_status") is False:
-        st.error('Username/password is incorrect')
+        st.error('用户名或密码错误')
         return
     elif st.session_state.get("authentication_status") is None:
-        st.warning('Please enter your username and password')
+        st.warning('请输入账户密码登录')
         return
 
     # User is authenticated - render dashboard
     # Logout button in sidebar
-    authenticator.logout(button_name='Logout', location='sidebar', key='Logout')
+    authenticator.logout(button_name='登出', location='sidebar', key='Logout')
 
     # Get user info from session state
     name = st.session_state.get("name", "User")
     username = st.session_state.get("username", "unknown")
 
     # Title
-    st.title("🤖 Signal Verification Dashboard")
-    st.markdown("**Task #019.01**: Visualize trading bot signals and verify decision quality")
-    st.markdown(f"**Logged in as**: {name}")
+    st.title("🤖 信号验证仪表盘")
+    st.markdown("**Task #019.01**: 可视化交易机器人信号，验证决策质量")
+    st.markdown(f"**登录用户**: {name}")
     st.markdown("---")
 
     # Sidebar: File upload and risk controls
     with st.sidebar:
-        st.header("⚙️ Configuration")
+        st.header("⚙️ 配置面板")
 
         # Risk Management Controls (TASK #033)
         st.markdown("---")
-        st.header("🚨 Risk Management")
+        st.header("🚨 风险管理")
 
         # Kill Switch Status
         try:
@@ -122,32 +122,32 @@ def main():
             is_active = kill_switch.is_active()
 
             if is_active:
-                st.error("🛑 **KILL SWITCH ACTIVE**")
+                st.error("🛑 **紧急制动激活**")
                 status = kill_switch.get_status()
-                st.write(f"**Reason**: {status.get('activation_reason', 'Unknown')}")
-                st.write(f"**Time**: {status.get('activation_time', 'Unknown')}")
+                st.write(f"**原因**: {status.get('activation_reason', 'Unknown')}")
+                st.write(f"**时间**: {status.get('activation_time', 'Unknown')}")
 
                 # Reset button
-                if st.button("🔴 Manual Reset (Admin)", key="reset_kill_switch"):
+                if st.button("🔴 手动复位（管理员）", key="reset_kill_switch"):
                     if kill_switch.reset():
-                        st.success("✅ Kill switch reset successfully")
+                        st.success("✅ 紧急制动已复位")
                         st.balloons()
                     else:
-                        st.error("❌ Failed to reset kill switch")
+                        st.error("❌ 紧急制动复位失败")
             else:
-                st.success("✅ Kill Switch: INACTIVE")
-                st.markdown(">Trading system operational")
+                st.success("✅ 紧急制动: 未激活")
+                st.markdown(">交易系统正常运行")
 
         except Exception as e:
-            st.warning(f"⚠️ Could not load kill switch status: {str(e)}")
+            st.warning(f"⚠️ 无法加载紧急制动状态: {str(e)}")
 
         st.markdown("---")
 
         # File uploader
         uploaded_file = st.file_uploader(
-            "Upload Trading Log File",
+            "上传交易日志文件",
             type=['log', 'txt'],
-            help="Select logs/trading.log from Task #018.01"
+            help="选择来自Task #018.01的logs/trading.log"
         )
 
     # Load and parse log file
@@ -195,15 +195,15 @@ def main():
             if default_path.exists():
                 log_content = default_path.read_text(encoding='utf-8')
                 st.session_state.log_cache = log_content  # Cache it!
-                st.toast("✅ Loaded default log file", icon="📁")
+                st.toast("✅ 已加载默认日志文件", icon="📁")
                 logger.info(f"Loaded default log file: {default_path}")
             else:
                 logger.error("Default log file not found")
 
         # 4. Final Check
         if not log_content:
-            st.error("❌ No log file available (Uploaded, Cached, or Default).")
-            st.info("Please upload a trading log file to begin.")
+            st.error("❌ 无可用日志文件（上传、缓存或默认）。")
+            st.info("请上传交易日志文件开始使用。")
             st.stop()
 
         # Create temporary file
@@ -215,68 +215,68 @@ def main():
         df_events = parser.parse_log()
 
         if df_events.empty:
-            st.error("❌ No events found in log file. Please check the file format.")
+            st.error("❌ 日志文件中未找到事件。请检查文件格式。")
             return
 
         # Get summary
         summary = parser.get_summary()
 
         # Display summary metrics
-        st.header("📊 Summary Metrics")
+        st.header("📊 核心指标概览")
 
         cols = st.columns(4)
         with cols[0]:
             st.metric(
-                "Total Ticks",
+                "Tick总数",
                 summary['total_ticks'],
-                help="Market tick events received"
+                help="收到的市场Tick事件"
             )
 
         with cols[1]:
             st.metric(
-                "Total Signals",
+                "信号总数",
                 summary['total_signals'],
-                help="Trading signals generated"
+                help="生成的交易信号"
             )
 
         with cols[2]:
             st.metric(
-                "Total Trades",
+                "交易总数",
                 summary['total_trades'],
-                help="Orders executed"
+                help="执行的订单"
             )
 
         with cols[3]:
             st.metric(
-                "Win Rate",
+                "策略胜率",
                 f"{summary['win_rate']:.1f}%",
-                help="% of profitable closed trades",
-                delta=f"{summary['avg_pnl']:+.2f}% avg"
+                help="盈利平仓交易的百分比",
+                delta=f"{summary['avg_pnl']:+.2f}% 平均"
             )
 
         # Signal breakdown
         col1, col2, col3 = st.columns(3)
         with col1:
-            st.metric("Buy Signals", summary['buy_signals'])
+            st.metric("买入信号", summary['buy_signals'])
         with col2:
-            st.metric("Sell Signals", summary['sell_signals'])
+            st.metric("卖出信号", summary['sell_signals'])
         with col3:
-            st.metric("Hold Signals", summary['hold_signals'])
+            st.metric("持仓信号", summary['hold_signals'])
 
         # Trade status breakdown
         col1, col2, col3 = st.columns(3)
         with col1:
-            st.metric("Open Trades", summary['open_trades'])
+            st.metric("持仓交易", summary['open_trades'])
         with col2:
-            st.metric("Closed Trades", summary['closed_trades'])
+            st.metric("平仓交易", summary['closed_trades'])
         with col3:
             avg_pnl_color = "positive" if summary['avg_pnl'] > 0 else "negative"
-            st.metric("Avg P&L", f"{summary['avg_pnl']:+.2f}%")
+            st.metric("平均盈亏", f"{summary['avg_pnl']:+.2f}%")
 
         st.markdown("---")
 
         # Candlestick chart with signals
-        st.header("📈 Candlestick Chart")
+        st.header("📈 K线走势图")
 
         # Get unique symbols
         ticks = df_events[df_events['event_type'] == 'TICK'].copy()
@@ -284,17 +284,17 @@ def main():
 
         if len(available_symbols) > 0:
             selected_symbol = st.selectbox(
-                "Select Symbol",
+                "选择交易品种",
                 available_symbols,
                 index=0,
-                help="Choose symbol to visualize"
+                help="选择要可视化的品种"
             )
 
             timeframe = st.select_slider(
-                "Timeframe",
+                "时间周期",
                 options=['15min', '30min', '1H', '4H', '1D'],
                 value='1H',
-                help="Candlestick aggregation period"
+                help="K线聚合时间周期"
             )
 
             # Generate OHLC
@@ -324,7 +324,7 @@ def main():
                             x=buy_ticks['timestamp'],
                             y=buy_ticks['price'],
                             mode='markers',
-                            name='Buy Signal',
+                            name='买入信号',
                             marker=dict(
                                 size=10,
                                 color='blue',
@@ -336,8 +336,8 @@ def main():
                 # Customize layout
                 fig.update_layout(
                     title=f"{selected_symbol} @ {timeframe}",
-                    yaxis_title="Price",
-                    xaxis_title="Time",
+                    yaxis_title="价格",
+                    xaxis_title="时间",
                     template="plotly_white",
                     height=600,
                     hovermode='x unified'
@@ -345,14 +345,14 @@ def main():
 
                 st.plotly_chart(fig, use_container_width=True)
             else:
-                st.warning(f"No OHLC data available for {selected_symbol}")
+                st.warning(f"无{selected_symbol}可用的OHLC数据")
         else:
-            st.warning("No tick data found in log file")
+            st.warning("日志文件中未找到Tick数据")
 
         st.markdown("---")
 
         # Trades table
-        st.header("📋 Trade History")
+        st.header("📋 交易历史记录")
 
         trades = parser.extract_trades()
         if not trades.empty:
@@ -372,12 +372,12 @@ def main():
 
             st.dataframe(trades_display, use_container_width=True, hide_index=True)
         else:
-            st.info("No completed trades found")
+            st.info("未找到完成的交易")
 
         st.markdown("---")
 
         # Event timeline
-        st.header("📅 Event Timeline")
+        st.header("📅 事件追踪链路")
 
         events_display = df_events.copy()
         events_display['timestamp'] = events_display['timestamp'].dt.strftime('%H:%M:%S')
@@ -397,7 +397,7 @@ def main():
         st.dataframe(events_display, use_container_width=True, hide_index=True)
 
     except Exception as e:
-        st.error(f"❌ Error processing log file: {str(e)}")
+        st.error(f"❌ 处理日志文件出错: {str(e)}")
         logger.exception("Dashboard error")
         import traceback
         st.write(traceback.format_exc())
