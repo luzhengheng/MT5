@@ -162,14 +162,47 @@ def main():
                 return
 
     # Load and parse log file
+    # TASK #037-FIX: Implement robust file reading with caching
     try:
-        # Save uploaded file temporarily
-        if hasattr(uploaded_file, 'read'):
-            log_content = uploaded_file.read()
-            if isinstance(log_content, bytes):
-                log_content = log_content.decode('utf-8')
-        else:
-            log_content = uploaded_file.read_text()
+        # Initialize log cache in session state if not exists
+        if "log_cache" not in st.session_state:
+            st.session_state.log_cache = None
+
+        log_content = None
+
+        # Try to read from uploaded file
+        if uploaded_file is not None:
+            try:
+                # Reset file pointer to beginning (in case it was read before)
+                if hasattr(uploaded_file, 'seek'):
+                    uploaded_file.seek(0)
+
+                # Read file content
+                if hasattr(uploaded_file, 'read'):
+                    raw_content = uploaded_file.read()
+                    if isinstance(raw_content, bytes):
+                        log_content = raw_content.decode('utf-8')
+                    else:
+                        log_content = raw_content
+                else:
+                    log_content = uploaded_file.read_text()
+
+                # Cache the content for subsequent reruns
+                st.session_state.log_cache = log_content
+
+            except ValueError as e:
+                # File handle is closed, try to use cached content
+                if st.session_state.log_cache:
+                    log_content = st.session_state.log_cache
+                    logger.warning(f"File handle closed, using cached content: {e}")
+                else:
+                    st.error("❌ File handle lost. Please re-upload the log file.")
+                    st.stop()
+
+        # If no content retrieved, stop
+        if not log_content:
+            st.warning("📁 No log content available. Please upload a file.")
+            return
 
         # Create temporary file
         temp_log = Path("/tmp/trading_temp.log")
