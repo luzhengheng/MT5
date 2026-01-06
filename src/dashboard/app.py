@@ -32,16 +32,23 @@ from src.config import DASHBOARD_PUBLIC_URL
 logger = logging.getLogger(__name__)
 
 # Load authentication configuration (TASK #036)
-config_path = Path(__file__).parent / 'auth_config.yaml'
-with open(config_path) as file:
-    config = yaml.safe_load(file)
+try:
+    config_path = Path(__file__).parent / 'auth_config.yaml'
+    with open(config_path, encoding='utf-8') as file:
+        config = yaml.safe_load(file)
 
-authenticator = Authenticate(
-    config['credentials'],
-    config['cookie']['name'],
-    config['cookie']['key'],
-    config['cookie']['expiry_days']
-)
+    authenticator = Authenticate(
+        config['credentials'],
+        config['cookie']['name'],
+        config['cookie']['key'],
+        config['cookie']['expiry_days']
+    )
+except FileNotFoundError:
+    logger.error(f"Auth config not found: {config_path}")
+    raise
+except Exception as e:
+    logger.error(f"Failed to load auth config: {e}")
+    raise
 
 # Configure Streamlit page
 st.set_page_config(
@@ -364,11 +371,14 @@ def main():
             if 'exit_time' in trades_display.columns:
                 trades_display['exit_time'] = trades_display['exit_time'].dt.strftime('%H:%M:%S')
             if 'entry_price' in trades_display.columns:
-                trades_display['entry_price'] = trades_display['entry_price'].apply(lambda x: f"{x:.5f}")
+                fmt_price = lambda x: f"{x:.5f}"
+                trades_display['entry_price'] = trades_display['entry_price'].apply(fmt_price)
             if 'exit_price' in trades_display.columns:
-                trades_display['exit_price'] = trades_display['exit_price'].apply(lambda x: f"{x:.5f}" if pd.notna(x) else "-")
+                fmt_exit = lambda x: f"{x:.5f}" if pd.notna(x) else "-"
+                trades_display['exit_price'] = trades_display['exit_price'].apply(fmt_exit)
             if 'pnl' in trades_display.columns:
-                trades_display['pnl'] = trades_display['pnl'].apply(lambda x: f"{x:+.2f}%" if pd.notna(x) else "-")
+                fmt_pnl = lambda x: f"{x:+.2f}%" if pd.notna(x) else "-"
+                trades_display['pnl'] = trades_display['pnl'].apply(fmt_pnl)
 
             st.dataframe(trades_display, use_container_width=True, hide_index=True)
         else:
