@@ -83,7 +83,8 @@ def main():
     """Main Streamlit application"""
 
     # Authentication (TASK #036: Application-Layer Authentication)
-    name, authentication_status, username = authenticator.login('Login', 'main')
+    # TASK #036-FIX: Fixed API signature - location must be keyword argument
+    name, authentication_status, username = authenticator.login(location='main', key='Login')
 
     if authentication_status == False:
         st.error('Username/password is incorrect')
@@ -93,7 +94,7 @@ def main():
         return
 
     # Logout button in sidebar
-    authenticator.logout('Logout', 'sidebar')
+    authenticator.logout(button_name='Logout', location='sidebar', key='Logout')
 
     # Title
     st.title("🤖 Signal Verification Dashboard")
