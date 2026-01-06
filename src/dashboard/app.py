@@ -150,19 +150,8 @@ def main():
             help="Select logs/trading.log from Task #018.01"
         )
 
-        if uploaded_file is None:
-            # Try to load default file
-            default_log = Path("logs/trading.log")
-            if default_log.exists():
-                with open(default_log, 'rb') as f:
-                    uploaded_file = f
-                st.success(f"✅ Loaded default: {default_log}")
-            else:
-                st.warning("📁 No log file loaded. Upload one to begin.")
-                return
-
     # Load and parse log file
-    # TASK #037-FIX: Implement robust file reading with caching
+    # TASK #037-REFIX: Implement three-tier fallback (uploaded → cache → default)
     try:
         # Initialize log cache in session state if not exists
         if "log_cache" not in st.session_state:
@@ -170,7 +159,7 @@ def main():
 
         log_content = None
 
-        # Try to read from uploaded file
+        # 1. Try Uploaded File
         if uploaded_file is not None:
             try:
                 # Reset file pointer to beginning (in case it was read before)
@@ -190,19 +179,32 @@ def main():
                 # Cache the content for subsequent reruns
                 st.session_state.log_cache = log_content
 
-            except ValueError as e:
-                # File handle is closed, try to use cached content
-                if st.session_state.log_cache:
-                    log_content = st.session_state.log_cache
-                    logger.warning(f"File handle closed, using cached content: {e}")
-                else:
-                    st.error("❌ File handle lost. Please re-upload the log file.")
-                    st.stop()
+            except Exception as e:
+                # File read failed, fall through to cache/default
+                logger.warning(f"Failed to read uploaded file: {e}")
+                pass
 
-        # If no content retrieved, stop
+        # 2. Try Cache
+        if log_content is None and st.session_state.log_cache is not None:
+            log_content = st.session_state.log_cache
+            logger.info("Using cached log content")
+
+        # 3. Try Default Local File (Final Fallback)
+        if log_content is None:
+            default_path = Path("logs/trading.log")
+            if default_path.exists():
+                log_content = default_path.read_text(encoding='utf-8')
+                st.session_state.log_cache = log_content  # Cache it!
+                st.toast("✅ Loaded default log file", icon="📁")
+                logger.info(f"Loaded default log file: {default_path}")
+            else:
+                logger.error("Default log file not found")
+
+        # 4. Final Check
         if not log_content:
-            st.warning("📁 No log content available. Please upload a file.")
-            return
+            st.error("❌ No log file available (Uploaded, Cached, or Default).")
+            st.info("Please upload a trading log file to begin.")
+            st.stop()
 
         # Create temporary file
         temp_log = Path("/tmp/trading_temp.log")
