@@ -14,9 +14,11 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import logging
+import yaml
 from pathlib import Path
 from typing import Optional, Dict
 from datetime import datetime
+from streamlit_authenticator import Authenticate
 
 # Add project root to path
 import sys
@@ -28,6 +30,18 @@ from src.dashboard import send_risk_alert, send_kill_switch_alert
 from src.config import DASHBOARD_PUBLIC_URL
 
 logger = logging.getLogger(__name__)
+
+# Load authentication configuration (TASK #036)
+config_path = Path(__file__).parent / 'auth_config.yaml'
+with open(config_path) as file:
+    config = yaml.safe_load(file)
+
+authenticator = Authenticate(
+    config['credentials'],
+    config['cookie']['name'],
+    config['cookie']['key'],
+    config['cookie']['expiry_days']
+)
 
 # Configure Streamlit page
 st.set_page_config(
@@ -68,9 +82,23 @@ st.markdown("""
 def main():
     """Main Streamlit application"""
 
+    # Authentication (TASK #036: Application-Layer Authentication)
+    name, authentication_status, username = authenticator.login('Login', 'main')
+
+    if authentication_status == False:
+        st.error('Username/password is incorrect')
+        return
+    elif authentication_status == None:
+        st.warning('Please enter your username and password')
+        return
+
+    # Logout button in sidebar
+    authenticator.logout('Logout', 'sidebar')
+
     # Title
     st.title("🤖 Signal Verification Dashboard")
     st.markdown("**Task #019.01**: Visualize trading bot signals and verify decision quality")
+    st.markdown(f"**Logged in as**: {name}")
     st.markdown("---")
 
     # Sidebar: File upload and risk controls

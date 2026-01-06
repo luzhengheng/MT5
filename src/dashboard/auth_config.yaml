@@ -1,0 +1,11 @@
+credentials:
+  usernames:
+    admin:
+      email: admin@crestive.net
+      name: Administrator
+      password: $2b$12$Zm3KYb1b7cchyEDXjGluQuNxnRlSekeI5uxkSA1OWke8g0smI1cPO
+
+cookie:
+  expiry_days: 30
+  key: mt5crs_dashboard_key_20260106
+  name: mt5crs_auth_token
