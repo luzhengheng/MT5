@@ -199,6 +199,9 @@
 │       ├── user_profile.json
 │       ├── user_profile_mock.json
 │       └── verification_report.txt
+├── deploy_production.sh
+├── DEVOPS_PATCH_DEPLOYMENT_STATUS.txt
+├── DEVOPS_PATCH_PoE_IMPLEMENTATION.md
 ├── docker-compose.prod.yml
 ├── docker-compose.yml
 ├── Dockerfile.api
@@ -273,9 +276,11 @@
 │   ├── reviews
 │   ├── RISK_CONTROL_INTEGRATION_GUIDE.md
 │   ├── SESSION_COMPLETION_SUMMARY.md
+│   ├── specs
+│   │   └── PROTOCOL_JSON_v1.md
 │   ├── SYNC_SUMMARY_20251222.md
 │   ├── SYSTEM_INSTRUCTION_MT5_CRS_DEVELOPMENT_PROTOCOL_V2.md
-│   ├── # [System Instruction MT5-CRS Development Protocol v4.0].md
+│   ├── [System Instruction MT5-CRS Development Protocol v4.3].md
 │   ├── TASK_016_01_PLAN.md
 │   ├── TASK_016_02_PLAN.md
 │   ├── TASK_017_01_PLAN.md
@@ -330,8 +335,7 @@
 │   └── 01_basic_feature_engineering.py
 ├── export_context_for_ai.py
 ├── exports
-│   ├── git_history_20260104_020433.md
-│   └── README.md
+│   └── git_history_20260107_000134.md
 ├── EXTERNAL_AI_QUICK_START.md
 ├── FINAL_SESSION_SUMMARY.txt
 ├── gemini_review_bridge.py
@@ -347,10 +351,21 @@
 │   ├── best_model.pkl -> ../data/models/baseline_v1.pkl
 │   ├── deep_v1.json
 │   ├── deep_v1.json.pre_training
-│   └── model_metadata.json
+│   ├── model_metadata.json
+│   └── xgboost_price_predictor.json
+├── MQL5
+│   └── Experts
+│       └── Direct_Zmq.mq5
+├── mt5_crs.egg-info
+│   ├── dependency_links.txt
+│   ├── PKG-INFO
+│   ├── requires.txt
+│   ├── SOURCES.txt
+│   └── top_level.txt
 ├── NEXT_STEPS_PLAN.md
 ├── NEXUS_DEPLOYMENT_COMPLETE.md
 ├── nexus_with_proxy.py
+├── nginx_dashboard.conf
 ├── NOTION_NEXUS_ENV_EXAMPLE.md
 ├── NOTION_SETUP_GUIDE.md
 ├── NOTION_SYNC_DEPLOYMENT_COMPLETE.md
@@ -376,6 +391,7 @@
 │   ├── task_033_spec.md
 │   └── task_034_spec.md
 ├── PROTOCOL_UPDATE_TICKET_FIRST.md
+├── pyproject.toml
 ├── pytest.ini
 ├── QUICK_START_CHECKLIST.md
 ├── QUICK_START.md
@@ -389,10 +405,20 @@
 │   ├── add_issue_content_to_notion.py
 │   ├── align_xgboost.sh
 │   ├── audit_current_task.py
+│   ├── audit_task_026_fix.py
+│   ├── audit_task_027.py
+│   ├── audit_task_028.py
+│   ├── audit_task_029.py
+│   ├── audit_task_030.py
+│   ├── audit_task_031.py
+│   ├── audit_task_032.py
+│   ├── audit_task_033.py
+│   ├── audit_task_034.py
 │   ├── audit_task_040_9.py
 │   ├── audit_task_040_9_reset.py
 │   ├── audit_task_042.py
 │   ├── audit_template.py
+│   ├── audit_trigger.txt
 │   ├── check_options.py
 │   ├── check_schema.py
 │   ├── check_versions.sh
@@ -415,6 +441,7 @@
 │   ├── diagnose_ai_bridge.py
 │   ├── diagnose_gateway.py
 │   ├── diagnostic_report.py
+│   ├── dummy_trigger.txt
 │   ├── emergency_backfill.py
 │   ├── fill_history_details.py
 │   ├── fix_remote_env.sh
@@ -467,12 +494,14 @@
 │   ├── ops_sync_completed_tickets.py
 │   ├── ops_universal_key_setup.py
 │   ├── ops_verify_mesh.py
+│   ├── probe_gateway.py
 │   ├── probe_live_gateway.py
 │   ├── project_cli.py
 │   ├── quick_create_issue.py
 │   ├── restore_history.py
 │   ├── restore_history.sh
 │   ├── restore_integrations.py
+│   ├── review_task_031.py
 │   ├── run_baseline_training.py
 │   ├── run_bulk_backfill.py
 │   ├── run_bulk_ingestion.py
@@ -493,19 +522,31 @@
 │   ├── sync_missing_ticket.py
 │   ├── task_014_operator_guide.sh
 │   ├── test_audit_connection.py
+│   ├── test_bridge_connectivity.py
+│   ├── test_dingtalk_card.py
 │   ├── test_docker_build.py
 │   ├── test_end_to_end.py
+│   ├── test_feature_retrieval.py
 │   ├── test_github_api.py
 │   ├── test_git_push.py
+│   ├── test_live_inference.py
 │   ├── test_market_data.py
+│   ├── test_market_feed.py
+│   ├── test_model_inference.py
 │   ├── test_multi_strategy.py
+│   ├── test_order_json.py
 │   ├── test_pipeline_integrity.py
+│   ├── test_portfolio_logic.py
 │   ├── test_purge_safety.py
+│   ├── test_reconciliation.py
+│   ├── test_remote_execution.py
+│   ├── test_risk_limits.py
 │   ├── test_strategy_adapter.py
 │   ├── test_sync_pulse.py
 │   ├── test_zmq_connection.py
 │   ├── test_zmq_heartbeat.py
 │   ├── transition_011_to_012.py
+│   ├── uat_task_034.py
 │   ├── update_notion_body.py
 │   ├── update_notion_from_git.py
 │   ├── utils
@@ -554,14 +595,18 @@
 │   │   ├── __init__.py
 │   │   └── trading_bot.py
 │   ├── client
+│   │   ├── json_trade_client.py
 │   │   └── mt5_connector.py
+│   ├── config.py
 │   ├── connection
 │   │   ├── circuit_breaker.py
 │   │   ├── __init__.py
 │   │   └── mt5_bridge.py
 │   ├── dashboard
 │   │   ├── app.py
-│   │   └── __init__.py
+│   │   ├── auth_config.yaml
+│   │   ├── __init__.py
+│   │   └── notifier.py
 │   ├── data
 │   │   ├── __init__.py
 │   │   └── multi_timeframe.py
@@ -601,14 +646,22 @@
 │   │   ├── ingest_stream.py
 │   │   ├── __init__.py
 │   │   └── labeling.py
+│   ├── features
+│   │   ├── engineering.py
+│   │   └── __init__.py
 │   ├── feature_store
 │   │   ├── data
 │   │   ├── definitions.py
+│   │   ├── features
 │   │   ├── feature_store.yaml
 │   │   ├── init_feature_store.py
-│   │   └── README.md
+│   │   ├── README.md
+│   │   └── registry.db
 │   ├── gateway
+│   │   ├── ingest_stream.py
 │   │   ├── __init__.py
+│   │   ├── json_gateway.py
+│   │   ├── market_data_feed.py
 │   │   ├── market_data.py
 │   │   ├── mt5_client.py
 │   │   ├── mt5_service.py
@@ -618,10 +671,14 @@
 │   │   ├── __init__.py
 │   │   ├── runner.py
 │   │   └── strategy_instance.py
+│   ├── main_paper_trading.py
 │   ├── main.py
 │   ├── market_data
 │   │   ├── __init__.py
 │   │   └── price_fetcher.py
+│   ├── model
+│   │   ├── predict.py
+│   │   └── train.py
 │   ├── model_factory
 │   │   ├── baseline_trainer.py
 │   │   ├── data_loader.py
@@ -667,6 +724,10 @@
 │   │   ├── log_parser.py
 │   │   ├── tearsheet.py
 │   │   └── trial_recorder.py
+│   ├── risk
+│   │   ├── __init__.py
+│   │   ├── kill_switch.py
+│   │   └── monitor.py
 │   ├── sentiment_service
 │   │   ├── finbert_analyzer.py
 │   │   ├── __init__.py
@@ -683,11 +744,14 @@
 │   │   ├── risk_manager.py
 │   │   └── signal_generator_consumer.py
 │   ├── strategy
+│   │   ├── engine.py
 │   │   ├── hierarchical_signals.py
 │   │   ├── indicators.py
 │   │   ├── __init__.py
 │   │   ├── live_adapter.py
 │   │   ├── ml_strategy.py
+│   │   ├── portfolio.py
+│   │   ├── reconciler.py
 │   │   ├── risk_manager.py
 │   │   ├── session_risk_manager.py
 │   │   └── signal_engine.py
@@ -712,6 +776,7 @@
 ├── TASK_034_STATUS.md
 ├── TASK_036_COMPLETION_STATUS.md
 ├── TASK_038_COMPLETION_STATUS.md
+├── TASK_039_FINAL_AUDIT_REPORT.md
 ├── test_gtw_link.py
 ├── tests
 │   ├── conftest.py
@@ -725,6 +790,7 @@
 │   ├── test_async_nexus_basic.py
 │   ├── test_async_nexus.py
 │   ├── test_feature_consistency.py
+│   ├── test_feature_engineering.py
 │   ├── test_hierarchical_signals.py
 │   ├── test_incremental_features.py
 │   ├── test_kelly_fix.py
@@ -823,8 +889,9 @@
 │   └── share
 │       ├── jupyter
 │       └── man
+├── VERIFY_LOG.log
 ├── WORKSPACE_CLEANUP_COMPLETE.md
 └── workspace_cleanup.sh
 
-127 directories, 696 files
+135 directories, 755 files
 ```
