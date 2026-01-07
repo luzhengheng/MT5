@@ -1,0 +1,803 @@
+[
+  {
+    "id": "2d2c8858-2b4e-8109-9986-c920bcb5ec29",
+    "title": "feat: 工单 #009 完成 - 对冲基金级机器学习预测引擎 (v2.0)",
+    "status": "完成",
+    "url": "https://www.notion.so/feat-009-v2-0-2d2c88582b4e81099986c920bcb5ec29",
+    "created_time": "2025-12-23T08:30:00.000Z",
+    "last_edited_time": "2025-12-30T18:23:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_feat_工单_#009_完成_-_对冲基金级机器学习预测引擎_v20.md"
+  },
+  {
+    "id": "2d2c8858-2b4e-810b-a27f-c5e92d61c243",
+    "title": "docs: å·¥å #005 å®ææ¥å - CI/CD ä¿®å¤ + åæ¯åå¹¶å°±ç»ª",
+    "status": "完成",
+    "url": "https://www.notion.so/docs-005-CI-CD-2d2c88582b4e810ba27fc5e92d61c243",
+    "created_time": "2025-12-23T08:30:00.000Z",
+    "last_edited_time": "2025-12-30T18:22:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_docs_åå_#005_åææå_-_CICD_äå__åæåå¹åçª.md"
+  },
+  {
+    "id": "2d2c8858-2b4e-8115-b289-e6971b892a74",
+    "title": "docs(export): generate project context snapshot for Ticket #011 MT5 integration review",
+    "status": "进行中",
+    "url": "https://www.notion.so/docs-export-generate-project-context-snapshot-for-Ticket-011-MT5-integration-review-2d2c88582b4e8115b289e6971b892a74",
+    "created_time": "2025-12-23T08:30:00.000Z",
+    "last_edited_time": "2026-01-01T19:49:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/进行中_docsexport_generate_project_context_snapshot_for_Ticket_#011_MT5_integration_review.md"
+  },
+  {
+    "id": "2d2c8858-2b4e-811d-a2ec-d196163453e3",
+    "title": "feat: 工单 #007 完成 - FinBERT 模型部署 (100%)",
+    "status": "完成",
+    "url": "https://www.notion.so/feat-007-FinBERT-100-2d2c88582b4e811da2ecd196163453e3",
+    "created_time": "2025-12-23T08:30:00.000Z",
+    "last_edited_time": "2025-12-30T18:22:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_feat_工单_#007_完成_-_FinBERT_模型部署_100.md"
+  },
+  {
+    "id": "2d2c8858-2b4e-8128-8686-e70a9601fa77",
+    "title": "chore: 工单 #002 完成报告 - 上下文延续系统已就绪",
+    "status": "完成",
+    "url": "https://www.notion.so/chore-002-2d2c88582b4e81288686e70a9601fa77",
+    "created_time": "2025-12-23T08:27:00.000Z",
+    "last_edited_time": "2025-12-30T18:22:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_chore_工单_#002_完成报告_-_上下文延续系统已就绪.md"
+  },
+  {
+    "id": "2d2c8858-2b4e-8129-a0f7-dae56a44859c",
+    "title": "#001 - Project Environment & Docker Infrastructure",
+    "status": "进行中",
+    "url": "https://www.notion.so/001-Project-Environment-Docker-Infrastructure-2d2c88582b4e8129a0f7dae56a44859c",
+    "created_time": "2025-12-23T08:25:00.000Z",
+    "last_edited_time": "2026-01-02T18:10:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/进行中_#001_-_Project_Environment__Docker_Infrastructure.md"
+  },
+  {
+    "id": "2d2c8858-2b4e-8169-9c9c-cfc656c64365",
+    "title": "feat(notion): 工单 #013 完成 - Notion 工作区全面重置 (中文标准)",
+    "status": "完成",
+    "url": "https://www.notion.so/feat-notion-013-Notion-2d2c88582b4e81699c9ccfc656c64365",
+    "created_time": "2025-12-23T08:30:00.000Z",
+    "last_edited_time": "2025-12-30T18:23:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_featnotion_工单_#013_完成_-_Notion_工作区全面重置_中文标准.md"
+  },
+  {
+    "id": "2d2c8858-2b4e-8180-8a63-e19560817b1c",
+    "title": "#002 MT5 数据采集模块原型 (历史数据 + 实时行情)",
+    "status": "完成",
+    "url": "https://www.notion.so/002-MT5-2d2c88582b4e81808a63e19560817b1c",
+    "created_time": "2025-12-23T08:30:00.000Z",
+    "last_edited_time": "2025-12-23T08:30:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_#002_MT5_数据采集模块原型_历史数据__实时行情.md"
+  },
+  {
+    "id": "2d2c8858-2b4e-818b-893f-ed1a1c8b16c0",
+    "title": "chore(docs): standardize protocol v2 filename and update audit script for task #015",
+    "status": "完成",
+    "url": "https://www.notion.so/chore-docs-standardize-protocol-v2-filename-and-update-audit-script-for-task-015-2d2c88582b4e818b893fed1a1c8b16c0",
+    "created_time": "2025-12-23T18:13:00.000Z",
+    "last_edited_time": "2025-12-30T18:23:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_choredocs_standardize_protocol_v2_filename_and_update_audit_script_for_task_#015.md"
+  },
+  {
+    "id": "2d2c8858-2b4e-818f-a9f5-cd0ddfe8d1cf",
+    "title": "#012 - Risk Management & Circuit Breakers",
+    "status": "进行中",
+    "url": "https://www.notion.so/012-Risk-Management-Circuit-Breakers-2d2c88582b4e818fa9f5cd0ddfe8d1cf",
+    "created_time": "2025-12-23T08:30:00.000Z",
+    "last_edited_time": "2026-01-01T22:47:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/进行中_#012_-_Risk_Management__Circuit_Breakers.md"
+  },
+  {
+    "id": "2d2c8858-2b4e-8192-99ea-e023a61bd113",
+    "title": "docs: 工单#004 完成报告 - 监控告警系统全面部署完成",
+    "status": "完成",
+    "url": "https://www.notion.so/docs-004-2d2c88582b4e819299eae023a61bd113",
+    "created_time": "2025-12-23T08:30:00.000Z",
+    "last_edited_time": "2025-12-30T18:22:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_docs_工单#004_完成报告_-_监控告警系统全面部署完成.md"
+  },
+  {
+    "id": "2d2c8858-2b4e-8194-a0d4-cc0711082299",
+    "title": "docs: 更新 Gemini 协同文档 - 同步工单 #010 完成状态",
+    "status": "完成",
+    "url": "https://www.notion.so/docs-Gemini-010-2d2c88582b4e8194a0d4cc0711082299",
+    "created_time": "2025-12-23T08:30:00.000Z",
+    "last_edited_time": "2025-12-30T18:23:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_docs_更新_Gemini_协同文档_-_同步工单_#010_完成状态.md"
+  },
+  {
+    "id": "2d2c8858-2b4e-8196-9c57-d30a666154b5",
+    "title": "feat: 完成工单 #003 - 统一 MT5 工作目录并解决路径混乱问题",
+    "status": "完成",
+    "url": "https://www.notion.so/feat-003-MT5-2d2c88582b4e81969c57d30a666154b5",
+    "created_time": "2025-12-23T08:27:00.000Z",
+    "last_edited_time": "2025-12-30T18:22:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_feat_完成工单_#003_-_统一_MT5_工作目录并解决路径混乱问题.md"
+  },
+  {
+    "id": "2d2c8858-2b4e-81b7-b1ef-e0cb84a188b4",
+    "title": "#003 TimescaleDB 架构设计与部署 (时序数据库)",
+    "status": "完成",
+    "url": "https://www.notion.so/003-TimescaleDB-2d2c88582b4e81b7b1efe0cb84a188b4",
+    "created_time": "2025-12-23T08:27:00.000Z",
+    "last_edited_time": "2025-12-23T08:27:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_#003_TimescaleDB_架构设计与部署_时序数据库.md"
+  },
+  {
+    "id": "2d2c8858-2b4e-81cd-8412-c009e2701b71",
+    "title": "#002 MT5 数据采集模块原型 (历史数据 + 实时行情)",
+    "status": "完成",
+    "url": "https://www.notion.so/002-MT5-2d2c88582b4e81cd8412c009e2701b71",
+    "created_time": "2025-12-23T08:27:00.000Z",
+    "last_edited_time": "2025-12-23T08:27:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_#002_MT5_数据采集模块原型_历史数据__实时行情.md"
+  },
+  {
+    "id": "2d2c8858-2b4e-81d5-81da-d365c97f1f2a",
+    "title": "#003 TimescaleDB 架构设计与部署 (时序数据库)",
+    "status": "完成",
+    "url": "https://www.notion.so/003-TimescaleDB-2d2c88582b4e81d581dad365c97f1f2a",
+    "created_time": "2025-12-23T08:30:00.000Z",
+    "last_edited_time": "2025-12-23T08:30:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_#003_TimescaleDB_架构设计与部署_时序数据库.md"
+  },
+  {
+    "id": "2d2c8858-2b4e-81d9-bcb7-d3f0e3d63980",
+    "title": "feat(notion): add script to populate Ticket #014 page content",
+    "status": "完成",
+    "url": "https://www.notion.so/feat-notion-add-script-to-populate-Ticket-014-page-content-2d2c88582b4e81d9bcb7d3f0e3d63980",
+    "created_time": "2025-12-23T16:51:00.000Z",
+    "last_edited_time": "2025-12-30T18:23:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_featnotion_add_script_to_populate_Ticket_#014_page_content.md"
+  },
+  {
+    "id": "2d2c8858-2b4e-81df-b0c5-cfd761d6b737",
+    "title": "docs: 更新 AI 协同报告 - 工单 #006 进展",
+    "status": "完成",
+    "url": "https://www.notion.so/docs-AI-006-2d2c88582b4e81dfb0c5cfd761d6b737",
+    "created_time": "2025-12-23T08:30:00.000Z",
+    "last_edited_time": "2025-12-30T18:22:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_docs_更新_AI_协同报告_-_工单_#006_进展.md"
+  },
+  {
+    "id": "2d2c8858-2b4e-81e2-98b4-cfd6a9e542a7",
+    "title": "feat: 工单 #008 完成 - MT5-CRS 数据管线与特征工程平台 (100%)",
+    "status": "完成",
+    "url": "https://www.notion.so/feat-008-MT5-CRS-100-2d2c88582b4e81e298b4cfd6a9e542a7",
+    "created_time": "2025-12-23T08:30:00.000Z",
+    "last_edited_time": "2025-12-30T18:23:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_feat_工单_#008_完成_-_MT5-CRS_数据管线与特征工程平台_100.md"
+  },
+  {
+    "id": "2d3c8858-2b4e-8139-a7a3-f7c8693cb1a6",
+    "title": "#017 - Market Data Service (ZMQ Pub/Sub)",
+    "status": "进行中",
+    "url": "https://www.notion.so/017-Market-Data-Service-ZMQ-Pub-Sub-2d3c88582b4e8139a7a3f7c8693cb1a6",
+    "created_time": "2025-12-24T15:00:00.000Z",
+    "last_edited_time": "2026-01-02T18:10:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/进行中_#017_-_Market_Data_Service_ZMQ_PubSub.md"
+  },
+  {
+    "id": "2d3c8858-2b4e-81ba-8be8-c810d0eec363",
+    "title": "#016 - Basic Order Execution Logic",
+    "status": "进行中",
+    "url": "https://www.notion.so/016-Basic-Order-Execution-Logic-2d3c88582b4e81ba8be8c810d0eec363",
+    "created_time": "2025-12-24T13:37:00.000Z",
+    "last_edited_time": "2026-01-02T18:28:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/进行中_#016_-_Basic_Order_Execution_Logic.md"
+  },
+  {
+    "id": "2d4c8858-2b4e-8112-b371-efb714934724",
+    "title": "feat(bot): implement Task #020 - Integrated Trading Bot Loop",
+    "status": "进行中",
+    "url": "https://www.notion.so/feat-bot-implement-Task-020-Integrated-Trading-Bot-Loop-2d4c88582b4e8112b371efb714934724",
+    "created_time": "2025-12-25T18:13:00.000Z",
+    "last_edited_time": "2026-01-02T19:43:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/进行中_featbot_implement_Task_#020_-_Integrated_Trading_Bot_Loop.md"
+  },
+  {
+    "id": "2d4c8858-2b4e-8119-b60b-d3d3926ce272",
+    "title": "test: update audit script for Task #019 and add signal verification script",
+    "status": "进行中",
+    "url": "https://www.notion.so/test-update-audit-script-for-Task-019-and-add-signal-verification-script-2d4c88582b4e8119b60bd3d3926ce272",
+    "created_time": "2025-12-25T17:41:00.000Z",
+    "last_edited_time": "2026-01-02T18:52:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/进行中_test_update_audit_script_for_Task_#019_and_add_signal_verification_script.md"
+  },
+  {
+    "id": "2d4c8858-2b4e-8197-b054-da708aa69807",
+    "title": "feat(main): implement Task #021 - Live Trading Runner",
+    "status": "进行中",
+    "url": "https://www.notion.so/feat-main-implement-Task-021-Live-Trading-Runner-2d4c88582b4e8197b054da708aa69807",
+    "created_time": "2025-12-25T19:18:00.000Z",
+    "last_edited_time": "2026-01-02T19:42:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/进行中_featmain_implement_Task_#021_-_Live_Trading_Runner.md"
+  },
+  {
+    "id": "2d4c8858-2b4e-81a0-9298-f05efc1c3256",
+    "title": "#018 - Technical Analysis Indicators Library",
+    "status": "进行中",
+    "url": "https://www.notion.so/018-Technical-Analysis-Indicators-Library-2d4c88582b4e81a09298f05efc1c3256",
+    "created_time": "2025-12-25T17:32:00.000Z",
+    "last_edited_time": "2026-01-02T18:38:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/进行中_#018_-_Technical_Analysis_Indicators_Library.md"
+  },
+  {
+    "id": "2d5c8858-2b4e-811e-ba83-e8ce0b98c262",
+    "title": "#022 - System Logging & Observability",
+    "status": "进行中",
+    "url": "https://www.notion.so/022-System-Logging-Observability-2d5c88582b4e811eba83e8ce0b98c262",
+    "created_time": "2025-12-26T17:38:00.000Z",
+    "last_edited_time": "2026-01-03T16:14:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/进行中_#022_-_System_Logging__Observability.md"
+  },
+  {
+    "id": "2d6c8858-2b4e-813c-a3df-d2f992a036c2",
+    "title": "feat(infra): implement Task #024 Safe Environment Purge with connectivity preservation",
+    "status": "进行中",
+    "url": "https://www.notion.so/feat-infra-implement-Task-024-Safe-Environment-Purge-with-connectivity-preservation-2d6c88582b4e813ca3dfd2f992a036c2",
+    "created_time": "2025-12-27T07:16:00.000Z",
+    "last_edited_time": "2026-01-03T19:23:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/进行中_featinfra_implement_Task_#024_Safe_Environment_Purge_with_connectivity_preservation.md"
+  },
+  {
+    "id": "2d6c8858-2b4e-815e-ae62-df7910cfc0ac",
+    "title": "feat(ml-strategy): integrate LiveStrategyAdapter into TradingBot (#025)",
+    "status": "进行中",
+    "url": "https://www.notion.so/feat-ml-strategy-integrate-LiveStrategyAdapter-into-TradingBot-025-2d6c88582b4e815eae62df7910cfc0ac",
+    "created_time": "2025-12-27T07:43:00.000Z",
+    "last_edited_time": "2026-01-04T17:00:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/进行中_featml-strategy_integrate_LiveStrategyAdapter_into_TradingBot_#025.md"
+  },
+  {
+    "id": "2d6c8858-2b4e-8170-a6ac-ef2724bfca09",
+    "title": "test(audit): update audit script for Task #023 Live Trading Strategy Integration",
+    "status": "完成",
+    "url": "https://www.notion.so/test-audit-update-audit-script-for-Task-023-Live-Trading-Strategy-Integration-2d6c88582b4e8170a6acef2724bfca09",
+    "created_time": "2025-12-27T06:14:00.000Z",
+    "last_edited_time": "2025-12-30T18:23:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_testaudit_update_audit_script_for_Task_#023_Live_Trading_Strategy_Integration.md"
+  },
+  {
+    "id": "2d6c8858-2b4e-818b-96c5-cf97df0cdec4",
+    "title": "docs: Add Work Order #026 completion report - GPU training pipeline verified",
+    "status": "进行中",
+    "url": "https://www.notion.so/docs-Add-Work-Order-026-completion-report-GPU-training-pipeline-verified-2d6c88582b4e818b96c5cf97df0cdec4",
+    "created_time": "2025-12-27T11:14:00.000Z",
+    "last_edited_time": "2026-01-01T11:10:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/进行中_docs_Add_Work_Order_#026_completion_report_-_GPU_training_pipeline_verified.md"
+  },
+  {
+    "id": "2d6c8858-2b4e-81e9-b9d1-ed98f499ba6e",
+    "title": "feat(gpu-training): Work Order #026 - Deep GPU Training Pipeline (#027)",
+    "status": "进行中",
+    "url": "https://www.notion.so/feat-gpu-training-Work-Order-026-Deep-GPU-Training-Pipeline-027-2d6c88582b4e81e9b9d1ed98f499ba6e",
+    "created_time": "2025-12-27T10:58:00.000Z",
+    "last_edited_time": "2026-01-01T07:52:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/进行中_featgpu-training_Work_Order_#026_-_Deep_GPU_Training_Pipeline_#027.md"
+  },
+  {
+    "id": "2d6c8858-2b4e-81fa-a054-ec7b8ab9c38b",
+    "title": "#023 Work Order #023 Strategy Integration",
+    "status": "完成",
+    "url": "https://www.notion.so/023-Work-Order-023-Strategy-Integration-2d6c88582b4e81faa054ec7b8ab9c38b",
+    "created_time": "2025-12-27T05:36:00.000Z",
+    "last_edited_time": "2025-12-27T05:48:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_#023_Work_Order_#023_Strategy_Integration.md"
+  },
+  {
+    "id": "2d7c8858-2b4e-8117-a152-da1b590cbde4",
+    "title": "docs: add task #032 completion report for data nexus infrastructure",
+    "status": "进行中",
+    "url": "https://www.notion.so/docs-add-task-032-completion-report-for-data-nexus-infrastructure-2d7c88582b4e8117a152da1b590cbde4",
+    "created_time": "2025-12-28T09:03:00.000Z",
+    "last_edited_time": "2026-01-05T13:41:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/进行中_docs_add_task_#032_completion_report_for_data_nexus_infrastructure.md"
+  },
+  {
+    "id": "2d7c8858-2b4e-812e-a760-ff62fe290a39",
+    "title": "docs: add implementation plan for EODHD bulk ingestion (Task #040)",
+    "status": "完成",
+    "url": "https://www.notion.so/docs-add-implementation-plan-for-EODHD-bulk-ingestion-Task-040-2d7c88582b4e812ea760ff62fe290a39",
+    "created_time": "2025-12-28T19:21:00.000Z",
+    "last_edited_time": "2025-12-30T18:24:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_docs_add_implementation_plan_for_EODHD_bulk_ingestion_Task_#040.md"
+  },
+  {
+    "id": "2d7c8858-2b4e-815d-995d-f3d85503c534",
+    "title": "#041 Task #041: Feast Feature Store Infrastructure",
+    "status": "未开始",
+    "url": "https://www.notion.so/041-Task-041-Feast-Feature-Store-Infrastructure-2d7c88582b4e815d995df3d85503c534",
+    "created_time": "2025-12-28T19:42:00.000Z",
+    "last_edited_time": "2025-12-28T19:42:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/未开始_#041_Task_#041_Feast_Feature_Store_Infrastructure.md"
+  },
+  {
+    "id": "2d7c8858-2b4e-8169-af50-ff63d3170d91",
+    "title": "#029 Task #027.5: Sync Notion State (001-027)",
+    "status": "进行中",
+    "url": "https://www.notion.so/029-Task-027-5-Sync-Notion-State-001-027-2d7c88582b4e8169af50ff63d3170d91",
+    "created_time": "2025-12-28T01:22:00.000Z",
+    "last_edited_time": "2026-01-05T06:18:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/进行中_#029_Task_#0275_Sync_Notion_State_001-027.md"
+  },
+  {
+    "id": "2d7c8858-2b4e-816a-b00e-ea1a6f34091f",
+    "title": "#039 Task #039: ML Training Pipeline",
+    "status": "进行中",
+    "url": "https://www.notion.so/039-Task-039-ML-Training-Pipeline-2d7c88582b4e816ab00eea1a6f34091f",
+    "created_time": "2025-12-28T18:58:00.000Z",
+    "last_edited_time": "2026-01-06T14:33:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/进行中_#039_Task_#039_ML_Training_Pipeline.md"
+  },
+  {
+    "id": "2d7c8858-2b4e-8173-94c3-da258416d0d4",
+    "title": "#038 Task #038: Technical Indicator Engine",
+    "status": "完成",
+    "url": "https://www.notion.so/038-Task-038-Technical-Indicator-Engine-2d7c88582b4e817394c3da258416d0d4",
+    "created_time": "2025-12-28T18:08:00.000Z",
+    "last_edited_time": "2025-12-28T18:44:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_#038_Task_#038_Technical_Indicator_Engine.md"
+  },
+  {
+    "id": "2d7c8858-2b4e-8190-acb8-ee52fd71e45a",
+    "title": "#033 Task #032.5: EODHD Data Verification & Profiling",
+    "status": "进行中",
+    "url": "https://www.notion.so/033-Task-032-5-EODHD-Data-Verification-Profiling-2d7c88582b4e8190acb8ee52fd71e45a",
+    "created_time": "2025-12-28T09:35:00.000Z",
+    "last_edited_time": "2026-01-05T13:41:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/进行中_#033_Task_#0325_EODHD_Data_Verification__Profiling.md"
+  },
+  {
+    "id": "2d7c8858-2b4e-81a5-8667-e9cbc81ab1a8",
+    "title": "docs: Task #034 final execution status - code complete, awaiting containers",
+    "status": "进行中",
+    "url": "https://www.notion.so/docs-Task-034-final-execution-status-code-complete-awaiting-containers-2d7c88582b4e81a58667e9cbc81ab1a8",
+    "created_time": "2025-12-28T10:28:00.000Z",
+    "last_edited_time": "2026-01-05T14:14:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/进行中_docs_Task_#034_final_execution_status_-_code_complete_awaiting_containers.md"
+  },
+  {
+    "id": "2d7c8858-2b4e-81b9-9e85-d3067f4382b9",
+    "title": "#036 Task #036: Real-time WebSocket Engine (EODHD Streaming)",
+    "status": "进行中",
+    "url": "https://www.notion.so/036-Task-036-Real-time-WebSocket-Engine-EODHD-Streaming-2d7c88582b4e81b99e85d3067f4382b9",
+    "created_time": "2025-12-28T17:23:00.000Z",
+    "last_edited_time": "2026-01-06T13:06:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/进行中_#036_Task_#036_Real-time_WebSocket_Engine_EODHD_Streaming.md"
+  },
+  {
+    "id": "2d7c8858-2b4e-81bd-8b85-c9edea4fdf1b",
+    "title": "docs: Add Task #030 completion report",
+    "status": "完成",
+    "url": "https://www.notion.so/docs-Add-Task-030-completion-report-2d7c88582b4e81bd8b85c9edea4fdf1b",
+    "created_time": "2025-12-28T03:09:00.000Z",
+    "last_edited_time": "2025-12-30T18:23:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_docs_Add_Task_#030_completion_report.md"
+  },
+  {
+    "id": "2d7c8858-2b4e-81c5-89bd-f6a1985a31a3",
+    "title": "feat(task-040-9): Complete Legacy Environment Reset - Task #040.9",
+    "status": "完成",
+    "url": "https://www.notion.so/feat-task-040-9-Complete-Legacy-Environment-Reset-Task-040-9-2d7c88582b4e81c589bdf6a1985a31a3",
+    "created_time": "2025-12-28T20:27:00.000Z",
+    "last_edited_time": "2025-12-30T18:24:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_feattask-040-9_Complete_Legacy_Environment_Reset_-_Task_#0409.md"
+  },
+  {
+    "id": "2d7c8858-2b4e-81e8-a353-e510c0b6d791",
+    "title": "#030 Task #027.9: History Healing",
+    "status": "完成",
+    "url": "https://www.notion.so/030-Task-027-9-History-Healing-2d7c88582b4e81e8a353e510c0b6d791",
+    "created_time": "2025-12-28T02:13:00.000Z",
+    "last_edited_time": "2025-12-28T05:38:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_#030_Task_#0279_History_Healing.md"
+  },
+  {
+    "id": "2d7c8858-2b4e-81e9-ac6f-d4753c8b34a7",
+    "title": "chore(admin): implement notion state synchronization and cleanup report for task #037",
+    "status": "完成",
+    "url": "https://www.notion.so/chore-admin-implement-notion-state-synchronization-and-cleanup-report-for-task-037-2d7c88582b4e81e9ac6fd4753c8b34a7",
+    "created_time": "2025-12-28T17:49:00.000Z",
+    "last_edited_time": "2025-12-30T18:23:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_choreadmin_implement_notion_state_synchronization_and_cleanup_report_for_task_#037.md"
+  },
+  {
+    "id": "2d8c8858-2b4e-8162-8d18-d1a21410319d",
+    "title": "#043 Task #040.9: Infrastructure Integrity & Identity Check",
+    "status": "未开始",
+    "url": "https://www.notion.so/043-Task-040-9-Infrastructure-Integrity-Identity-Check-2d8c88582b4e81628d18d1a21410319d",
+    "created_time": "2025-12-29T01:57:00.000Z",
+    "last_edited_time": "2025-12-29T01:57:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/未开始_#043_Task_#0409_Infrastructure_Integrity__Identity_Check.md"
+  },
+  {
+    "id": "2d8c8858-2b4e-817d-93a2-d6a50714e3df",
+    "title": "#044 Task #040.9: Infra Standardization",
+    "status": "未开始",
+    "url": "https://www.notion.so/044-Task-040-9-Infra-Standardization-2d8c88582b4e817d93a2d6a50714e3df",
+    "created_time": "2025-12-29T05:13:00.000Z",
+    "last_edited_time": "2025-12-29T05:13:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/未开始_#044_Task_#0409_Infra_Standardization.md"
+  },
+  {
+    "id": "2d8c8858-2b4e-817e-91ed-d3a1d0a46205",
+    "title": "#045 Task #040.9: Env Reset",
+    "status": "未开始",
+    "url": "https://www.notion.so/045-Task-040-9-Env-Reset-2d8c88582b4e817e91edd3a1d0a46205",
+    "created_time": "2025-12-29T05:27:00.000Z",
+    "last_edited_time": "2025-12-29T05:27:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/未开始_#045_Task_#0409_Env_Reset.md"
+  },
+  {
+    "id": "2d8c8858-2b4e-817f-9847-e8d049da6ff7",
+    "title": "docs: Task #042 Series complete - System recovery summary",
+    "status": "进行中",
+    "url": "https://www.notion.so/docs-Task-042-Series-complete-System-recovery-summary-2d8c88582b4e817f9847e8d049da6ff7",
+    "created_time": "2025-12-29T17:31:00.000Z",
+    "last_edited_time": "2025-12-31T19:23:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/进行中_docs_Task_#042_Series_complete_-_System_recovery_summary.md"
+  },
+  {
+    "id": "2d9c8858-2b4e-810a-813f-cb2f5cbfb422",
+    "title": "#058 Task #011.17: Universal 4-Node SSH Mesh Setup",
+    "status": "未开始",
+    "url": "https://www.notion.so/058-Task-011-17-Universal-4-Node-SSH-Mesh-Setup-2d9c88582b4e810a813fcb2f5cbfb422",
+    "created_time": "2025-12-30T15:03:00.000Z",
+    "last_edited_time": "2025-12-30T15:03:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/未开始_#058_Task_#01117_Universal_4-Node_SSH_Mesh_Setup.md"
+  },
+  {
+    "id": "2d9c8858-2b4e-8122-932f-ee1a45915dbe",
+    "title": "feat(database): initialize EODHD schema on TimescaleDB #069",
+    "status": "完成",
+    "url": "https://www.notion.so/feat-database-initialize-EODHD-schema-on-TimescaleDB-069-2d9c88582b4e8122932fee1a45915dbe",
+    "created_time": "2025-12-30T19:18:00.000Z",
+    "last_edited_time": "2025-12-31T18:41:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_featdatabase_initialize_EODHD_schema_on_TimescaleDB_#069.md"
+  },
+  {
+    "id": "2d9c8858-2b4e-8128-9e33-eb818f48b4c0",
+    "title": "#054 Task #011.12: Full Mesh Connectivity Verification & Sync Restoration",
+    "status": "未开始",
+    "url": "https://www.notion.so/054-Task-011-12-Full-Mesh-Connectivity-Verification-Sync-Restoration-2d9c88582b4e81289e33eb818f48b4c0",
+    "created_time": "2025-12-30T13:20:00.000Z",
+    "last_edited_time": "2025-12-30T13:20:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/未开始_#054_Task_#01112_Full_Mesh_Connectivity_Verification__Sync_Restoration.md"
+  },
+  {
+    "id": "2d9c8858-2b4e-8132-9601-fe62e8be3cdf",
+    "title": "feat(feast): migrate online store to Redis and offline to Postgres (Task #042.8)",
+    "status": "完成",
+    "url": "https://www.notion.so/feat-feast-migrate-online-store-to-Redis-and-offline-to-Postgres-Task-042-8-2d9c88582b4e81329601fe62e8be3cdf",
+    "created_time": "2025-12-30T12:15:00.000Z",
+    "last_edited_time": "2025-12-30T18:24:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_featfeast_migrate_online_store_to_Redis_and_offline_to_Postgres_Task_#0428.md"
+  },
+  {
+    "id": "2d9c8858-2b4e-8132-ad21-d19d78f3038a",
+    "title": "docs: add completion reports for tasks #040.10 (data verification) and #040.11 (toolchain fix)",
+    "status": "完成",
+    "url": "https://www.notion.so/docs-add-completion-reports-for-tasks-040-10-data-verification-and-040-11-toolchain-fix-2d9c88582b4e8132ad21d19d78f3038a",
+    "created_time": "2025-12-30T05:22:00.000Z",
+    "last_edited_time": "2025-12-30T18:24:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_docs_add_completion_reports_for_tasks_#04010_data_verification_and_#04011_toolchain_fix.md"
+  },
+  {
+    "id": "2d9c8858-2b4e-8135-b6ce-d6ec483149b6",
+    "title": "chore(cleanup): 工作区深度清理与归档 - 移除一次性脚本和测试文件 #011.2",
+    "status": "完成",
+    "url": "https://www.notion.so/chore-cleanup-011-2-2d9c88582b4e8135b6ced6ec483149b6",
+    "created_time": "2025-12-30T17:00:00.000Z",
+    "last_edited_time": "2025-12-30T18:23:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_chorecleanup_工作区深度清理与归档_-_移除一次性脚本和测试文件_#0112.md"
+  },
+  {
+    "id": "2d9c8858-2b4e-8138-8022-d7218de51107",
+    "title": "#062 Task #011.22: Fix Windows SSH Key Permissions & Path",
+    "status": "未开始",
+    "url": "https://www.notion.so/062-Task-011-22-Fix-Windows-SSH-Key-Permissions-Path-2d9c88582b4e81388022d7218de51107",
+    "created_time": "2025-12-30T16:24:00.000Z",
+    "last_edited_time": "2025-12-30T16:24:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/未开始_#062_Task_#01122_Fix_Windows_SSH_Key_Permissions__Path.md"
+  },
+  {
+    "id": "2d9c8858-2b4e-8158-a952-f6ca754f2a24",
+    "title": "#050 Task #040.14: Data DNA Test",
+    "status": "未开始",
+    "url": "https://www.notion.so/050-Task-040-14-Data-DNA-Test-2d9c88582b4e8158a952f6ca754f2a24",
+    "created_time": "2025-12-30T06:37:00.000Z",
+    "last_edited_time": "2025-12-30T06:37:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/未开始_#050_Task_#04014_Data_DNA_Test.md"
+  },
+  {
+    "id": "2d9c8858-2b4e-8165-ba85-d209bd890ea9",
+    "title": "#057 Task #011.15: Final Acceptance & Sync Activation",
+    "status": "未开始",
+    "url": "https://www.notion.so/057-Task-011-15-Final-Acceptance-Sync-Activation-2d9c88582b4e8165ba85d209bd890ea9",
+    "created_time": "2025-12-30T14:47:00.000Z",
+    "last_edited_time": "2025-12-30T14:47:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/未开始_#057_Task_#01115_Final_Acceptance__Sync_Activation.md"
+  },
+  {
+    "id": "2d9c8858-2b4e-8169-8284-f3b2df0efbb6",
+    "title": "#049 Task #040.13: Runtime Upgrade - Restore Python 3.9",
+    "status": "未开始",
+    "url": "https://www.notion.so/049-Task-040-13-Runtime-Upgrade-Restore-Python-3-9-2d9c88582b4e81698284f3b2df0efbb6",
+    "created_time": "2025-12-30T05:39:00.000Z",
+    "last_edited_time": "2025-12-30T05:39:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/未开始_#049_Task_#04013_Runtime_Upgrade_-_Restore_Python_39.md"
+  },
+  {
+    "id": "2d9c8858-2b4e-816b-a101-e25a892f0f02",
+    "title": "fix(notion): correct schema mapping - title field name #066",
+    "status": "完成",
+    "url": "https://www.notion.so/fix-notion-correct-schema-mapping-title-field-name-066-2d9c88582b4e816ba101e25a892f0f02",
+    "created_time": "2025-12-30T17:37:00.000Z",
+    "last_edited_time": "2025-12-30T18:24:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_fixnotion_correct_schema_mapping_-_title_field_name_#066.md"
+  },
+  {
+    "id": "2d9c8858-2b4e-8170-a8a2-d171d4734743",
+    "title": "#056 Task #011.14: Final Full Mesh Connectivity Verification",
+    "status": "未开始",
+    "url": "https://www.notion.so/056-Task-011-14-Final-Full-Mesh-Connectivity-Verification-2d9c88582b4e8170a8a2d171d4734743",
+    "created_time": "2025-12-30T14:35:00.000Z",
+    "last_edited_time": "2025-12-30T14:35:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/未开始_#056_Task_#01114_Final_Full_Mesh_Connectivity_Verification.md"
+  },
+  {
+    "id": "2d9c8858-2b4e-8182-b2f6-e4b5e854b7d9",
+    "title": "feat(market-data): verify ZMQ subscription infrastructure #068",
+    "status": "完成",
+    "url": "https://www.notion.so/feat-market-data-verify-ZMQ-subscription-infrastructure-068-2d9c88582b4e8182b2f6e4b5e854b7d9",
+    "created_time": "2025-12-30T18:45:00.000Z",
+    "last_edited_time": "2025-12-31T18:41:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_featmarket-data_verify_ZMQ_subscription_infrastructure_#068.md"
+  },
+  {
+    "id": "2d9c8858-2b4e-8189-ae1c-ccbe54ac39cb",
+    "title": "chore(#055): verify sync operational after secret cleanup",
+    "status": "完成",
+    "url": "https://www.notion.so/chore-055-verify-sync-operational-after-secret-cleanup-2d9c88582b4e8189ae1cccbe54ac39cb",
+    "created_time": "2025-12-30T13:36:00.000Z",
+    "last_edited_time": "2025-12-30T18:24:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_chore#055_verify_sync_operational_after_secret_cleanup.md"
+  },
+  {
+    "id": "2d9c8858-2b4e-8193-9d24-f34b33a53219",
+    "title": "#060 Task #011.20: Finalize SSH Mesh - Connect to Windows",
+    "status": "进行中",
+    "url": "https://www.notion.so/060-Task-011-20-Finalize-SSH-Mesh-Connect-to-Windows-2d9c88582b4e81939d24f34b33a53219",
+    "created_time": "2025-12-30T15:37:00.000Z",
+    "last_edited_time": "2026-01-07T15:19:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/进行中_#060_Task_#01120_Finalize_SSH_Mesh_-_Connect_to_Windows.md"
+  },
+  {
+    "id": "2d9c8858-2b4e-8194-a659-f7130c3cd906",
+    "title": "feat(ingestion): EODHD bulk data ingestion pipeline #070",
+    "status": "完成",
+    "url": "https://www.notion.so/feat-ingestion-EODHD-bulk-data-ingestion-pipeline-070-2d9c88582b4e8194a659f7130c3cd906",
+    "created_time": "2025-12-30T23:41:00.000Z",
+    "last_edited_time": "2025-12-31T18:41:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_featingestion_EODHD_bulk_data_ingestion_pipeline_#070.md"
+  },
+  {
+    "id": "2d9c8858-2b4e-81ae-a28b-d24aa84808df",
+    "title": "#061 Task #011.21: Fix Syntax Error in GTW Setup Script",
+    "status": "完成",
+    "url": "https://www.notion.so/061-Task-011-21-Fix-Syntax-Error-in-GTW-Setup-Script-2d9c88582b4e81aea28bd24aa84808df",
+    "created_time": "2025-12-30T16:03:00.000Z",
+    "last_edited_time": "2025-12-30T16:05:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_#061_Task_#01121_Fix_Syntax_Error_in_GTW_Setup_Script.md"
+  },
+  {
+    "id": "2d9c8858-2b4e-81b6-a3bf-f704df0a873c",
+    "title": "#051 Task #040.15: API Token Renewal & Final Provenance Check",
+    "status": "未开始",
+    "url": "https://www.notion.so/051-Task-040-15-API-Token-Renewal-Final-Provenance-Check-2d9c88582b4e81b6a3bff704df0a873c",
+    "created_time": "2025-12-30T07:02:00.000Z",
+    "last_edited_time": "2025-12-30T07:02:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/未开始_#051_Task_#04015_API_Token_Renewal__Final_Provenance_Check.md"
+  },
+  {
+    "id": "2d9c8858-2b4e-81ba-8cc8-c87ce9371948",
+    "title": "chore(#053): test sync - verify Git to Notion integration",
+    "status": "完成",
+    "url": "https://www.notion.so/chore-053-test-sync-verify-Git-to-Notion-integration-2d9c88582b4e81ba8cc8c87ce9371948",
+    "created_time": "2025-12-30T13:03:00.000Z",
+    "last_edited_time": "2025-12-30T18:24:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_chore#053_test_sync_-_verify_Git_to_Notion_integration.md"
+  },
+  {
+    "id": "2d9c8858-2b4e-81bc-9f94-f0ead96c7d2d",
+    "title": "#065 Task #011.25: Remote Wake-Up & ZMQ Heartbeat Check",
+    "status": "未开始",
+    "url": "https://www.notion.so/065-Task-011-25-Remote-Wake-Up-ZMQ-Heartbeat-Check-2d9c88582b4e81bc9f94f0ead96c7d2d",
+    "created_time": "2025-12-30T17:16:00.000Z",
+    "last_edited_time": "2025-12-30T17:16:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/未开始_#065_Task_#01125_Remote_Wake-Up__ZMQ_Heartbeat_Check.md"
+  },
+  {
+    "id": "2d9c8858-2b4e-81bf-8d84-df88cf448bdd",
+    "title": "feat(notion): bulk resync and repair 35+ tickets from Git history #067",
+    "status": "完成",
+    "url": "https://www.notion.so/feat-notion-bulk-resync-and-repair-35-tickets-from-Git-history-067-2d9c88582b4e81bf8d84df88cf448bdd",
+    "created_time": "2025-12-30T18:14:00.000Z",
+    "last_edited_time": "2025-12-31T18:41:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_featnotion_bulk_resync_and_repair_35_tickets_from_Git_history_#067.md"
+  },
+  {
+    "id": "2d9c8858-2b4e-81d3-90c9-f37f1862480a",
+    "title": "docs: add completion reports for tasks #040.10 (data verification) and #040.11 (toolchain fix)",
+    "status": "完成",
+    "url": "https://www.notion.so/docs-add-completion-reports-for-tasks-040-10-data-verification-and-040-11-toolchain-fix-2d9c88582b4e81d390c9f37f1862480a",
+    "created_time": "2025-12-30T05:04:00.000Z",
+    "last_edited_time": "2025-12-30T18:24:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/完成_docs_add_completion_reports_for_tasks_#04010_data_verification_and_#04011_toolchain_fix.md"
+  },
+  {
+    "id": "2d9c8858-2b4e-81dd-89fb-f64c1bd842d0",
+    "title": "#059 Task #011.19: Enable Windows OpenSSH Service",
+    "status": "未开始",
+    "url": "https://www.notion.so/059-Task-011-19-Enable-Windows-OpenSSH-Service-2d9c88582b4e81dd89fbf64c1bd842d0",
+    "created_time": "2025-12-30T15:24:00.000Z",
+    "last_edited_time": "2025-12-30T15:24:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/未开始_#059_Task_#01119_Enable_Windows_OpenSSH_Service.md"
+  },
+  {
+    "id": "2d9c8858-2b4e-81ec-bc30-dcd32caa48e7",
+    "title": "#063 Task #011.23: Fix Windows Encoding Crash (GBK/UTF-8)",
+    "status": "未开始",
+    "url": "https://www.notion.so/063-Task-011-23-Fix-Windows-Encoding-Crash-GBK-UTF-8-2d9c88582b4e81ecbc30dcd32caa48e7",
+    "created_time": "2025-12-30T16:43:00.000Z",
+    "last_edited_time": "2025-12-30T16:43:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/未开始_#063_Task_#01123_Fix_Windows_Encoding_Crash_GBKUTF-8.md"
+  },
+  {
+    "id": "2dac8858-2b4e-812d-89c7-c764bf967e23",
+    "title": "#071 Task #012.05: Full Ingestion",
+    "status": "进行中",
+    "url": "https://www.notion.so/071-Task-012-05-Full-Ingestion-2dac88582b4e812d89c7c764bf967e23",
+    "created_time": "2025-12-31T00:16:00.000Z",
+    "last_edited_time": "2025-12-31T05:21:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/进行中_#071_Task_#01205_Full_Ingestion.md"
+  },
+  {
+    "id": "2dac8858-2b4e-8144-97da-e06bb51f019a",
+    "title": "#072 Task #019.01: Signal Verification Dashboard (Streamlit)",
+    "status": "进行中",
+    "url": "https://www.notion.so/072-Task-019-01-Signal-Verification-Dashboard-Streamlit-2dac88582b4e814497dae06bb51f019a",
+    "created_time": "2025-12-31T19:30:00.000Z",
+    "last_edited_time": "2025-12-31T19:56:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/进行中_#072_Task_#01901_Signal_Verification_Dashboard_Streamlit.md"
+  },
+  {
+    "id": "2dac8858-2b4e-8161-b3ef-c4b77f6cc5e4",
+    "title": "#075 Task #022.01: Docker Deployment",
+    "status": "未开始",
+    "url": "https://www.notion.so/075-Task-022-01-Docker-Deployment-2dac88582b4e8161b3efc4b77f6cc5e4",
+    "created_time": "2025-12-31T20:17:00.000Z",
+    "last_edited_time": "2025-12-31T20:17:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/未开始_#075_Task_#02201_Docker_Deployment.md"
+  },
+  {
+    "id": "2dac8858-2b4e-816a-921b-e08e2389175b",
+    "title": "#074 Task #021.01: Multi-Strategy Orchestration Engine",
+    "status": "未开始",
+    "url": "https://www.notion.so/074-Task-021-01-Multi-Strategy-Orchestration-Engine-2dac88582b4e816a921be08e2389175b",
+    "created_time": "2025-12-31T20:06:00.000Z",
+    "last_edited_time": "2025-12-31T20:06:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/未开始_#074_Task_#02101_Multi-Strategy_Orchestration_Engine.md"
+  },
+  {
+    "id": "2dac8858-2b4e-81ba-9bf9-df11ced2eaa5",
+    "title": "#073 Task #020.01: Unified Strategy Adapter (Backtest & Live)",
+    "status": "进行中",
+    "url": "https://www.notion.so/073-Task-020-01-Unified-Strategy-Adapter-Backtest-Live-2dac88582b4e81ba9bf9df11ced2eaa5",
+    "created_time": "2025-12-31T19:47:00.000Z",
+    "last_edited_time": "2025-12-31T20:12:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/进行中_#073_Task_#02001_Unified_Strategy_Adapter_Backtest__Live.md"
+  },
+  {
+    "id": "2dbc8858-2b4e-8112-92aa-f1493da146d4",
+    "title": "#085 Task #027.03: Fix XGBoost Version Mismatch",
+    "status": "未开始",
+    "url": "https://www.notion.so/085-Task-027-03-Fix-XGBoost-Version-Mismatch-2dbc88582b4e811292aaf1493da146d4",
+    "created_time": "2026-01-01T11:05:00.000Z",
+    "last_edited_time": "2026-01-01T11:05:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/未开始_#085_Task_#02703_Fix_XGBoost_Version_Mismatch.md"
+  },
+  {
+    "id": "2dbc8858-2b4e-8131-a95f-e3540648cb7e",
+    "title": "#086 Task #012: Live Monitor & Safety",
+    "status": "未开始",
+    "url": "https://www.notion.so/086-Task-012-Live-Monitor-Safety-2dbc88582b4e8131a95fe3540648cb7e",
+    "created_time": "2026-01-01T20:32:00.000Z",
+    "last_edited_time": "2026-01-01T20:32:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/未开始_#086_Task_#012_Live_Monitor__Safety.md"
+  },
+  {
+    "id": "2dbc8858-2b4e-8180-aafa-d4ae7b60fbf2",
+    "title": "#077 Task #024.01: Environment Safe Purge Protocol",
+    "status": "进行中",
+    "url": "https://www.notion.so/077-Task-024-01-Environment-Safe-Purge-Protocol-2dbc88582b4e8180aafad4ae7b60fbf2",
+    "created_time": "2026-01-01T03:50:00.000Z",
+    "last_edited_time": "2026-01-01T04:26:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/进行中_#077_Task_#02401_Environment_Safe_Purge_Protocol.md"
+  },
+  {
+    "id": "2dbc8858-2b4e-818b-a4ad-ff62c9a62314",
+    "title": "#080 Task #026.01: Remote Training",
+    "status": "进行中",
+    "url": "https://www.notion.so/080-Task-026-01-Remote-Training-2dbc88582b4e818ba4adff62c9a62314",
+    "created_time": "2026-01-01T07:14:00.000Z",
+    "last_edited_time": "2026-01-01T09:58:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/进行中_#080_Task_#02601_Remote_Training.md"
+  },
+  {
+    "id": "2dbc8858-2b4e-818b-b60a-f9e91a642c62",
+    "title": "#084 Task #028.00: System Hallucination Investigation & Reality Restoration",
+    "status": "未开始",
+    "url": "https://www.notion.so/084-Task-028-00-System-Hallucination-Investigation-Reality-Restoration-2dbc88582b4e818bb60af9e91a642c62",
+    "created_time": "2026-01-01T10:23:00.000Z",
+    "last_edited_time": "2026-01-01T10:23:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/未开始_#084_Task_#02800_System_Hallucination_Investigation__Reality_Restoration.md"
+  },
+  {
+    "id": "2dbc8858-2b4e-8191-b88b-d5dd0e6f9a6d",
+    "title": "#083 Task #027.02: Force Model Switch & Final Validation",
+    "status": "进行中",
+    "url": "https://www.notion.so/083-Task-027-02-Force-Model-Switch-Final-Validation-2dbc88582b4e8191b88bd5dd0e6f9a6d",
+    "created_time": "2026-01-01T08:25:00.000Z",
+    "last_edited_time": "2026-01-01T09:58:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/进行中_#083_Task_#02702_Force_Model_Switch__Final_Validation.md"
+  },
+  {
+    "id": "2dbc8858-2b4e-81b9-ae64-d9ef34dd549a",
+    "title": "#082 Task #026.03: Fix Remote Environment Variables & Retry Training",
+    "status": "进行中",
+    "url": "https://www.notion.so/082-Task-026-03-Fix-Remote-Environment-Variables-Retry-Training-2dbc88582b4e81b9ae64d9ef34dd549a",
+    "created_time": "2026-01-01T08:03:00.000Z",
+    "last_edited_time": "2026-01-01T08:16:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/进行中_#082_Task_#02603_Fix_Remote_Environment_Variables__Retry_Training.md"
+  },
+  {
+    "id": "2dbc8858-2b4e-81db-9394-ca008a9a98b3",
+    "title": "#078 Task #025.01: Live Config",
+    "status": "进行中",
+    "url": "https://www.notion.so/078-Task-025-01-Live-Config-2dbc88582b4e81db9394ca008a9a98b3",
+    "created_time": "2026-01-01T04:19:00.000Z",
+    "last_edited_time": "2026-01-01T09:58:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/进行中_#078_Task_#02501_Live_Config.md"
+  },
+  {
+    "id": "2dbc8858-2b4e-81e5-8a06-dca9b1ea1c15",
+    "title": "#076 Task #023.01: Live Gateway Connectivity Probe",
+    "status": "未开始",
+    "url": "https://www.notion.so/076-Task-023-01-Live-Gateway-Connectivity-Probe-2dbc88582b4e81e58a06dca9b1ea1c15",
+    "created_time": "2026-01-01T03:37:00.000Z",
+    "last_edited_time": "2026-01-01T03:37:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/未开始_#076_Task_#02301_Live_Gateway_Connectivity_Probe.md"
+  },
+  {
+    "id": "2dbc8858-2b4e-81f3-b2f6-de8ff8aefaa1",
+    "title": "#081 Task #026.02: Manual Training Fix",
+    "status": "进行中",
+    "url": "https://www.notion.so/081-Task-026-02-Manual-Training-Fix-2dbc88582b4e81f3b2f6de8ff8aefaa1",
+    "created_time": "2026-01-01T07:46:00.000Z",
+    "last_edited_time": "2026-01-01T08:16:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/进行中_#081_Task_#02602_Manual_Training_Fix.md"
+  },
+  {
+    "id": "2dbc8858-2b4e-81fe-b20e-f49674133072",
+    "title": "#079 Task #026.00: GPU Link Setup",
+    "status": "进行中",
+    "url": "https://www.notion.so/079-Task-026-00-GPU-Link-Setup-2dbc88582b4e81feb20ef49674133072",
+    "created_time": "2026-01-01T05:47:00.000Z",
+    "last_edited_time": "2026-01-01T08:16:00.000Z",
+    "file": "docs/archive/notion_backup/20260107_234027/进行中_#079_Task_#02600_GPU_Link_Setup.md"
+  }
+]
