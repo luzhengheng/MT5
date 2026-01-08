@@ -1,0 +1,252 @@
+# Docker Compose Configuration for Phase 2 Data Infrastructure
+# TASK #065: Phase 2 Data Foundation - "Cold Path" Factory
+# Protocol: v4.3 (Zero-Trust Edition)
+#
+# Purpose: High-performance time-series database (TimescaleDB) and feature store (Feast)
+#          infrastructure for AI training and vectorized backtesting.
+#
+# Architecture:
+# - TimescaleDB: Time-series optimized PostgreSQL with hypertables
+# - Redis: Feature caching layer for Feast online store
+# - Feast: Feature store for ML feature management (to be initialized separately)
+#
+# Usage:
+#   docker-compose -f docker-compose.data.yml up -d
+#   docker-compose -f docker-compose.data.yml down
+
+version: '3.9'
+
+# ============================================================================
+# Services
+# ============================================================================
+
+services:
+
+  # ==========================================================================
+  # TimescaleDB: Time-Series Database (Cold Path Storage)
+  # ==========================================================================
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    container_name: mt5-crs-timescaledb
+
+    networks:
+      - data-net
+
+    environment:
+      # Database configuration
+      POSTGRES_USER: ${POSTGRES_USER:-trader}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme_timescale}
+      POSTGRES_DB: ${POSTGRES_DB:-mt5_data}
+
+      # TimescaleDB-specific tuning
+      TIMESCALEDB_TELEMETRY: 'off'
+
+      # Performance tuning for time-series workloads
+      # Increase shared_buffers for better caching (default: 128MB -> 512MB)
+      POSTGRES_SHARED_BUFFERS: '512MB'
+
+      # Increase work memory for complex queries (default: 4MB -> 64MB)
+      POSTGRES_WORK_MEM: '64MB'
+
+      # Increase WAL buffers for write performance
+      POSTGRES_WAL_BUFFERS: '16MB'
+
+      # Increase effective cache size hint (1/2 of available RAM)
+      POSTGRES_EFFECTIVE_CACHE_SIZE: '2GB'
+
+    volumes:
+      # Persistent data storage
+      - timescaledb_data:/var/lib/postgresql/data
+
+      # Database initialization scripts
+      - ./src/infrastructure/init_db.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+
+      # Optional: Custom PostgreSQL configuration
+      # - ./config/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+
+    ports:
+      # Expose to host for development access
+      # SECURITY NOTE: In production, remove this or use SSH tunneling
+      - "5432:5432"
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-trader} -d ${POSTGRES_DB:-mt5_data}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s  # Allow time for initialization
+
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4G
+        reservations:
+          cpus: '1.0'
+          memory: 2G
+
+    restart: unless-stopped
+
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+    labels:
+      description: "TimescaleDB for EODHD historical data storage"
+      phase: "2"
+      component: "database"
+
+  # ==========================================================================
+  # Redis: Feature Store Online Cache
+  # ==========================================================================
+  redis:
+    image: redis:7-alpine
+    container_name: mt5-crs-redis-feast
+
+    networks:
+      - data-net
+
+    environment:
+      # Redis configuration
+      REDIS_MAXMEMORY: '1gb'
+      REDIS_MAXMEMORY_POLICY: 'allkeys-lru'
+
+    volumes:
+      # Persistent storage for AOF (Append-Only File)
+      - redis_feast_data:/data
+
+    ports:
+      # Expose for Feast online store access
+      - "6379:6379"
+
+    command: >
+      redis-server
+      --appendonly yes
+      --appendfsync everysec
+      --maxmemory 1gb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+
+    restart: unless-stopped
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+    labels:
+      description: "Redis cache for Feast feature store online serving"
+      phase: "2"
+      component: "cache"
+
+  # ==========================================================================
+  # PgAdmin: Database Management UI (Optional - Development Only)
+  # ==========================================================================
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: mt5-crs-pgadmin
+
+    networks:
+      - data-net
+
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@mt5crs.local}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-changeme_pgadmin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+
+    ports:
+      - "5050:80"
+
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+
+    restart: unless-stopped
+
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "2"
+
+    labels:
+      description: "PgAdmin for TimescaleDB management (development only)"
+      phase: "2"
+      component: "admin-ui"
+
+    # SECURITY: Comment out this service in production
+    profiles:
+      - dev
+
+# ============================================================================
+# Networks
+# ============================================================================
+
+networks:
+  data-net:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.29.0.0/16
+    labels:
+      description: "Phase 2 Data Infrastructure Network"
+      phase: "2"
+
+# ============================================================================
+# Volumes
+# ============================================================================
+
+volumes:
+  timescaledb_data:
+    driver: local
+    labels:
+      description: "TimescaleDB persistent data storage"
+      phase: "2"
+      backup: "required"
+
+  redis_feast_data:
+    driver: local
+    labels:
+      description: "Redis AOF persistence for Feast features"
+      phase: "2"
+      backup: "optional"
+
+  pgadmin_data:
+    driver: local
+    labels:
+      description: "PgAdmin configuration and saved queries"
+      phase: "2"
+      backup: "optional"
