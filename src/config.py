@@ -33,6 +33,10 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 GEMINI_BASE_URL = os.getenv("GEMINI_BASE_URL", "https://api.yyds168.net/v1")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-pro-preview")
 
+# EODHD API Configuration (for bulk historical data ingestion)
+EODHD_API_TOKEN = os.getenv("EODHD_API_TOKEN", "")
+EODHD_BASE_URL = os.getenv("EODHD_BASE_URL", "https://eodhd.com/api")
+
 # ==============================================================================
 # ZMQ & Execution Gateway Configuration (CRITICAL FOR TASK #029)
 # ==============================================================================
