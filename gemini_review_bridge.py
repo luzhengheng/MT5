@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Gemini Review Bridge v3.4 (Robust Edition)
+Gemini Review Bridge v3.6 (Hybrid Force Audit Edition)
 架构目标:
 1. 穿透 Cloudflare (Titanium Shield).
 2. 精准提取 JSON 用于控制脚本流程 (Pass/Fail).
 3. 保留并展示 AI 的架构点评，供 Claude 学习改进.
 4. 🆕 双重检查机制：检测未暂存变更并强制添加.
 5. 🆕 强力编码处理：防止管道缓冲和编码错误导致的崩溃.
+6. 🆕 Hybrid Force Audit (v3.6): 当 Git 无变更时，自动进入全量审计模式，扫描关键文件.
+7. 🆕 智能配置加载 (v3.6): 优先级: src.config > settings.py > ENV.
 """
 import os
 import sys
@@ -44,17 +46,47 @@ RESET = "\033[0m"
 # --- 环境变量初始化 (必须在所有导入后立即执行) ---
 load_dotenv()  # 从 .env 文件加载环境变量
 
-# --- 配置加载和验证 ---
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-GEMINI_BASE_URL = os.getenv("GEMINI_BASE_URL", "https://api.yyds168.net/v1")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3-pro-preview")
+# --- 🆕 v3.6: 智能配置加载 (多优先级策略) ---
+GEMINI_API_KEY = None
+GEMINI_BASE_URL = "https://api.yyds168.net/v1"
+GEMINI_MODEL = "gemini-3-pro-preview"
+
+# 优先级 1: 尝试从 src.config 导入 (项目标准配置模块)
+try:
+    from src.config import GEMINI_API_KEY as K, GEMINI_BASE_URL as U, GEMINI_MODEL as M
+    GEMINI_API_KEY = K
+    GEMINI_BASE_URL = U
+    GEMINI_MODEL = M
+    print(f"{GREEN}✅ [v3.6] Loaded config from src.config{RESET}")
+except ImportError:
+    # 优先级 2: 尝试从 settings.py 导入 (根目录配置)
+    try:
+        import settings
+        GEMINI_API_KEY = settings.GEMINI_API_KEY
+        GEMINI_BASE_URL = getattr(settings, 'GEMINI_BASE_URL', GEMINI_BASE_URL)
+        GEMINI_MODEL = getattr(settings, 'GEMINI_MODEL', GEMINI_MODEL)
+        print(f"{GREEN}✅ [v3.6] Loaded config from settings.py{RESET}")
+    except ImportError:
+        # 优先级 3: 使用环境变量 (最后的退路)
+        GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
+        GEMINI_BASE_URL = os.getenv("GEMINI_BASE_URL", GEMINI_BASE_URL)
+        GEMINI_MODEL = os.getenv("GEMINI_MODEL", GEMINI_MODEL)
+        print(f"{YELLOW}⚠️  [v3.6] Loaded config from Environment Variables{RESET}")
+
+# --- 🆕 v3.6: 强制审计目标文件列表 (Hybrid Mode) ---
+FORCE_AUDIT_TARGETS = [
+    "docker-compose.data.yml",
+    "src/infrastructure/init_db.py",
+    "src/infrastructure/init_db.sql",
+    "src/config.py"
+]
 
 # --- 启动时的配置验证 ---
 def _verify_config():
     """验证关键配置是否已加载"""
     if not GEMINI_API_KEY:
-        print(f"{RED}[FATAL] GEMINI_API_KEY 未设置{RESET}")
-        print(f"{YELLOW}请检查 .env 文件或环境变量{RESET}")
+        print(f"{RED}🔴 [FATAL] GEMINI_API_KEY 未设置{RESET}")
+        print(f"{YELLOW}请检查 src.config, settings.py 或环境变量{RESET}")
         sys.exit(1)
 
     print(f"{GREEN}[INFO] 配置验证通过:{RESET}")
@@ -62,6 +94,17 @@ def _verify_config():
     print(f"  ✅ Base URL: {GEMINI_BASE_URL}")
     print(f"  ✅ Model: {GEMINI_MODEL}")
     print()
+
+def read_file_content(filepath):
+    """🆕 v3.6: 读取指定文件内容 (用于强制审计模式)"""
+    if os.path.exists(filepath):
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                return f.read()
+        except Exception as e:
+            log(f"无法读取文件 {filepath}: {e}", "WARN")
+            return None
+    return None
 
 def log(msg, level="INFO"):
     timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -156,19 +199,44 @@ def phase_local_audit():
         return False
 
 # ==============================================================================
-# 🧠 Phase 2: 外部 AI 深度审查 (核心逻辑)
+# 🧠 Phase 2: 外部 AI 深度审查 (核心逻辑 + v3.6 Hybrid Mode)
 # ==============================================================================
-def external_ai_review(diff_content, session_id):
+def external_ai_review(diff_content, session_id, audit_mode="INCREMENTAL"):
+    """
+    🆕 v3.6: 支持 Hybrid Force Audit
+    - audit_mode="INCREMENTAL": Git 变更审计 (增量模式)
+    - audit_mode="FORCE_FULL": 全量文件扫描 (强制模式)
+    """
     if not CURL_AVAILABLE or not GEMINI_API_KEY:
         log("跳过 AI 审查 (缺少配置或依赖)", "WARN")
         return None, session_id
 
-    log("启动 curl_cffi 引擎，请求架构师审查...", "PHASE")
+    log(f"启动 curl_cffi 引擎，请求架构师审查... (模式: {audit_mode})", "PHASE")
 
-    # Prompt: 明确要求 JSON 在前，评论在后
+    # Prompt: 根据模式调整审查重点
+    if audit_mode == "FORCE_FULL":
+        audit_context = f"""
+        你是一位严厉的 DevOps Security Auditor。
+        当前环境: Git 工作区干净，无代码变更。
+        审查模式: 强制全量扫描 (Force Audit Mode)
+        审查对象: Task #065 Phase 2 Data Infrastructure 的关键配置文件。
+
+        请审查以下基础设施代码:
+        {diff_content[:40000]}
+
+        **审查重点 (Protocol v4.3 Compliance)**:
+        1. Hardcoded Secrets (Critical) - 严禁硬编码密码、API Key
+        2. Docker/Database Best Practices - 端口暴露、数据卷配置
+        3. Logic Flaws & Error Handling - SQL 注入风险、异常处理
+        """
+    else:
+        audit_context = f"""
+        你是一位严厉的 Python 架构师。请审查以下 Git Diff:
+        {diff_content[:40000]}
+        """
+
     prompt = f"""
-    你是一位严厉的 Python 架构师。请审查以下 Git Diff:
-    {diff_content[:40000]}
+    {audit_context}
 
     **输出格式要求 (严格遵守)**:
     1. 第一部分：必须是一个标准的 JSON 对象。
@@ -265,14 +333,14 @@ def external_ai_review(diff_content, session_id):
         return "FATAL_ERROR", session_id
 
 # ==============================================================================
-# 🚀 主流程 (v3.4 Robust Edition)
+# 🚀 主流程 (v3.6 Hybrid Force Audit Edition)
 # ==============================================================================
 def main():
     # 🆕 v3.5: Anti-Hallucination Proof of Execution (PoE) Mechanism
     session_id = str(uuid.uuid4())
     session_start_time = datetime.datetime.now().isoformat()
 
-    print(f"{CYAN}🛡️ Gemini Review Bridge v3.5 (Anti-Hallucination Edition){RESET}")
+    print(f"{CYAN}🛡️ Gemini Review Bridge v3.6 (Hybrid Force Audit Edition){RESET}")
     print(f"{CYAN}⚡ [PROOF] AUDIT SESSION ID: {session_id}{RESET}")
     print(f"{CYAN}⚡ [PROOF] SESSION START: {session_start_time}{RESET}")
     print()
@@ -280,59 +348,91 @@ def main():
     # 🆕 v3.4: 启动时验证关键配置
     _verify_config()
 
-    # 🆕 v3.4: 双重检查机制 (Double Check Logic)
+    # 🆕 v3.6: Hybrid Mode - 智能决策审计策略
     print(f"{BLUE}🐛 [DEBUG] 开始检查 Git 状态...{RESET}")
 
     # Check 1: 检查是否有未暂存的变更
     rc1, raw_status, _ = run_cmd("git status --porcelain")
 
+    audit_mode = "INCREMENTAL"
+    diff_content = ""
+
     if not raw_status:
-        log("工作区干净，无代码变更。", "WARN")
-        sys.exit(0)
+        # 🆕 v3.6: 工作区干净 -> 切换到强制全量审计模式
+        print(f"{YELLOW}⚡ No git changes detected.{RESET}")
+        print(f"{YELLOW}⚡ Switching to FORCE AUDIT MODE (Full Scan).{RESET}")
+        print()
 
-    print(f"{BLUE}🐛 [DEBUG] 检测到以下文件变更:{RESET}")
-    for line in raw_status.splitlines():
-        print(f"{BLUE}    {line}{RESET}")
+        audit_mode = "FORCE_FULL"
+        found_count = 0
 
-    # Check 2: 执行强制暂存
-    print(f"{BLUE}🐛 [DEBUG] 执行 Git 暂存 (git add -A)...{RESET}")
-    run_cmd("git add -A")
+        for fpath in FORCE_AUDIT_TARGETS:
+            content = read_file_content(fpath)
+            if content:
+                found_count += 1
+                print(f"{GREEN}  ✅ Loaded: {fpath} ({len(content)} chars){RESET}")
+                diff_content += f"\n--- FILE: {fpath} ---\n{content}\n"
+            else:
+                print(f"{YELLOW}  ⚠️  Not found: {fpath}{RESET}")
 
-    # Check 3: 验证暂存区是否有文件
-    rc2, staged_files, _ = run_cmd("git diff --cached --name-only")
+        print()
 
-    if not staged_files:
-        log("异常：git status 显示有变更，但暂存区为空", "ERROR")
-        log("这可能是 Git 索引损坏，请运行: git reset && git status", "ERROR")
-        sys.exit(1)
+        if found_count == 0:
+            log("🔴 No target files found for force audit.", "ERROR")
+            sys.exit(1)
 
-    print(f"{BLUE}🐛 [DEBUG] 已暂存 {len(staged_files.splitlines())} 个文件{RESET}")
+        log(f"✅ Force Audit Mode activated. Scanning {found_count} files.", "INFO")
 
-    # 获取 diff 内容
-    _, diff, _ = run_cmd("git diff --cached")
+    else:
+        # 🆕 v3.6: 有 Git 变更 -> 正常增量审计模式
+        audit_mode = "INCREMENTAL"
 
-    if not diff:
-        log("工作区干净，无代码变更。", "WARN")
-        sys.exit(0)
+        print(f"{BLUE}🐛 [DEBUG] 检测到以下文件变更:{RESET}")
+        for line in raw_status.splitlines():
+            print(f"{BLUE}    {line}{RESET}")
 
-    print(f"{GREEN}✅ [INFO] 检测到以下文件变更...{RESET}")
-    for line in staged_files.splitlines():
-        print(f"{GREEN}    + {line}{RESET}")
-    print()
+        # Check 2: 执行强制暂存
+        print(f"{BLUE}🐛 [DEBUG] 执行 Git 暂存 (git add -A)...{RESET}")
+        run_cmd("git add -A")
 
-    # 1. 本地审计 (Claude 自测)
-    if not phase_local_audit():
-        sys.exit(1)
+        # Check 3: 验证暂存区是否有文件
+        rc2, staged_files, _ = run_cmd("git diff --cached --name-only")
+
+        if not staged_files:
+            log("异常：git status 显示有变更，但暂存区为空", "ERROR")
+            log("这可能是 Git 索引损坏，请运行: git reset && git status", "ERROR")
+            sys.exit(1)
+
+        print(f"{BLUE}🐛 [DEBUG] 已暂存 {len(staged_files.splitlines())} 个文件{RESET}")
+
+        # 获取 diff 内容
+        _, diff_content, _ = run_cmd("git diff --cached")
+
+        if not diff_content:
+            log("工作区干净，无代码变更。", "WARN")
+            sys.exit(0)
+
+        print(f"{GREEN}✅ [INFO] 检测到以下文件变更...{RESET}")
+        for line in staged_files.splitlines():
+            print(f"{GREEN}    + {line}{RESET}")
+        print()
+
+    # 1. 本地审计 (Claude 自测) - 仅在 INCREMENTAL 模式下执行
+    if audit_mode == "INCREMENTAL":
+        if not phase_local_audit():
+            sys.exit(1)
+    else:
+        log("跳过本地审计 (FORCE_FULL 模式无 Git 变更)", "INFO")
 
     # 2. 外部 AI 审查 (架构师把关)
     ai_commit_msg = None
     if ENABLE_AI_REVIEW:
         log("=" * 80, "INFO")
-        log("启动外部AI审查...", "PHASE")
+        log(f"启动外部AI审查... (模式: {audit_mode})", "PHASE")
         log("=" * 80, "INFO")
         print()
 
-        review_result, session_id = external_ai_review(diff, session_id)
+        review_result, session_id = external_ai_review(diff_content, session_id, audit_mode)
 
         if review_result == "FAIL":
             print()
@@ -356,7 +456,19 @@ def main():
 
         ai_commit_msg = review_result
 
-    # 3. 决定提交信息
+    # 3. 🆕 v3.6: FORCE_FULL 模式下不执行 Git 提交（仅审计）
+    if audit_mode == "FORCE_FULL":
+        session_end_time = datetime.datetime.now().isoformat()
+        print()
+        print(f"{GREEN}{'=' * 80}{RESET}")
+        log("✅ Force Audit 完成 (仅审查，无 Git 提交)", "SUCCESS")
+        print(f"{GREEN}{'=' * 80}{RESET}")
+        print(f"{CYAN}⚡ [PROOF] SESSION COMPLETED: {session_id}{RESET}")
+        print(f"{CYAN}⚡ [PROOF] SESSION END: {session_end_time}{RESET}")
+        log(f"[PROOF] Session {session_id} completed successfully (FORCE_FULL mode)", "INFO")
+        sys.exit(0)
+
+    # 4. INCREMENTAL 模式: 决定提交信息并执行提交
     if ai_commit_msg:
         commit_msg = ai_commit_msg
     else:
@@ -365,7 +477,7 @@ def main():
         cnt = len([f for f in files.splitlines() if f])
         commit_msg = f"feat(auto): update {cnt} files (local audit passed)"
 
-    # 4. 执行提交
+    # 5. 执行提交
     log(f"执行提交: {commit_msg}", "INFO")
     code, out, err = run_cmd(f'git commit -m "{commit_msg}"')
 
