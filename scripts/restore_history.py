@@ -1,164 +1,297 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
-MT5-CRS Project History Restoration Script
-Purpose: Populate Notion database with complete project history (#001-#013)
-Created: 2025-12-23
-Author: Claude Sonnet 4.5 (Lead Architect)
+TASK #064: Historical Task Restoration to Notion Database
+Protocol: v4.3 (Zero-Trust Edition)
+
+Restores all backed-up tasks to Notion with Status="完成" (Done) to create institutional memory.
+All restored tasks preserve original metadata but are marked as complete.
 """
 
-import subprocess
-import sys
+import os
+import json
+import requests
+import time
 from pathlib import Path
 
-# Project root
-SCRIPT_DIR = Path(__file__).parent
-PROJECT_ROOT = SCRIPT_DIR.parent
-CREATE_SCRIPT = SCRIPT_DIR / "quick_create_issue.py"
+NOTION_TOKEN = ""
+DATABASE_ID = ""
 
-# Historical tasks with proper categorization
-TASKS = [
-    # Phase 1: Infrastructure Foundation
-    ("#001 阿里云 CentOS 环境初始化 (Python 3.9 + Git + 基础依赖)", "Infra", "P0"),
-    ("#006 驱动管理器与 MT5 终端服务部署 (Wine + Xvfb + VNC)", "Infra", "P0"),
-    ("#011 Notion API 集成与 DevOps 工具链建设 (多阶段任务)", "Infra", "P1"),
+# Load from .env file manually
+env_file = "/opt/mt5-crs/.env"
+if os.path.exists(env_file):
+    with open(env_file) as f:
+        for line in f:
+            line = line.strip()
+            if line and not line.startswith('#') and '=' in line:
+                key, value = line.split('=', 1)
+                if key.strip() == "NOTION_TOKEN":
+                    NOTION_TOKEN = value.strip()
+                elif key.strip() == "NOTION_DB_ID":
+                    DATABASE_ID = value.strip()
 
-    # Phase 2: Data Pipeline
-    ("#002 MT5 数据采集模块原型 (历史数据 + 实时行情)", "Core", "P0"),
-    ("#003 TimescaleDB 架构设计与部署 (时序数据库)", "Infra", "P0"),
-    ("#007 数据质量监控系统 (DQ Score + Prometheus + Grafana)", "Feature", "P1"),
-    ("#008 知识库与文档架构建设 (完整特征工程文档)", "Feature", "P2"),
+if not NOTION_TOKEN or not DATABASE_ID:
+    print("🔴 Configuration failed: NOTION_TOKEN or DATABASE_ID not found")
+    exit(1)
 
-    # Phase 3: Strategy & Analysis
-    ("#004 基础特征工程 (35维技术指标 + TA-Lib 集成)", "Core", "P0"),
-    ("#005 高级特征工程 (40维分数差分 + 三重障碍标签法)", "Core", "P1"),
-    ("#009 机器学习训练管线 (XGBoost + LightGBM + Optuna 调优)", "Core", "P1"),
-    ("#010 回测系统建设 (Backtrader + 风险管理 + 完整报告)", "Core", "P1"),
+HEADERS = {
+    "Authorization": f"Bearer {NOTION_TOKEN}",
+    "Content-Type": "application/json",
+    "Notion-Version": "2022-06-28"
+}
 
-    # Phase 4: Architecture & Gateway (Current)
-    ("#012 MT5 交易网关研究 (ZeroMQ 跨平台通信方案)", "Core", "P0"),
-    ("#013 Notion 工作区重构 (中文标准化 + Schema 对齐)", "Infra", "P1"),
-]
-
-
-def print_header():
-    """Print the script header"""
-    print("╔════════════════════════════════════════════════════════════════════════════╗")
-    print("║       MT5-CRS 项目历史恢复工具 (Tasks #001-#013)                          ║")
-    print("╚════════════════════════════════════════════════════════════════════════════╝")
-    print()
+BACKUP_DIR = Path("docs/archive/notion_backup")
 
 
-def print_statistics():
-    """Print completion statistics"""
-    print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-    print("✅ History Restoration Complete!")
-    print("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━")
-    print()
-    print("📊 Statistics:")
-    print(f"   - Total Tasks Created: {len(TASKS)}")
-    print("   - Phase 1 (Infrastructure): 3 tasks")
-    print("   - Phase 2 (Data Pipeline): 4 tasks")
-    print("   - Phase 3 (Strategy & Analysis): 4 tasks")
-    print("   - Phase 4 (Architecture & Gateway): 2 tasks")
-    print()
-    print("🔗 Next Steps:")
-    print("   1. Verify all tasks in Notion Database")
-    print("   2. Add detailed descriptions and documentation links")
-    print("   3. Begin Task #014 (new development phase)")
-    print()
-    print("🎯 Knowledge Base Established - Ready for Next Phase!")
+def get_latest_backup():
+    """Find the most recent backup directory"""
+    if not BACKUP_DIR.exists():
+        return None
+    
+    backup_dirs = list(BACKUP_DIR.glob("*/"))
+    if not backup_dirs:
+        return None
+    
+    return max(backup_dirs, key=lambda p: p.name)
 
 
-def create_task(idx: int, title: str, task_type: str, priority: str) -> bool:
-    """
-    Create a single task using quick_create_issue.py
+def parse_markdown_to_blocks(md_text, max_blocks=90):
+    """Convert markdown to Notion blocks (limit to 90 blocks per API)"""
+    blocks = []
+    lines = md_text.split('\n')
+    in_code_block = False
+    code_content = []
+    code_lang = "plain text"
+    
+    for line in lines:
+        if len(blocks) >= max_blocks:
+            break
+            
+        if line.strip().startswith("```"):
+            if in_code_block:
+                # End code block
+                full_text = "\n".join(code_content)[:1999]  # API limit
+                blocks.append({
+                    "object": "block",
+                    "type": "code",
+                    "code": {
+                        "rich_text": [{"type": "text", "text": {"content": full_text}}],
+                        "language": code_lang
+                    }
+                })
+                code_content = []
+                in_code_block = False
+            else:
+                # Start code block
+                in_code_block = True
+                lang = line.strip().replace("```", "")
+                code_lang = lang if lang else "plain text"
+        elif in_code_block:
+            code_content.append(line)
+        elif line.startswith("### "):
+            text = line[4:].strip()[:1999]
+            if text:
+                blocks.append({
+                    "object": "block",
+                    "type": "heading_3",
+                    "heading_3": {"rich_text": [{"type": "text", "text": {"content": text}}]}
+                })
+        elif line.startswith("## "):
+            text = line[3:].strip()[:1999]
+            if text:
+                blocks.append({
+                    "object": "block",
+                    "type": "heading_2",
+                    "heading_2": {"rich_text": [{"type": "text", "text": {"content": text}}]}
+                })
+        elif line.startswith("# ") and not line.startswith("## "):
+            text = line[2:].strip()[:1999]
+            if text:
+                blocks.append({
+                    "object": "block",
+                    "type": "heading_1",
+                    "heading_1": {"rich_text": [{"type": "text", "text": {"content": text}}]}
+                })
+        elif line.strip().startswith("* ") or line.strip().startswith("- "):
+            text = line.strip()[2:].strip()[:1999]
+            if text:
+                blocks.append({
+                    "object": "block",
+                    "type": "bulleted_list_item",
+                    "bulleted_list_item": {"rich_text": [{"type": "text", "text": {"content": text}}]}
+                })
+        elif line.strip():
+            text = line.strip()[:1999]
+            blocks.append({
+                "object": "block",
+                "type": "paragraph",
+                "paragraph": {"rich_text": [{"type": "text", "text": {"content": text}}]}
+            })
+    
+    return blocks[:max_blocks]
 
-    Args:
-        idx: Task index (1-based)
-        title: Task title
-        task_type: Task type (Core, Infra, Feature, Bug)
-        priority: Priority (P0, P1, P2, P3)
 
-    Returns:
-        True if successful, False otherwise
-    """
-    # Display shortened title for readability
-    short_title = title[:50] + "..." if len(title) > 50 else title
-    print(f"[{idx}/{len(TASKS)}] Creating {short_title}")
-
-    # Build command
-    cmd = [
-        "python3", str(CREATE_SCRIPT),
-        title,
-        "--type", task_type,
-        "--prio", priority,
-        "--status", "DONE"
-    ]
-
-    # Execute
+def restore_page(item, backup_dir):
+    """Restore a single page to Notion with Status='完成' (Done)"""
+    title = item['title'][:2000]  # Notion limit
+    
+    # Read markdown content
+    md_file = Path(item['file'])
+    if not md_file.exists():
+        print(f"⚠️  File not found: {md_file}")
+        return False
+    
+    with open(md_file, "r", encoding="utf-8") as f:
+        md_content = f.read()
+    
+    # Parse markdown to blocks
+    blocks = parse_markdown_to_blocks(md_content, max_blocks=90)
+    
+    # Create page with Status="完成" (Done) - using correct Chinese property names
+    payload = {
+        "parent": {"database_id": DATABASE_ID},
+        "properties": {
+            "标题": {
+                "title": [{"type": "text", "text": {"content": title}}]
+            },
+            "状态": {
+                "status": {"name": "完成"}
+            },
+            "优先级": {
+                "select": {"name": "P1"}
+            }
+        },
+        "children": blocks
+    }
+    
     try:
-        result = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            check=True,
-            timeout=30
+        resp = requests.post(
+            "https://api.notion.com/v1/pages",
+            json=payload,
+            headers=HEADERS
         )
-
-        # Extract and display success message
-        for line in result.stdout.split('\n'):
-            if 'SUCCESS' in line:
-                print(f"  ✅ {line.strip()}")
-            elif 'URL' in line:
-                print(f"  🔗 {line.strip()}")
-
-        print()
-        return True
-
-    except subprocess.CalledProcessError as e:
-        print(f"  ❌ Error: {e.stderr}")
-        return False
-    except subprocess.TimeoutExpired:
-        print(f"  ❌ Error: Command timed out after 30 seconds")
-        return False
+        
+        if resp.status_code == 200:
+            page_id = resp.json()['id']
+            print(f"✅ Successfully restored: {title} ({page_id})")
+            
+            # Forensic check for Ticket #060
+            if "1417253330" in md_content:
+                print(f"🔍 [FORENSIC] Ticket ID 1417253330 detected in: {title}")
+            
+            return True
+        else:
+            print(f"❌ Failed to restore: {title}")
+            print(f"   Error: {resp.text[:150]}")
+            return False
+            
     except Exception as e:
-        print(f"  ❌ Error: {str(e)}")
+        print(f"❌ Exception restoring {title}: {e}")
         return False
 
 
 def main():
-    """Main execution function"""
-    # Check if create script exists
-    if not CREATE_SCRIPT.exists():
-        print(f"❌ Error: quick_create_issue.py not found at {CREATE_SCRIPT}")
-        sys.exit(1)
-
-    # Print header
-    print_header()
-
-    # Create all tasks
+    """Main restoration execution"""
+    print("=" * 70)
+    print("TASK #064: Historical Task Restoration")
+    print("Protocol: v4.3 (Zero-Trust Edition)")
+    print("=" * 70)
+    print()
+    
+    # Step 1: Find backup
+    print("📁 Step 1: Locating Latest Backup...")
+    backup_dir = get_latest_backup()
+    
+    if not backup_dir:
+        print("🔴 ERROR: No backup found")
+        print("   Please run TASK #062 backup first")
+        return 1
+    
+    print(f"✅ Found backup: {backup_dir}")
+    print()
+    
+    # Step 2: Load index
+    print("📋 Step 2: Loading Backup Index...")
+    index_file = backup_dir / "index.json"
+    
+    if not index_file.exists():
+        print("🔴 ERROR: index.json not found in backup")
+        return 1
+    
+    with open(index_file, "r", encoding="utf-8") as f:
+        tasks = json.load(f)
+    
+    count = len(tasks)
+    print(f"✅ Loaded {count} tasks from backup")
+    print()
+    
+    # Step 3: User confirmation
+    print("⚠️  WARNING: About to restore all historical tasks")
+    print(f"   Total tasks: {count}")
+    print(f"   Database ID: {DATABASE_ID}")
+    print(f"   All tasks will be marked as Status='完成' (Done)")
+    print()
+    print("   Starting restoration in 5 seconds... (Ctrl+C to abort)")
+    
+    try:
+        for i in range(5, 0, -1):
+            print(f"   {i}...", end="", flush=True)
+            time.sleep(1)
+        print()
+    except KeyboardInterrupt:
+        print("\n⛔ Restoration aborted by user")
+        return 130
+    
+    print()
+    print("🔄 Step 4: Restoring Tasks...")
+    print("-" * 70)
+    
+    # Step 4: Restore all tasks (oldest first)
     success_count = 0
-    for idx, (title, task_type, priority) in enumerate(TASKS, 1):
-        if create_task(idx, title, task_type, priority):
+    failed_count = 0
+    forensic_found = False
+    
+    # Reverse order to restore oldest first
+    tasks_reversed = list(reversed(tasks))
+    
+    for i, task in enumerate(tasks_reversed):
+        print(f"[{i+1}/{count}] ", end="")
+        
+        if restore_page(task, backup_dir):
             success_count += 1
+            
+            # Check for Task #060 ticket ID
+            if "1417253330" in str(task):
+                forensic_found = True
         else:
-            print(f"\n⚠️  Warning: Failed to create task {idx}/{len(TASKS)}")
-            user_input = input("Continue with remaining tasks? (y/n): ")
-            if user_input.lower() != 'y':
-                print("\n❌ Restoration aborted by user")
-                sys.exit(1)
-
-    # Print statistics
-    print_statistics()
-
-    # Exit with appropriate status
-    if success_count == len(TASKS):
-        print(f"\n✅ All {len(TASKS)} tasks created successfully!")
-        sys.exit(0)
+            failed_count += 1
+        
+        # Rate limiting
+        time.sleep(0.3)
+    
+    print("-" * 70)
+    print()
+    
+    # Step 5: Summary
+    print("=" * 70)
+    print("📊 RESTORATION SUMMARY")
+    print("=" * 70)
+    print(f"Total tasks:              {count}")
+    print(f"Successfully restored:    {success_count}")
+    print(f"Failed to restore:        {failed_count}")
+    print(f"Forensic check (Ticket ID 1417253330): {'✅ FOUND' if forensic_found else '⚠️  NOT FOUND'}")
+    print("=" * 70)
+    
+    if success_count == count:
+        print("\n✅ SUCCESS: All historical tasks restored to Notion")
+        print("   Institutional Memory established for Phase 1")
+        print("   All tasks marked as Status='完成' (Done)")
+        return 0
     else:
-        print(f"\n⚠️  {success_count}/{len(TASKS)} tasks created successfully")
-        sys.exit(1)
+        print(f"\n⚠️  WARNING: {failed_count} tasks failed to restore")
+        print("   Check logs and retry if needed")
+        return 1
 
 
 if __name__ == "__main__":
-    main()
+    exit(main())
