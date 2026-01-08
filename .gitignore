@@ -82,4 +82,7 @@ data/sample_features.parquet
 src/feature_store/data/
 src/feature_store/registry.db
 src/feature_store/registry.db-wal
+src/feature_repo/data/
+src/feature_repo/registry.db
+src/feature_repo/registry.db-wal
 data/registry.db

@@ -1,0 +1,37 @@
+# Feast Feature Store Configuration (Task #067)
+# Protocol: v4.3 (Zero-Trust Edition)
+#
+# IMPORTANT: All sensitive credentials are loaded from environment variables.
+# Never commit plaintext passwords or API keys to version control.
+#
+# Required environment variables (see .env file or system environment):
+#   POSTGRES_HOST (default: localhost)
+#   POSTGRES_PORT (default: 5432)
+#   POSTGRES_USER (default: trader)
+#   POSTGRES_PASSWORD (required for production - never hardcode)
+#   POSTGRES_DB (default: mt5_crs)
+#   REDIS_HOST (default: localhost)
+#   REDIS_PORT (default: 6379)
+#   REDIS_DB (default: 0)
+#
+# This is a minimal placeholder. For production, use scripts/init_feast.py
+# which properly injects credentials from a secure source.
+
+project: mt5_crs
+registry: data/registry.db
+provider: local
+
+online_store:
+  type: redis
+  connection_string: localhost:6379,db=0
+
+offline_store:
+  type: postgres
+  host: localhost
+  port: 5432
+  database: mt5_crs
+  user: trader
+  password: CHANGE_ME_IN_ENVIRONMENT_VARIABLES
+  sslmode: disable
+
+entity_key_serialization_version: 2
