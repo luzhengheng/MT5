@@ -20,6 +20,8 @@ tmp/
 # 日志文件
 *.log
 var/log/*.log
+VERIFY_LOG.log
+VERIFY_LOG_*.log
 
 # 缓存
 var/cache/
