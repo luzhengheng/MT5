@@ -71,6 +71,11 @@ websockets>=15.0.0         # Async WebSocket client
 notion-client>=2.0.0       # Notion API client
 
 # ============================================================================
+# Work Order #069: MLflow Experiment Tracking
+# ============================================================================
+mlflow>=2.10.0             # Experiment tracking (Task #069: Baseline Model)
+
+# ============================================================================
 # Optional Dependencies (Development/Research Only)
 # ============================================================================
 # Install with: pip install -r requirements-dev.txt

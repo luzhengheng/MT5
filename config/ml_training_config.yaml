@@ -145,8 +145,10 @@ output:
   save_all_folds: false  # 是否保存所有 fold 的模型
 
   # 实验追踪
-  mlflow_tracking: false  # 是否使用 MLFlow 追踪实验
+  mlflow_tracking: true  # 是否使用 MLFlow 追踪实验 (Task #069)
   mlflow_uri: "http://localhost:5000"
+  mlflow_experiment_name: "task_069_baseline"
+  mlflow_run_name_template: "baseline_{model_type}_{timestamp}"
 
 # 计算资源配置
 compute:
