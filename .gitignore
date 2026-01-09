@@ -23,6 +23,13 @@ var/log/*.log
 VERIFY_LOG.log
 VERIFY_LOG_*.log
 
+# MLflow 本地运行产物
+mlruns/
+
+# Optuna 本地数据库
+*.db
+optuna.db
+
 # 缓存
 var/cache/
 var/run/
