@@ -1,0 +1,10 @@
+artifact_location: file:///opt/mt5-crs/mlruns/751055591151216542/models/m-297688cddddb4b26a65619887079eb17/artifacts
+creation_timestamp: 1767938217929
+experiment_id: '751055591151216542'
+last_updated_timestamp: 1767938230097
+model_id: m-297688cddddb4b26a65619887079eb17
+model_type: null
+name: model
+source_run_id: 411ee21664f4420bb5ec35e2cc610300
+status: 2
+status_message: null

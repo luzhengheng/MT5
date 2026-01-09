@@ -1,0 +1,14 @@
+artifact_uri: file:///opt/mt5-crs/mlruns/751055591151216542/411ee21664f4420bb5ec35e2cc610300/artifacts
+end_time: 1767938230173
+entry_point_name: ''
+experiment_id: '751055591151216542'
+lifecycle_stage: active
+run_id: 411ee21664f4420bb5ec35e2cc610300
+run_name: gaudy-skunk-971
+source_name: ''
+source_type: 4
+source_version: ''
+start_time: 1767938210330
+status: 3
+tags: []
+user_id: root

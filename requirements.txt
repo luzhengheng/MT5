@@ -76,6 +76,12 @@ notion-client>=2.0.0       # Notion API client
 mlflow>=2.10.0             # Experiment tracking (Task #069: Baseline Model)
 
 # ============================================================================
+# Work Order #070: Deep Learning (LSTM/GRU Baseline)
+# ============================================================================
+torch>=2.0.0               # PyTorch deep learning framework (CPU)
+# torchvision, torchaudio installed with torch
+
+# ============================================================================
 # Optional Dependencies (Development/Research Only)
 # ============================================================================
 # Install with: pip install -r requirements-dev.txt

@@ -159,6 +159,32 @@ compute:
 # 随机种子 (复现性)
 random_seed: 42
 
+# ============================================================================
+# 深度学习配置 (Task #070: LSTM/GRU Baseline)
+# ============================================================================
+deep_learning:
+  # 数据配置
+  sequence_length: 60          # 时间窗口长度 (滑动窗口)
+  batch_size: 32              # 批次大小
+
+  # 模型配置
+  model_type: "lstm"          # 'lstm' 或 'gru'
+  hidden_dim: 64              # 隐层维度
+  num_layers: 2               # LSTM/GRU 层数
+  dropout: 0.2                # Dropout 比率
+
+  # 训练配置
+  learning_rate: 0.001        # 学习率
+  num_epochs: 5               # 训练轮数
+  validation_split: 0.2       # 验证集比例
+
+  # 优化器配置
+  optimizer: "adam"           # 优化算法
+  weight_decay: 0.0001        # L2 正则化
+
+  # 设备配置
+  device: "cpu"               # 'cpu' 或 'cuda'
+
 # 日志配置
 logging:
   level: "INFO"  # 'DEBUG', 'INFO', 'WARNING', 'ERROR'
