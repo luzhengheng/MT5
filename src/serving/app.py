@@ -88,7 +88,7 @@ def get_feature_service() -> FeatureService:
 
 
 def get_model_predictor():
-    """获取或初始化模型预测器"""
+    """获取或初始化模型预测器 (Task #080: Real Model Loading)"""
     global model_predictor
     if model_predictor is None:
         # Import here to avoid circular dependencies
@@ -102,12 +102,16 @@ def get_model_predictor():
             return None  # Signal mock mode
         else:
             try:
+                # Task #080: Load real model from disk
                 model_predictor = PricePredictor()
-                logger.info(f"{GREEN}✅ 模型预测器已初始化{RESET}")
+                logger.info(f"{GREEN}✅ 真实模型预测器已初始化 (Task #080){RESET}")
+                logger.info(f"   Model: {model_predictor.model_path}")
+                logger.info(f"   Features: {len(model_predictor.feature_names)}")
+                logger.info(f"   Test Accuracy: {model_predictor.metadata.get('metrics', {}).get('accuracy', 'N/A')}")
             except Exception as e:
                 logger.error(f"{RED}❌ 无法加载模型: {e}{RESET}")
                 # Fail fast - do not fallback silently
-                raise RuntimeError(f"Model initialization failed: {e}")
+                raise RuntimeError(f"Model initialization failed (Task #080): {e}")
 
     return model_predictor
 
@@ -123,6 +127,16 @@ async def startup_event():
     try:
         get_feature_service()
         logger.info(f"{GREEN}✅ 特征服务已初始化{RESET}")
+
+        # Task #080: Load model at startup
+        import os
+        if os.getenv("ENABLE_MOCK_INFERENCE", "false").lower() != "true":
+            logger.info(f"{CYAN}📦 加载实时模型 (Task #080)...{RESET}")
+            get_model_predictor()
+            logger.info(f"{GREEN}✅ 实时模型已加载{RESET}")
+        else:
+            logger.warning(f"{RED}⚠️  [MOCK MODE] 跳过模型加载{RESET}")
+
     except Exception as e:
         logger.error(f"{RED}❌ 启动失败: {e}{RESET}")
         raise
@@ -404,7 +418,7 @@ async def invocations(request: InvocationRequest):
 
         # Check if mock mode is enabled
         import os
-        use_mock = os.getenv("ENABLE_MOCK_INFERENCE", "true").lower() == "true"
+        use_mock = os.getenv("ENABLE_MOCK_INFERENCE", "false").lower() == "true"
 
         predictions = []
 
@@ -416,14 +430,52 @@ async def invocations(request: InvocationRequest):
                 prob = random.uniform(0.4, 0.8)
                 predictions.append([prob])
         else:
-            # Real model inference - Not yet implemented
-            # Reason: Feature mapping between Sentinel's output and model's expected input
-            # is not yet clarified. Once the interface contract is defined, integrate
-            # with actual model via PricePredictor.predict_batch()
-            raise HTTPException(
-                status_code=status.HTTP_501_NOT_IMPLEMENTED,
-                detail="Real model inference not yet implemented - feature mapping pending"
-            )
+            # Real model inference (Task #080)
+            from src.serving.feature_map import map_sentinel_to_model
+
+            predictor = get_model_predictor()
+            if predictor is None:
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail="Model predictor not available"
+                )
+
+            # Process each instance
+            for instance_data in instances:
+                try:
+                    # Extract features from Sentinel's format
+                    # Sentinel sends: [[X_tabular, X_sequential]] where X_tabular is (23,)
+                    if isinstance(instance_data, list) and len(instance_data) >= 1:
+                        # Get tabular features (first element)
+                        sentinel_features = instance_data[0]  # Should be (23,) array
+
+                        # Map Sentinel's 23 features to model's 15 features
+                        mapped_features = map_sentinel_to_model(
+                            sentinel_features,
+                            model_features=predictor.feature_names
+                        )
+
+                        if mapped_features is None:
+                            logger.error("Feature mapping failed")
+                            raise ValueError("Feature mapping returned None")
+
+                        # Run model inference
+                        result = predictor.predict(mapped_features)
+
+                        # Extract probability (model returns dict with 'probability' key)
+                        probability = result.get('probability', 0.5)
+                        predictions.append([probability])
+
+                    else:
+                        raise ValueError(
+                            f"Invalid instance format: expected list with >=1 elements, "
+                            f"got {type(instance_data)}"
+                        )
+
+                except Exception as e:
+                    logger.error(f"Instance processing error: {e}")
+                    # Fail gracefully with neutral prediction
+                    predictions.append([0.5])
 
         logger.info(f"{GREEN}✅ 推理完成: {len(predictions)} predictions{RESET}")
 
