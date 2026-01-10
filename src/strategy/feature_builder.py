@@ -210,6 +210,10 @@ class FeatureBuilder:
 
         # Use last N rows
         df_window = df.tail(self.lookback_period).copy()
+        df_window = df_window.reset_index(drop=True)
+
+        # Remove duplicate columns if any
+        df_window = df_window.loc[:, ~df_window.columns.duplicated()]
 
         # Extract price series
         close = df_window['close']
@@ -259,9 +263,11 @@ class FeatureBuilder:
 
         # 8. Time-based (if timestamp available)
         if 'timestamp' in df_window.columns:
-            dt = pd.to_datetime(df_window['timestamp'])
-            features['hour'] = dt.dt.hour
-            features['day_of_week'] = dt.dt.dayofweek
+            # Convert timestamp safely - use tolist() to avoid duplicate keys error
+            timestamps = df_window['timestamp'].tolist()
+            dt = pd.to_datetime(timestamps, unit='s')
+            features['hour'] = dt.hour
+            features['day_of_week'] = dt.dayofweek
         else:
             # Placeholder if no timestamp
             features['hour'] = 0
@@ -321,6 +327,7 @@ class FeatureBuilder:
 
         # Use last N rows
         df_window = df.tail(sequence_length).copy()
+        df_window = df_window.reset_index(drop=True)
 
         # Build features for each timestep
         sequences = []
