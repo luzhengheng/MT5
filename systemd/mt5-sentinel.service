@@ -1,0 +1,37 @@
+[Unit]
+Description=MT5-CRS Sentinel Daemon - Automated Trading Orchestrator
+Documentation=https://github.com/luzhengheng/MT5
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/mt5-crs
+
+# Use venv Python interpreter
+ExecStart=/opt/mt5-crs/venv/bin/python /opt/mt5-crs/src/strategy/sentinel_daemon.py --dry-run --threshold 0.6
+
+# Environment variables (loaded from .env via Python)
+EnvironmentFile=/opt/mt5-crs/.env
+
+# Restart policy
+Restart=always
+RestartSec=10
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+
+# Resource limits
+LimitNOFILE=4096
+MemoryLimit=1G
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=mt5-sentinel
+
+[Install]
+WantedBy=multi-user.target
