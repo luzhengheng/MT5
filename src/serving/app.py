@@ -29,7 +29,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 from src.serving.models import (
     HistoricalRequest, LatestRequest,
     HistoricalResponse, LatestResponse, ErrorResponse, HealthResponse,
-    FeatureDataPoint
+    FeatureDataPoint, InvocationRequest, InvocationResponse
 )
 from src.serving.handlers import FeatureService
 
@@ -72,6 +72,7 @@ app.add_middleware(
 # ============================================================================
 
 feature_service = None
+model_predictor = None  # Global model instance
 
 
 def get_feature_service() -> FeatureService:
@@ -84,6 +85,31 @@ def get_feature_service() -> FeatureService:
             logger.error(f"{RED}❌ 无法初始化特征服务: {e}{RESET}")
             raise
     return feature_service
+
+
+def get_model_predictor():
+    """获取或初始化模型预测器"""
+    global model_predictor
+    if model_predictor is None:
+        # Import here to avoid circular dependencies
+        from src.model.predict import PricePredictor
+        import os
+
+        enable_mock = os.getenv("ENABLE_MOCK_INFERENCE", "false").lower() == "true"
+
+        if enable_mock:
+            logger.warning(f"{RED}⚠️ [MOCK MODE ENABLED] Using mock predictions{RESET}")
+            return None  # Signal mock mode
+        else:
+            try:
+                model_predictor = PricePredictor()
+                logger.info(f"{GREEN}✅ 模型预测器已初始化{RESET}")
+            except Exception as e:
+                logger.error(f"{RED}❌ 无法加载模型: {e}{RESET}")
+                # Fail fast - do not fallback silently
+                raise RuntimeError(f"Model initialization failed: {e}")
+
+    return model_predictor
 
 
 # ============================================================================
@@ -333,6 +359,86 @@ async def get_latest_features(request: LatestRequest):
 
 
 # ============================================================================
+# 模型推理端点
+# ============================================================================
+
+@app.post(
+    "/invocations",
+    response_model=InvocationResponse,
+    tags=["Inference"],
+    summary="模型推理 (MLflow Compatible)",
+    description="接收特征数据并返回模型预测结果 (兼容 MLflow serving API)"
+)
+async def invocations(request: InvocationRequest):
+    """
+    MLflow兼容的推理端点
+
+    支持多种输入格式:
+    1. dataframe_split (Sentinel发送格式)
+    2. instances (标准 MLflow)
+    3. inputs (替代格式)
+    """
+    try:
+        logger.info(f"📥 收到推理请求")
+
+        # Extract input data (support multiple MLflow formats)
+        instances = None
+        format_used = "unknown"
+
+        if request.dataframe_split is not None:
+            instances = request.dataframe_split.get("data", [])
+            format_used = "dataframe_split"
+        elif request.instances is not None:
+            instances = request.instances
+            format_used = "instances"
+        elif request.inputs is not None:
+            instances = request.inputs
+            format_used = "inputs"
+        else:
+            raise ValueError("Missing 'dataframe_split', 'instances', or 'inputs' field")
+
+        if not instances:
+            raise ValueError("No data instances provided")
+
+        logger.info(f"  Format: {format_used}, Input count: {len(instances)}")
+
+        # Check if mock mode is enabled
+        import os
+        use_mock = os.getenv("ENABLE_MOCK_INFERENCE", "true").lower() == "true"
+
+        predictions = []
+
+        if use_mock:
+            # Mock mode enabled - for integration testing only
+            logger.warning(f"{RED}⚠️ [MOCK MODE] Generating random predictions - NOT FOR PRODUCTION{RESET}")
+            import random
+            for _ in instances:
+                prob = random.uniform(0.4, 0.8)
+                predictions.append([prob])
+        else:
+            # Real model inference - Not yet implemented
+            # Reason: Feature mapping between Sentinel's output and model's expected input
+            # is not yet clarified. Once the interface contract is defined, integrate
+            # with actual model via PricePredictor.predict_batch()
+            raise HTTPException(
+                status_code=status.HTTP_501_NOT_IMPLEMENTED,
+                detail="Real model inference not yet implemented - feature mapping pending"
+            )
+
+        logger.info(f"{GREEN}✅ 推理完成: {len(predictions)} predictions{RESET}")
+
+        return InvocationResponse(predictions=predictions)
+
+    except Exception as e:
+        logger.error(f"{RED}❌ 推理失败: {e}{RESET}")
+        # Fail fast - do not fallback
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+# ============================================================================
 # 根端点
 # ============================================================================
 
@@ -352,7 +458,8 @@ async def root():
         "endpoints": {
             "health": "GET /health",
             "historical_features": "POST /features/historical",
-            "latest_features": "POST /features/latest"
+            "latest_features": "POST /features/latest",
+            "invocations": "POST /invocations"
         }
     }
 

@@ -331,3 +331,51 @@ class HealthResponse(BaseModel):
                 "timestamp": "2024-12-31T14:30:00Z"
             }
         }
+
+
+# ============================================================================
+# 推理请求/响应模型
+# ============================================================================
+
+class InvocationRequest(BaseModel):
+    """MLflow兼容的推理请求"""
+
+    dataframe_split: Optional[Dict] = Field(
+        None,
+        description="DataFrame split格式 (Sentinel使用)"
+    )
+
+    instances: Optional[List] = Field(
+        None,
+        description="Instances格式"
+    )
+
+    inputs: Optional[List] = Field(
+        None,
+        description="Inputs格式"
+    )
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "dataframe_split": {
+                    "columns": ["X_tabular", "X_sequential"],
+                    "data": [[[0.1, 0.2, ...], [[0.1, 0.2, ...], ...]]]
+                }
+            }
+        }
+
+
+class InvocationResponse(BaseModel):
+    """推理响应"""
+
+    predictions: List[List[float]] = Field(
+        description="预测值列表"
+    )
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "predictions": [[0.75], [0.65], [0.55]]
+            }
+        }
