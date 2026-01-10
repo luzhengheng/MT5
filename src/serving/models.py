@@ -9,7 +9,7 @@ Data Models for Feature Serving API
 """
 
 from typing import List, Dict, Optional
-from pydantic.v1 import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from datetime import datetime
 import re
 
@@ -60,7 +60,8 @@ class HistoricalRequest(BaseModel):
         example="2024-12-31"
     )
 
-    @validator('symbols')
+    @field_validator('symbols')
+    @classmethod
     def validate_symbols(cls, v):
         """验证交易对有效性"""
         if not v:
@@ -74,7 +75,8 @@ class HistoricalRequest(BaseModel):
 
         return list(set(v))  # 去重
 
-    @validator('features')
+    @field_validator('features')
+    @classmethod
     def validate_features(cls, v):
         """验证特征有效性"""
         if not v:
@@ -88,7 +90,8 @@ class HistoricalRequest(BaseModel):
 
         return list(set(v))  # 去重
 
-    @validator('start_date', 'end_date')
+    @field_validator('start_date', 'end_date')
+    @classmethod
     def validate_date_format(cls, v):
         """验证日期格式"""
         try:
@@ -97,14 +100,15 @@ class HistoricalRequest(BaseModel):
         except ValueError:
             raise ValueError(f"日期格式错误: {v}. 请使用 YYYY-MM-DD 格式")
 
-    @validator('end_date')
-    def validate_date_range(cls, v, values):
+    @field_validator('end_date')
+    @classmethod
+    def validate_date_range(cls, v, info):
         """验证日期范围"""
-        if 'start_date' in values:
-            start = datetime.strptime(values['start_date'], '%Y-%m-%d')
+        if info.data.get('start_date'):
+            start = datetime.strptime(info.data['start_date'], '%Y-%m-%d')
             end = datetime.strptime(v, '%Y-%m-%d')
             if end < start:
-                raise ValueError(f"end_date ({v}) 必须 >= start_date ({values['start_date']})")
+                raise ValueError(f"end_date ({v}) 必须 >= start_date ({info.data['start_date']})")
         return v
 
     class Config:
@@ -133,7 +137,8 @@ class LatestRequest(BaseModel):
         example=["rsi_14", "bb_upper", "bb_lower"]
     )
 
-    @validator('symbols')
+    @field_validator('symbols')
+    @classmethod
     def validate_symbols(cls, v):
         """验证交易对有效性"""
         if not v:
@@ -147,7 +152,8 @@ class LatestRequest(BaseModel):
 
         return list(set(v))
 
-    @validator('features')
+    @field_validator('features')
+    @classmethod
     def validate_features(cls, v):
         """验证特征有效性"""
         if not v:

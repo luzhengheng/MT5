@@ -20,7 +20,7 @@ from typing import List
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from pydantic.v1 import ValidationError
+from pydantic import ValidationError
 
 # Add project root to path
 PROJECT_ROOT = Path(__file__).parent.parent.parent
