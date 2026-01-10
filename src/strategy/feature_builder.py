@@ -188,118 +188,29 @@ class FeatureBuilder:
         """
         Build complete feature set from OHLCV data
 
+        Task #081 Fix: Uses vectorized calculation on full history to ensure
+        consistency with sequential feature building. History-dependent indicators
+        (EMA, MACD, RSI) must be calculated on the same data window.
+
         Args:
             df: DataFrame with columns ['timestamp', 'open', 'high', 'low', 'close', 'volume']
             symbol: Symbol name (for logging)
 
         Returns:
-            DataFrame with features, or None if insufficient data
+            DataFrame with features (last row only), or None if insufficient data
         """
-        logger.info(f"Building features for {symbol}...")
+        # Use vectorized calculation on FULL dataframe
+        # This ensures consistency with build_features_vectorized
+        full_features = self.build_features_vectorized(df, symbol)
 
-        # Validate input
-        required_cols = ['close', 'high', 'low', 'volume']
-        missing = [c for c in required_cols if c not in df.columns]
-        if missing:
-            logger.error(f"Missing columns: {missing}")
+        if full_features is None or len(full_features) == 0:
+            logger.error(f"Failed to build features for {symbol}")
             return None
 
-        if len(df) < self.lookback_period:
-            logger.error(f"Insufficient data: {len(df)} rows (need {self.lookback_period})")
-            return None
+        # Return only the last row as a DataFrame (preserving column names)
+        latest_features = full_features.iloc[-1:].copy()
 
-        # Use last N rows
-        df_window = df.tail(self.lookback_period).copy()
-        df_window = df_window.reset_index(drop=True)
-
-        # Remove duplicate columns if any
-        df_window = df_window.loc[:, ~df_window.columns.duplicated()]
-
-        # Extract price series
-        close = df_window['close']
-        high = df_window['high']
-        low = df_window['low']
-        volume = df_window['volume']
-
-        logger.info(f"  Data window: {len(df_window)} rows")
-        logger.info(f"  Price range: {close.min():.5f} - {close.max():.5f}")
-
-        # Build features
-        features = {}
-
-        # 1. Returns (3 features)
-        features['return_1'] = self.calculate_returns(close, periods=1)
-        features['return_5'] = self.calculate_returns(close, periods=5)
-        features['return_10'] = self.calculate_returns(close, periods=10)
-
-        # 2. Moving Averages (4 features)
-        features['sma_10'] = self.calculate_sma(close, window=10)
-        features['sma_20'] = self.calculate_sma(close, window=20)
-        features['ema_10'] = self.calculate_ema(close, span=10)
-        features['ema_20'] = self.calculate_ema(close, span=20)
-
-        # 3. Volatility (2 features)
-        returns = self.calculate_returns(close)
-        features['volatility_10'] = self.calculate_volatility(returns, window=10)
-        features['volatility_20'] = self.calculate_volatility(returns, window=20)
-
-        # 4. RSI (1 feature)
-        features['rsi_14'] = self.calculate_rsi(close, period=14)
-
-        # 5. MACD (3 features)
-        macd, signal, hist = self.calculate_macd(close)
-        features['macd'] = macd
-        features['macd_signal'] = signal
-        features['macd_hist'] = hist
-
-        # 6. Price position (3 features)
-        features['high_low_ratio'] = high / low
-        features['close_high_ratio'] = close / high
-        features['close_low_ratio'] = close / low
-
-        # 7. Volume features (2 features)
-        features['volume_sma'] = self.calculate_sma(volume, window=20)
-        features['volume_ratio'] = volume / features['volume_sma']
-
-        # 8. Time-based (if timestamp available)
-        if 'timestamp' in df_window.columns:
-            # Convert timestamp safely - use tolist() to avoid duplicate keys error
-            timestamps = df_window['timestamp'].tolist()
-            dt = pd.to_datetime(timestamps, unit='s')
-            features['hour'] = dt.hour
-            features['day_of_week'] = dt.dayofweek
-        else:
-            # Placeholder if no timestamp
-            features['hour'] = 0
-            features['day_of_week'] = 0
-
-        # 9. Additional features to reach 23
-        features['price_momentum'] = close.diff(5)
-        features['price_acceleration'] = close.diff(5).diff(5)
-
-        # Combine into DataFrame
-        feature_df = pd.DataFrame(features)
-
-        # Handle NaN values (from rolling operations)
-        feature_df = feature_df.fillna(method='bfill').fillna(0)
-
-        # Select last row (most recent features)
-        latest_features = feature_df.iloc[-1:].copy()
-
-        # Ensure we have exactly 23 features
-        current_features = list(latest_features.columns)
-        if len(current_features) < 23:
-            # Pad with zeros
-            for i in range(len(current_features), 23):
-                latest_features[f'feature_{i}'] = 0.0
-        elif len(current_features) > 23:
-            # Trim to first 23
-            latest_features = latest_features.iloc[:, :23]
-
-        # Rename columns to match expected format
-        latest_features.columns = [f'feature_{i}' for i in range(23)]
-
-        logger.info(f"  ✓ Features built: {latest_features.shape}")
+        logger.info(f"  ✓ Features built (latest row from full history): {latest_features.shape}")
         logger.info(f"  Sample values: {latest_features.iloc[0, :5].values}")
 
         return latest_features
@@ -386,9 +297,23 @@ class FeatureBuilder:
         # 8. Time-based (if timestamp available)
         if 'timestamp' in df_clean.columns:
             timestamps = df_clean['timestamp'].tolist()
-            dt = pd.to_datetime(timestamps, unit='s')
-            features['hour'] = dt.hour
-            features['day_of_week'] = dt.dayofweek
+            try:
+                # Try to parse as datetime string first (from EODHD API)
+                dt = pd.to_datetime(timestamps)
+            except (ValueError, TypeError):
+                try:
+                    # Fall back to Unix timestamp interpretation
+                    dt = pd.to_datetime(timestamps, unit='s')
+                except (ValueError, TypeError):
+                    logger.warning("Could not parse timestamps, using defaults")
+                    dt = None
+
+            if dt is not None:
+                features['hour'] = dt.hour
+                features['day_of_week'] = dt.dayofweek
+            else:
+                features['hour'] = 0
+                features['day_of_week'] = 0
         else:
             features['hour'] = 0
             features['day_of_week'] = 0
@@ -401,7 +326,7 @@ class FeatureBuilder:
         feature_df = pd.DataFrame(features)
 
         # Handle NaN values (from rolling operations)
-        feature_df = feature_df.fillna(method='bfill').fillna(0)
+        feature_df = feature_df.bfill().fillna(0)
 
         # Rename columns to match expected format
         if len(feature_df.columns) >= 23:
