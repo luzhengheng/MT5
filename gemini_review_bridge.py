@@ -74,11 +74,10 @@ except ImportError:
         print(f"{YELLOW}⚠️  [v3.6] Loaded config from Environment Variables{RESET}")
 
 # --- 🆕 v3.6: 强制审计目标文件列表 (Hybrid Mode) ---
+# Task #077.4: Retroactive audit of Sentinel Daemon core files
 FORCE_AUDIT_TARGETS = [
-    "docker-compose.data.yml",
-    "src/infrastructure/init_db.py",
-    "src/infrastructure/init_db.sql",
-    "src/config.py"
+    "src/strategy/sentinel_daemon.py",
+    "src/strategy/feature_builder.py"
 ]
 
 # --- 启动时的配置验证 ---
@@ -216,12 +215,23 @@ def external_ai_review(diff_content, session_id, audit_mode="INCREMENTAL"):
     # Prompt: 根据模式调整审查重点
     if audit_mode == "FORCE_FULL":
         audit_context = f"""
-        你是一位严厉的 DevOps Security Auditor。
+        你是一位严厉的 Python 架构师和代码审查专家。
         当前环境: Git 工作区干净，无代码变更。
-        审查模式: 强制全量扫描 (Force Audit Mode)
-        审查对象: Task #065 Phase 2 Data Infrastructure 的关键配置文件。
+        审查模式: 强制全量扫描 (Force Audit Mode) - 回溯性合规审计
+        审查对象: Task #077.4 - Sentinel Daemon 核心策略代码（之前在紧急模式下部署，现补充审计）
 
-        请审查以下基础设施代码:
+        文件列表:
+        1. src/strategy/sentinel_daemon.py - 自动交易哨兵守护进程
+        2. src/strategy/feature_builder.py - 轻量级特征构建器（已修复 duplicate keys bug）
+
+        请重点审查:
+        - 代码质量和架构设计
+        - 错误处理和异常恢复机制
+        - 性能瓶颈（特别是 feature_builder.py）
+        - 安全隐患和潜在风险
+        - 与 MT5 实盘对接的健壮性
+
+        请审查以下策略代码:
         {diff_content[:40000]}
 
         **审查重点 (Protocol v4.3 Compliance)**:
