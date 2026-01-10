@@ -67,7 +67,7 @@ class SentinelDaemon:
         eodhd_api_key: Optional[str] = None,
         symbol: str = "EURUSD",
         threshold: float = 0.6,
-        lookback_bars: int = 100,
+        lookback_bars: int = 200,  # Increased from 100 to fix data starvation (Task #077.5)
         dry_run: bool = True
     ):
         """

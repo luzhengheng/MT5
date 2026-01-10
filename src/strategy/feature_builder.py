@@ -304,13 +304,132 @@ class FeatureBuilder:
 
         return latest_features
 
+    def build_features_vectorized(
+        self,
+        df: pd.DataFrame,
+        symbol: str = "EURUSD"
+    ) -> Optional[pd.DataFrame]:
+        """
+        Build features for ENTIRE dataframe at once (TRUE vectorization)
+
+        Unlike build_features which returns only the latest row,
+        this returns features for ALL rows in the dataframe.
+
+        Args:
+            df: DataFrame with columns ['timestamp', 'open', 'high', 'low', 'close', 'volume']
+            symbol: Symbol name (for logging)
+
+        Returns:
+            DataFrame with shape (len(df), n_features), or None if insufficient data
+        """
+        logger.info(f"Building vectorized features for {symbol}...")
+
+        # Validate input
+        required_cols = ['close', 'high', 'low', 'volume']
+        missing = [c for c in required_cols if c not in df.columns]
+        if missing:
+            logger.error(f"Missing columns: {missing}")
+            return None
+
+        if len(df) < self.lookback_period:
+            logger.error(f"Insufficient data: {len(df)} rows (need {self.lookback_period})")
+            return None
+
+        # Remove duplicate columns if any
+        df_clean = df.loc[:, ~df.columns.duplicated()].copy()
+
+        # Extract price series
+        close = df_clean['close']
+        high = df_clean['high']
+        low = df_clean['low']
+        volume = df_clean['volume']
+
+        logger.info(f"  Data: {len(df_clean)} rows, price range: {close.min():.5f} - {close.max():.5f}")
+
+        # Build features (vectorized operations on entire series)
+        features = {}
+
+        # 1. Returns (3 features)
+        features['return_1'] = self.calculate_returns(close, periods=1)
+        features['return_5'] = self.calculate_returns(close, periods=5)
+        features['return_10'] = self.calculate_returns(close, periods=10)
+
+        # 2. Moving Averages (4 features)
+        features['sma_10'] = self.calculate_sma(close, window=10)
+        features['sma_20'] = self.calculate_sma(close, window=20)
+        features['ema_10'] = self.calculate_ema(close, span=10)
+        features['ema_20'] = self.calculate_ema(close, span=20)
+
+        # 3. Volatility (2 features)
+        returns = self.calculate_returns(close)
+        features['volatility_10'] = self.calculate_volatility(returns, window=10)
+        features['volatility_20'] = self.calculate_volatility(returns, window=20)
+
+        # 4. RSI (1 feature)
+        features['rsi_14'] = self.calculate_rsi(close, period=14)
+
+        # 5. MACD (3 features)
+        macd, signal, hist = self.calculate_macd(close)
+        features['macd'] = macd
+        features['macd_signal'] = signal
+        features['macd_hist'] = hist
+
+        # 6. Price position (3 features)
+        features['high_low_ratio'] = high / low
+        features['close_high_ratio'] = close / high
+        features['close_low_ratio'] = close / low
+
+        # 7. Volume features (2 features)
+        features['volume_sma'] = self.calculate_sma(volume, window=20)
+        features['volume_ratio'] = volume / features['volume_sma']
+
+        # 8. Time-based (if timestamp available)
+        if 'timestamp' in df_clean.columns:
+            timestamps = df_clean['timestamp'].tolist()
+            dt = pd.to_datetime(timestamps, unit='s')
+            features['hour'] = dt.hour
+            features['day_of_week'] = dt.dayofweek
+        else:
+            features['hour'] = 0
+            features['day_of_week'] = 0
+
+        # 9. Additional features to reach 23
+        features['price_momentum'] = close.diff(5)
+        features['price_acceleration'] = close.diff(5).diff(5)
+
+        # Combine into DataFrame
+        feature_df = pd.DataFrame(features)
+
+        # Handle NaN values (from rolling operations)
+        feature_df = feature_df.fillna(method='bfill').fillna(0)
+
+        # Rename columns to match expected format
+        if len(feature_df.columns) >= 23:
+            feature_df = feature_df.iloc[:, :23]
+        else:
+            # Pad with zeros if needed
+            for i in range(len(feature_df.columns), 23):
+                feature_df[f'feature_{i}'] = 0.0
+
+        feature_df.columns = [f'feature_{i}' for i in range(23)]
+
+        logger.info(f"  ✓ Vectorized features built: {feature_df.shape}")
+
+        return feature_df
+
     def build_sequence(
         self,
         df: pd.DataFrame,
         sequence_length: int = 60
     ) -> Optional[np.ndarray]:
         """
-        Build sequence of features for LSTM input
+        Build sequence of features for LSTM input (TRUE Vectorization - Task #077.5)
+
+        Performance: O(N) - calculates features once, then slices
+
+        This is the CORRECT implementation that:
+        1. Calls build_features_vectorized ONCE to get all features
+        2. Slices the last N rows directly (no loops)
 
         Args:
             df: DataFrame with columns ['close', 'high', 'low', 'volume']
@@ -319,33 +438,37 @@ class FeatureBuilder:
         Returns:
             Array of shape (sequence_length, n_features) or None
         """
-        logger.info(f"Building feature sequence...")
+        logger.info(f"Building feature sequence (TRUE vectorization)...")
 
-        if len(df) < sequence_length:
-            logger.error(f"Insufficient data for sequence: {len(df)} < {sequence_length}")
+        # Check if we have enough data
+        min_required = sequence_length + self.lookback_period
+        if len(df) < min_required:
+            logger.error(f"Insufficient data for sequence: {len(df)} < {min_required} required")
             return None
 
-        # Use last N rows
-        df_window = df.tail(sequence_length).copy()
-        df_window = df_window.reset_index(drop=True)
+        # TRUE vectorization: calculate ALL features at once (O(N) operation)
+        full_features_df = self.build_features_vectorized(df)
 
-        # Build features for each timestep
-        sequences = []
+        if full_features_df is None:
+            logger.error("Vectorized feature building failed")
+            return None
 
-        for i in range(len(df_window)):
-            # Get data up to this point
-            subset = df.iloc[:len(df) - len(df_window) + i + 1]
+        # Handle NaN values that may exist from early indicators
+        # Drop initial rows that have NaNs due to insufficient history
+        full_features_df = full_features_df.dropna()
 
-            # Build features
-            features_df = self.build_features(subset)
+        if len(full_features_df) < sequence_length:
+            logger.error(f"Insufficient valid features after dropna: {len(full_features_df)} < {sequence_length}")
+            return None
 
-            if features_df is not None:
-                sequences.append(features_df.values[0])
-            else:
-                # Use zeros if features can't be built
-                sequences.append(np.zeros(23))
+        # Simply slice the last N rows (O(1) operation)
+        sequence_df = full_features_df.tail(sequence_length)
 
-        sequence_array = np.array(sequences, dtype=np.float32)
+        if len(sequence_df) != sequence_length:
+            logger.error(f"Sequence length mismatch: {len(sequence_df)} != {sequence_length}")
+            return None
+
+        sequence_array = sequence_df.values.astype(np.float32)
 
         logger.info(f"  ✓ Sequence built: {sequence_array.shape}")
 
