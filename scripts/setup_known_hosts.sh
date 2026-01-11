@@ -20,7 +20,7 @@ GTW_IP="172.19.141.255"      # Gateway node (Windows MT5 Terminal)
 SSH_USER="${MT5_SSH_USER:-root}"
 KNOWN_HOSTS_FILE="${HOME}/.ssh/known_hosts"
 
-# Function to add host key to known_hosts
+# Function to add host key to known_hosts (idempotent)
 add_host_key() {
     local host_ip=$1
     local host_name=$2
@@ -31,13 +31,26 @@ add_host_key() {
     mkdir -p "${HOME}/.ssh"
     chmod 700 "${HOME}/.ssh"
 
-    # Use ssh-keyscan to fetch and add the host key
-    # -H: Hash the hostname (optional, for privacy)
-    if ssh-keyscan -H "${host_ip}" >> "${KNOWN_HOSTS_FILE}" 2>/dev/null; then
-        echo "  ✓ Successfully added ${host_name}"
+    # Create a temporary file for the new host key
+    local temp_key_file
+    temp_key_file=$(mktemp)
+
+    # Fetch the host key
+    if ssh-keyscan -H "${host_ip}" > "${temp_key_file}" 2>/dev/null; then
+        # Check if the host key already exists in known_hosts
+        if grep -q "$(cat "${temp_key_file}")" "${KNOWN_HOSTS_FILE}" 2>/dev/null; then
+            echo "  ℹ Host key already exists, skipping..."
+        else
+            # Add the host key only if it doesn't exist
+            cat "${temp_key_file}" >> "${KNOWN_HOSTS_FILE}"
+            echo "  ✓ Successfully added ${host_name}"
+        fi
     else
         echo "  ⚠ Warning: Failed to add ${host_name}, but continuing..."
     fi
+
+    # Clean up temporary file
+    rm -f "${temp_key_file}"
 }
 
 # Main execution
