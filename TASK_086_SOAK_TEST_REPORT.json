@@ -1,0 +1,114 @@
+{
+  "test_metadata": {
+    "start_time": "2026-01-11T15:05:26.523286",
+    "end_time": "2026-01-11T15:07:57.141211",
+    "elapsed_seconds": 180.0307219028473,
+    "sample_count": 6,
+    "interval_seconds": 30.005120317141216
+  },
+  "stability_analysis": {
+    "uptime_trend": {
+      "min": 2591.390844106674,
+      "max": 2711.1468408107758,
+      "mean": 2651.420683542887,
+      "is_increasing": true
+    },
+    "trading_cycles": {
+      "total_samples": 6,
+      "latest_count": 47.0,
+      "increases_observed": 2,
+      "is_cycling": true
+    },
+    "failure_analysis": {
+      "latest_failed_count": 0.0,
+      "has_errors": false,
+      "error_rate": 0.0
+    }
+  },
+  "errors": [],
+  "samples": [
+    {
+      "timestamp": "2026-01-11T15:05:26.523286",
+      "unix_timestamp": 1768115126.5232942,
+      "metrics": {
+        "sentinel_daemon_uptime_seconds": 2591.390844106674,
+        "sentinel_trading_cycles_total": 45.0,
+        "sentinel_trading_cycles_failed_total": 0.0,
+        "sentinel_prediction_requests_total": 45.0,
+        "sentinel_trading_signals_total": 45.0,
+        "sentinel_zmq_send_failures_total": 0.0,
+        "sentinel_api_errors_total": null
+      }
+    },
+    {
+      "timestamp": "2026-01-11T15:05:56.691720",
+      "unix_timestamp": 1768115156.6917295,
+      "metrics": {
+        "sentinel_daemon_uptime_seconds": 2591.390844106674,
+        "sentinel_trading_cycles_total": 45.0,
+        "sentinel_trading_cycles_failed_total": 0.0,
+        "sentinel_prediction_requests_total": 45.0,
+        "sentinel_trading_signals_total": 45.0,
+        "sentinel_zmq_send_failures_total": 0.0,
+        "sentinel_api_errors_total": null
+      }
+    },
+    {
+      "timestamp": "2026-01-11T15:06:26.834740",
+      "unix_timestamp": 1768115186.8347538,
+      "metrics": {
+        "sentinel_daemon_uptime_seconds": 2651.724365711212,
+        "sentinel_trading_cycles_total": 46.0,
+        "sentinel_trading_cycles_failed_total": 0.0,
+        "sentinel_prediction_requests_total": 46.0,
+        "sentinel_trading_signals_total": 46.0,
+        "sentinel_zmq_send_failures_total": 0.0,
+        "sentinel_api_errors_total": null
+      }
+    },
+    {
+      "timestamp": "2026-01-11T15:06:56.896733",
+      "unix_timestamp": 1768115216.8967423,
+      "metrics": {
+        "sentinel_daemon_uptime_seconds": 2651.724365711212,
+        "sentinel_trading_cycles_total": 46.0,
+        "sentinel_trading_cycles_failed_total": 0.0,
+        "sentinel_prediction_requests_total": 46.0,
+        "sentinel_trading_signals_total": 46.0,
+        "sentinel_zmq_send_failures_total": 0.0,
+        "sentinel_api_errors_total": null
+      }
+    },
+    {
+      "timestamp": "2026-01-11T15:07:27.032683",
+      "unix_timestamp": 1768115247.0326922,
+      "metrics": {
+        "sentinel_daemon_uptime_seconds": 2711.1468408107758,
+        "sentinel_trading_cycles_total": 47.0,
+        "sentinel_trading_cycles_failed_total": 0.0,
+        "sentinel_prediction_requests_total": 47.0,
+        "sentinel_trading_signals_total": 47.0,
+        "sentinel_zmq_send_failures_total": 0.0,
+        "sentinel_api_errors_total": null
+      }
+    },
+    {
+      "timestamp": "2026-01-11T15:07:57.141211",
+      "unix_timestamp": 1768115277.1412203,
+      "metrics": {
+        "sentinel_daemon_uptime_seconds": 2711.1468408107758,
+        "sentinel_trading_cycles_total": 47.0,
+        "sentinel_trading_cycles_failed_total": 0.0,
+        "sentinel_prediction_requests_total": 47.0,
+        "sentinel_trading_signals_total": 47.0,
+        "sentinel_zmq_send_failures_total": 0.0,
+        "sentinel_api_errors_total": null
+      }
+    }
+  ],
+  "overall_health": {
+    "is_healthy": true,
+    "status": "HEALTHY",
+    "recommendation": "Ready for production monitoring"
+  }
+}

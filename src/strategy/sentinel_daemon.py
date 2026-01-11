@@ -38,6 +38,7 @@ import pandas as pd
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from strategy.feature_builder import FeatureBuilder
+from strategy.metrics_exporter import get_metrics_exporter
 
 # Configure logging
 logging.basicConfig(
@@ -68,7 +69,8 @@ class SentinelDaemon:
         symbol: str = "EURUSD",
         threshold: float = 0.6,
         lookback_bars: int = 200,  # Increased from 100 to fix data starvation (Task #077.5)
-        dry_run: bool = True
+        dry_run: bool = True,
+        metrics_port: int = 8000  # Prometheus metrics endpoint (Task #085)
     ):
         """
         Initialize Sentinel Daemon
@@ -83,6 +85,7 @@ class SentinelDaemon:
             threshold: Probability threshold for trading
             lookback_bars: Number of historical bars to fetch
             dry_run: If True, don't send actual trades
+            metrics_port: Port for Prometheus metrics endpoint (Task #085)
         """
         self.hub_host = hub_host
         self.hub_port = hub_port
@@ -93,11 +96,16 @@ class SentinelDaemon:
         self.threshold = threshold
         self.lookback_bars = lookback_bars
         self.dry_run = dry_run
+        self.metrics_port = metrics_port
 
         self.hub_url = f"http://{hub_host}:{hub_port}"
+        self.start_time = time.time()
 
         # Initialize feature builder
         self.feature_builder = FeatureBuilder(lookback_period=60)
+
+        # Initialize metrics exporter (Task #085)
+        self.metrics = get_metrics_exporter(port=metrics_port)
 
         # ZMQ context (created per-request to avoid leaks)
         self.zmq_context = None
@@ -110,6 +118,7 @@ class SentinelDaemon:
         logger.info(f"Symbol: {symbol}")
         logger.info(f"Threshold: {threshold}")
         logger.info(f"Dry Run: {dry_run}")
+        logger.info(f"Metrics Port: {metrics_port}")
         logger.info(f"API Key: {'SET' if self.eodhd_api_key else 'NOT SET'}")
         logger.info("=" * 80)
 
@@ -121,9 +130,12 @@ class SentinelDaemon:
             DataFrame with OHLCV data or None on error
         """
         logger.info(f"Fetching market data for {self.symbol}...")
+        fetch_start = time.time()
 
         if not self.eodhd_api_key:
             logger.error("EODHD API key not set")
+            self.metrics.record_data_fetch(time.time() - fetch_start, success=False)
+            self.metrics.record_api_error('eodhd', 'no_api_key')
             return None
 
         try:
@@ -140,12 +152,16 @@ class SentinelDaemon:
             if response.status_code != 200:
                 logger.error(f"API error: {response.status_code}")
                 logger.error(f"Response: {response.text}")
+                self.metrics.record_data_fetch(time.time() - fetch_start, success=False)
+                self.metrics.record_api_error('eodhd', str(response.status_code))
                 return None
 
             data = response.json()
 
             if not data:
                 logger.error("Empty response from API")
+                self.metrics.record_data_fetch(time.time() - fetch_start, success=False)
+                self.metrics.record_api_error('eodhd', 'empty_response')
                 return None
 
             # Convert to DataFrame
@@ -158,14 +174,21 @@ class SentinelDaemon:
             logger.info(f"✓ Fetched {len(df)} bars")
             logger.info(f"  Latest: {df.iloc[-1]['timestamp'] if len(df) > 0 else 'N/A'}")
 
+            # Record successful fetch
+            self.metrics.record_data_fetch(time.time() - fetch_start, success=True)
+
             return df.tail(self.lookback_bars)
 
         except requests.exceptions.Timeout:
             logger.error("API request timeout")
+            self.metrics.record_data_fetch(time.time() - fetch_start, success=False)
+            self.metrics.record_api_error('eodhd', 'timeout')
             return None
         except Exception as e:
             logger.error(f"Error fetching data: {e}")
             traceback.print_exc()
+            self.metrics.record_data_fetch(time.time() - fetch_start, success=False)
+            self.metrics.record_api_error('eodhd', 'exception')
             return None
 
     def request_prediction(
@@ -184,6 +207,7 @@ class SentinelDaemon:
             (1, 3) prediction probabilities or None
         """
         logger.info("Requesting prediction from HUB...")
+        pred_start = time.time()
 
         try:
             # Format for MLflow serving
@@ -210,6 +234,11 @@ class SentinelDaemon:
             if response.status_code != 200:
                 logger.error(f"Inference error: {response.status_code}")
                 logger.error(f"Response: {response.text}")
+                self.metrics.record_prediction(
+                    time.time() - pred_start,
+                    success=False
+                )
+                self.metrics.record_api_error('hub', str(response.status_code))
                 return None
 
             predictions = response.json()
@@ -222,14 +251,26 @@ class SentinelDaemon:
 
             logger.info(f"✓ Prediction: {pred_array[0]}")
 
+            # Record successful prediction
+            confidence = float(np.max(pred_array[0]))
+            self.metrics.record_prediction(
+                time.time() - pred_start,
+                success=True,
+                confidence=confidence
+            )
+
             return pred_array
 
         except requests.exceptions.Timeout:
             logger.error("HUB request timeout (>1s)")
+            self.metrics.record_prediction(time.time() - pred_start, success=False)
+            self.metrics.record_api_error('hub', 'timeout')
             return None
         except Exception as e:
             logger.error(f"Prediction error: {e}")
             traceback.print_exc()
+            self.metrics.record_prediction(time.time() - pred_start, success=False)
+            self.metrics.record_api_error('hub', 'exception')
             return None
 
     def send_trading_signal(
@@ -249,12 +290,16 @@ class SentinelDaemon:
         """
         logger.info(f"Sending trading signal: {action} (confidence: {confidence:.4f})")
 
+        # Record signal generation
+        self.metrics.record_trading_signal(action)
+
         if self.dry_run:
             logger.info("  [DRY RUN] Signal not actually sent")
             return True
 
         zmq_context = None
         zmq_socket = None
+        zmq_start = time.time()
 
         try:
             # Create ZMQ context and socket
@@ -283,17 +328,25 @@ class SentinelDaemon:
 
             logger.info(f"  GTW Response: {response}")
 
+            # Record successful send
+            zmq_duration = time.time() - zmq_start
+            self.metrics.record_zmq_send(zmq_duration, success=True)
+            self.metrics.record_trading_signal(action, executed=True)
+
             return True
 
         except zmq.error.Again:
             logger.error("  ZMQ timeout - GTW may not be running")
+            self.metrics.record_zmq_send(time.time() - zmq_start, success=False)
             return False
         except zmq.error.ZMQError as e:
             logger.error(f"  ZMQ error: {e}")
+            self.metrics.record_zmq_send(time.time() - zmq_start, success=False)
             return False
         except Exception as e:
             logger.error(f"  Error sending signal: {e}")
             traceback.print_exc()
+            self.metrics.record_zmq_send(time.time() - zmq_start, success=False)
             return False
         finally:
             # Cleanup ZMQ resources
@@ -323,20 +376,30 @@ class SentinelDaemon:
         logger.info(f"TRADING CYCLE START: {datetime.now().isoformat()}")
         logger.info("=" * 80)
 
+        cycle_start = time.time()
+        success = True
+
         try:
+            # Update daemon uptime
+            uptime = time.time() - self.start_time
+            self.metrics.set_uptime(uptime)
+
             # Step 1: Fetch market data
             df = self.fetch_market_data()
             if df is None or len(df) == 0:
                 logger.warning("No market data - skipping cycle")
+                self.metrics.record_cycle_end(cycle_start, success=False)
                 return
 
             # Step 2: Build features
             logger.info("Building features...")
+            feat_start = time.time()
 
             # Tabular features (latest)
             features_tabular_df = self.feature_builder.build_features(df, self.symbol)
             if features_tabular_df is None:
                 logger.error("Feature building failed - skipping cycle")
+                self.metrics.record_cycle_end(cycle_start, success=False)
                 return
 
             features_tabular = features_tabular_df.values  # (1, 23)
@@ -345,6 +408,7 @@ class SentinelDaemon:
             features_sequential = self.feature_builder.build_sequence(df, sequence_length=60)
             if features_sequential is None:
                 logger.error("Sequence building failed - skipping cycle")
+                self.metrics.record_cycle_end(cycle_start, success=False)
                 return
 
             features_sequential = features_sequential.reshape(1, 60, 23)  # (1, 60, 23)
@@ -353,10 +417,14 @@ class SentinelDaemon:
             logger.info(f"  Tabular: {features_tabular.shape}")
             logger.info(f"  Sequential: {features_sequential.shape}")
 
+            # Record feature build time
+            self.metrics.record_feature_build(time.time() - feat_start)
+
             # Step 3: Request prediction from HUB
             predictions = self.request_prediction(features_tabular, features_sequential)
             if predictions is None:
                 logger.error("Prediction failed - skipping cycle")
+                self.metrics.record_cycle_end(cycle_start, success=False)
                 return
 
             # Step 4: Make trading decision
@@ -370,11 +438,12 @@ class SentinelDaemon:
 
             # Step 5: Execute trade if confidence > threshold
             if confidence > self.threshold and action != 'HOLD':
-                success = self.send_trading_signal(action, confidence)
-                if success:
+                exec_success = self.send_trading_signal(action, confidence)
+                if exec_success:
                     logger.info(f"✓ Trade executed: {action}")
                 else:
                     logger.error(f"✗ Trade execution failed")
+                    success = False
             else:
                 logger.info(f"No trade (confidence {confidence:.4f} <= {self.threshold})")
 
@@ -382,11 +451,15 @@ class SentinelDaemon:
             logger.info(f"TRADING CYCLE COMPLETE")
             logger.info("=" * 80)
 
+            # Record successful cycle
+            self.metrics.record_cycle_end(cycle_start, success=success)
+
         except Exception as e:
             # NEVER crash the daemon
             logger.error(f"!!! CYCLE ERROR: {e}")
             logger.error(traceback.format_exc())
             logger.error("Daemon continues running...")
+            self.metrics.record_cycle_end(cycle_start, success=False)
 
     def start(self):
         """
@@ -397,6 +470,14 @@ class SentinelDaemon:
         logger.info("=" * 80)
         logger.info("STARTING SENTINEL DAEMON")
         logger.info("=" * 80)
+
+        # Start metrics HTTP server (Task #085)
+        try:
+            self.metrics.start_http_server()
+            logger.info(f"✓ Metrics endpoint available at http://0.0.0.0:{self.metrics_port}/metrics")
+        except Exception as e:
+            logger.error(f"Failed to start metrics server: {e}")
+            raise
 
         # Schedule job to run every minute at :58 seconds
         schedule.every(1).minutes.at(":58").do(self.execute_trading_cycle)
@@ -419,6 +500,11 @@ class SentinelDaemon:
             logger.info("\n" + "=" * 80)
             logger.info("Daemon stopped by user (Ctrl+C)")
             logger.info("=" * 80)
+            # Shutdown metrics server
+            try:
+                self.metrics.shutdown()
+            except Exception as e:
+                logger.error(f"Error shutting down metrics: {e}")
         except Exception as e:
             logger.error(f"Daemon crashed: {e}")
             logger.error(traceback.format_exc())
@@ -474,6 +560,12 @@ def main():
         action="store_true",
         help="Live trading mode (disables dry-run)"
     )
+    parser.add_argument(
+        "--metrics-port",
+        type=int,
+        default=int(os.getenv("METRICS_PORT", "8000")),
+        help="Prometheus metrics endpoint port (Task #085)"
+    )
 
     args = parser.parse_args()
 
@@ -485,7 +577,8 @@ def main():
         gtw_port=args.gtw_port,
         symbol=args.symbol,
         threshold=args.threshold,
-        dry_run=not args.live  # Dry run unless --live specified
+        dry_run=not args.live,  # Dry run unless --live specified
+        metrics_port=args.metrics_port  # Prometheus metrics port (Task #085)
     )
 
     # Start daemon

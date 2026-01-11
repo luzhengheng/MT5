@@ -21,6 +21,26 @@ rule_files:
 
 # 采集配置
 scrape_configs:
+  # INF (Sentinel) 交易指标 (Task #085)
+  # 将 INF 节点 (mt5-sentinel) 接入 HUB 监控中心
+  # INF 在 :8000/metrics 暴露 Prometheus 指标
+  - job_name: 'sentinel-metrics'
+    static_configs:
+      - targets:
+          - '172.19.141.250:8000'  # INF 服务器 Sentinel Daemon
+        labels:
+          instance: 'inf-sentinel'
+          component: 'trading'
+          node: 'inf'
+          region: 'singapore'
+
+    # 采集间隔
+    scrape_interval: 15s
+    scrape_timeout: 10s
+
+    # 指标路径
+    metrics_path: '/metrics'
+
   # MT5-CRS 数据质量指标
   - job_name: 'mt5-crs-dq-score'
     static_configs:
@@ -36,9 +56,6 @@ scrape_configs:
 
     # 指标路径
     metrics_path: '/metrics'
-
-    # 健康检查
-    health_check_path: '/health'
 
   # Prometheus 自监控
   - job_name: 'prometheus'
