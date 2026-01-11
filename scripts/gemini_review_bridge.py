@@ -25,13 +25,21 @@ import subprocess
 from dotenv import load_dotenv
 load_dotenv()
 
-# Try to import OpenAI client for Gemini API
+# Try to import required packages
 try:
     from openai import OpenAI
 except ImportError:
     print("ERROR: openai package not installed")
     print("Install: pip install openai")
     sys.exit(1)
+
+# Try to import curl_cffi for Cloudflare bypass
+try:
+    from curl_cffi import requests as cffi_requests
+    CURL_CFFI_AVAILABLE = True
+except ImportError:
+    CURL_CFFI_AVAILABLE = False
+    print("⚠️  WARNING: curl_cffi not available - Cloudflare protection may block API calls")
 
 
 class GeminiReviewBridge:
@@ -193,19 +201,50 @@ Please review now.
         print()
 
         try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[
+            # Try curl_cffi first for Cloudflare bypass
+            if CURL_CFFI_AVAILABLE:
+                return self._request_with_cffi(prompt, task_id)
+            else:
+                return self._request_with_openai(prompt, task_id)
+
+        except Exception as e:
+            print(f"ERROR: API call failed: {e}")
+            raise
+
+    def _request_with_cffi(self, prompt: str, task_id: str) -> Dict[str, Any]:
+        """Send request using curl_cffi to bypass Cloudflare"""
+        try:
+            headers = {
+                "Authorization": f"Bearer {self.api_key}",
+                "Content-Type": "application/json"
+            }
+
+            payload = {
+                "model": self.model,
+                "messages": [
                     {"role": "system", "content": "You are a senior DevOps architect specializing in Linux system services and automation. Provide concise, actionable feedback."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.3,
-                max_tokens=2000
+                "temperature": 0.3,
+                "max_tokens": 2000
+            }
+
+            response = cffi_requests.post(
+                f"{self.base_url}/chat/completions",
+                headers=headers,
+                json=payload,
+                timeout=60,
+                impersonate="chrome110"
             )
 
+            if response.status_code != 200:
+                raise Exception(f"API returned {response.status_code}: {response.text[:500]}")
+
+            data = response.json()
+
             # Extract response
-            review_text = response.choices[0].message.content
-            usage = response.usage
+            review_text = data['choices'][0]['message']['content']
+            usage = data.get('usage', {})
 
             result = {
                 "session_id": self.session_id,
@@ -213,17 +252,48 @@ Please review now.
                 "task_id": task_id,
                 "review": review_text,
                 "token_usage": {
-                    "input": usage.prompt_tokens,
-                    "output": usage.completion_tokens,
-                    "total": usage.total_tokens
+                    "input": usage.get('prompt_tokens', 0),
+                    "output": usage.get('completion_tokens', 0),
+                    "total": usage.get('total_tokens', 0)
                 }
             }
 
             return result
 
         except Exception as e:
-            print(f"ERROR: API call failed: {e}")
-            raise
+            print(f"⚠️  curl_cffi request failed: {e}")
+            print(f"   Falling back to standard OpenAI client...")
+            return self._request_with_openai(prompt, task_id)
+
+    def _request_with_openai(self, prompt: str, task_id: str) -> Dict[str, Any]:
+        """Send request using standard OpenAI client"""
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": "You are a senior DevOps architect specializing in Linux system services and automation. Provide concise, actionable feedback."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3,
+            max_tokens=2000
+        )
+
+        # Extract response
+        review_text = response.choices[0].message.content
+        usage = response.usage
+
+        result = {
+            "session_id": self.session_id,
+            "timestamp": self.timestamp,
+            "task_id": task_id,
+            "review": review_text,
+            "token_usage": {
+                "input": usage.prompt_tokens,
+                "output": usage.completion_tokens,
+                "total": usage.total_tokens
+            }
+        }
+
+        return result
 
     def save_review(self, result: Dict[str, Any]):
         """Save review to file"""
