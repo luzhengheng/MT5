@@ -302,13 +302,14 @@ def verify_connection():
         import subprocess
 
         print(f"\n  Testing SSH connection to GTW...")
+        # Task #088: Removed StrictHostKeyChecking=no for security
+        # Now requires setup_known_hosts.sh to be run first
         result = subprocess.run(
             [
                 "ssh",
                 "-o", "BatchMode=yes",
                 "-o", "ConnectTimeout=5",
-                "-o", "StrictHostKeyChecking=no",
-                "-o", "UserKnownHostsFile=/dev/null",
+                "-o", "StrictHostKeyChecking=accept-new",
                 "gtw",
                 "echo SUCCESS"
             ],

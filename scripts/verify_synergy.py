@@ -172,8 +172,9 @@ def check_hub_link():
     # Check 3: Test SSH connection to GitHub
     logger.info("Testing SSH connection to github.com...")
     try:
+        # Task #088: Removed StrictHostKeyChecking=no, use accept-new for security
         result = subprocess.run(
-            ["ssh", "-T", "git@github.com", "-o", "StrictHostKeyChecking=no"],
+            ["ssh", "-T", "git@github.com", "-o", "StrictHostKeyChecking=accept-new"],
             capture_output=True,
             text=True,
             timeout=10

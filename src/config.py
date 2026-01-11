@@ -38,6 +38,18 @@ EODHD_API_TOKEN = os.getenv("EODHD_API_TOKEN", "")
 EODHD_BASE_URL = os.getenv("EODHD_BASE_URL", "https://eodhd.com/api")
 
 # ==============================================================================
+# Cluster IP Configuration (TASK #088: Hardening & Security)
+# ==============================================================================
+# Inference node (Brain)
+INF_IP = os.getenv("INF_IP", "172.19.141.250")
+
+# Hub node (Repository/Model Server)
+HUB_IP = os.getenv("HUB_IP", "172.19.141.254")
+
+# Gateway node (Windows MT5 Terminal - Hand)
+GTW_IP = os.getenv("GTW_IP", "172.19.141.255")
+
+# ==============================================================================
 # ZMQ & Execution Gateway Configuration (CRITICAL FOR TASK #029)
 # ==============================================================================
 # Linux Strategy Node
@@ -45,8 +57,8 @@ ZMQ_MARKET_DATA_HOST = os.getenv("ZMQ_MARKET_DATA_HOST", "localhost")
 ZMQ_MARKET_DATA_PORT = int(os.getenv("ZMQ_MARKET_DATA_PORT", 5556))
 ZMQ_MARKET_DATA_URL = f"tcp://{ZMQ_MARKET_DATA_HOST}:{ZMQ_MARKET_DATA_PORT}"
 
-# Windows Execution Gateway (172.19.141.255 = Windows MT5 Terminal host)
-GTW_HOST = os.getenv("GTW_HOST", "172.19.141.255")  # Windows gateway IP
+# Windows Execution Gateway (GTW_IP = Windows MT5 Terminal host)
+GTW_HOST = os.getenv("GTW_HOST", GTW_IP)  # Windows gateway IP (uses centralized config)
 GTW_PORT = int(os.getenv("GTW_PORT", 5555))  # ZMQ REP port
 ZMQ_EXECUTION_URL = f"tcp://{GTW_HOST}:{GTW_PORT}"
 

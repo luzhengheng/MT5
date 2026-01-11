@@ -70,7 +70,7 @@ else
     echo -e "${YELLOW}⚠ Cannot reach INF metrics endpoint${NC}"
     echo "  Troubleshooting:"
     echo "    1. Check if INF is running: ssh $INF_HOST 'pgrep -f sentinel_daemon'"
-    echo "    2. Check port 8000 on INF: ssh $INF_HOST 'netstat -tulpn | grep 8000'"
+    echo "    2. Check port 8000 on INF: ssh $INF_HOST 'ss -tulpn | grep 8000'"
     echo "    3. Check firewall: ssh $INF_HOST 'ufw status'"
     echo "    4. Enable port: ssh $INF_HOST 'sudo ufw allow 8000/tcp'"
 fi

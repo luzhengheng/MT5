@@ -3,6 +3,7 @@
 """
 Cluster Health Verification Script for MT5-CRS
 Task #087: Production Hardening & Auto-Start Configuration
+Task #088: Hardening & Security - Refactored to use centralized config
 
 Validates that all critical trading services are running and properly configured
 for auto-start across the production cluster.
@@ -23,6 +24,9 @@ from datetime import datetime
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
+# Import centralized configuration
+from src.config import INF_IP, HUB_IP, GTW_IP
+
 # Configure logging
 logging.basicConfig(
     level=logging.INFO,
@@ -35,16 +39,17 @@ class ClusterHealthVerifier:
     """Verifies health and auto-start configuration of production cluster"""
 
     def __init__(self):
-        # Load cluster configuration from environment variables
-        self.hub_ip = os.getenv("MT5_HUB_IP", "172.19.141.254")
-        self.inf_ip = os.getenv("MT5_INF_IP", "172.19.141.250")
+        # Load cluster configuration from centralized config module (Task #088)
+        self.hub_ip = HUB_IP
+        self.inf_ip = INF_IP
+        self.gtw_ip = GTW_IP
         self.ssh_user = os.getenv("MT5_SSH_USER", "root")
         self.checks_passed = []
         self.checks_failed = []
 
-        # Validate required environment variables
+        # Validate required configuration
         if not self.hub_ip or not self.inf_ip:
-            raise ValueError("MT5_HUB_IP and MT5_INF_IP environment variables are required")
+            raise ValueError("INF_IP and HUB_IP configuration is required (from src.config)")
 
     def check_local_service(self, service_name: str) -> Tuple[bool, str]:
         """Check if a local systemd service is enabled and running"""
@@ -92,8 +97,9 @@ class ClusterHealthVerifier:
         logger.info(f"Checking {host_type} service via SSH ({host_ip}): {service_name}...")
 
         try:
-            # SSH configuration with secure defaults
-            ssh_opts = ['-o', 'ConnectTimeout=10', '-o', 'BatchMode=yes']
+            # SSH configuration with secure defaults (Task #088: removed StrictHostKeyChecking=no)
+            # Requires known_hosts to be properly configured via setup_known_hosts.sh
+            ssh_opts = ['-o', 'ConnectTimeout=10', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=accept-new']
 
             # Check if service is enabled
             result = subprocess.run(

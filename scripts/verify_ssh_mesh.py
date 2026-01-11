@@ -60,14 +60,13 @@ def test_ssh_connection(host: str) -> Tuple[bool, str, str]:
         # SSH with batch mode to avoid password prompts
         # -o BatchMode=yes: No password prompts
         # -o ConnectTimeout=10: 10 second timeout
-        # -o StrictHostKeyChecking=no: Skip host key verification
+        # -o StrictHostKeyChecking=accept-new: Task #088 - Secure SSH without host key verification
         result = subprocess.run(
             [
                 "ssh",
                 "-o", "BatchMode=yes",
                 "-o", "ConnectTimeout=10",
-                "-o", "StrictHostKeyChecking=no",
-                "-o", "UserKnownHostsFile=/dev/null",
+                "-o", "StrictHostKeyChecking=accept-new",
                 host,
                 "echo 'Connection Success' && hostname && whoami"
             ],
@@ -104,8 +103,7 @@ def test_latency(host: str) -> Tuple[bool, str]:
                 "ssh",
                 "-o", "BatchMode=yes",
                 "-o", "ConnectTimeout=10",
-                "-o", "StrictHostKeyChecking=no",
-                "-o", "UserKnownHostsFile=/dev/null",
+                "-o", "StrictHostKeyChecking=accept-new",
                 host,
                 "echo OK"
             ],
