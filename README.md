@@ -8,6 +8,23 @@
 [![Python](https://img.shields.io/badge/python-3.6+-blue.svg)](https://www.python.org/downloads/)
 [![Redis](https://img.shields.io/badge/redis-6.0+-red.svg)](https://redis.io/)
 
+**Status**: v1.0 Infrastructure Complete | v1.1 Strategy Research Phase
+
+---
+
+## 📖 快速导航
+
+> **新人/新 Agent 请先看这里！**
+
+| 目录 | 用途 | 快速链接 |
+|------|------|---------|
+| 🚀 **快速开始** | 首次部署和运行 | [docs/guides/](docs/guides/) |
+| 📚 **参考文档** | 系统指令、协议、架构 | [docs/references/](docs/references/) |
+| 🏗️ **基础设施** | 服务器、网络、配置 | [docs/references/📄 MT5-CRS 基础设施资产全景档案.md.md](docs/references/) |
+| 📦 **任务存档** | 已完成的任务报告 | [docs/archive/tasks/](docs/archive/tasks/) |
+| 📊 **执行日志** | 验证和审计日志 | [docs/archive/logs/](docs/archive/logs/) |
+| 🔍 **工作流** | 开发协议（Protocol v4.3） | [docs/references/[System Instruction MT5-CRS Development Protocol v4.3].md](docs/references/) |
+
 ---
 
 ## 🎯 项目概述
@@ -225,33 +242,46 @@ redis-cli XREVRANGE mt5:events:signals + - COUNT 5
 
 ```
 MT5-CRS/
-├── src/
+├── src/                        # 核心业务代码
 │   ├── event_bus/              # 事件总线核心
-│   │   ├── base_producer.py    # 事件生产者
-│   │   ├── base_consumer.py    # 事件消费者
-│   │   └── config.py           # Redis配置
+│   │   ├── base_producer.py
+│   │   ├── base_consumer.py
+│   │   └── config.py
 │   │
 │   ├── news_service/           # 新闻服务
-│   │   ├── news_fetcher.py     # EODHD新闻获取
-│   │   └── ticker_extractor.py # Ticker提取
-│   │
 │   ├── sentiment_service/      # 情感分析服务
-│   │   ├── finbert_analyzer.py       # FinBERT分析器
-│   │   └── news_filter_consumer.py   # 新闻过滤消费者
-│   │
 │   ├── signal_service/         # 信号生成服务
-│   │   ├── risk_manager.py           # 风险管理器
-│   │   └── signal_generator_consumer.py # 信号生成消费者
+│   └── test_end_to_end.py
+│
+├── scripts/                    # 自动化和管理脚本
+│   ├── audit_current_task.py   # Gate 1 本地审计
+│   └── read_task_context.py    # 任务上下文读取
+│
+├── docs/                       # 📚 文档根目录
+│   ├── guides/                 # 🚀 快速开始 & 部署指南
+│   │   ├── DEPLOYMENT.md
+│   │   ├── ML_TRAINING_GUIDE.md
+│   │   └── ...
 │   │
-│   └── test_end_to_end.py     # 端到端测试
+│   ├── references/             # 📖 参考文档
+│   │   ├── [System Instruction...].md
+│   │   ├── 📄 MT5-CRS 基础设施资产全景档案.md.md
+│   │   └── task.md
+│   │
+│   ├── archive/                # 📦 归档区
+│   │   ├── tasks/              # 已完成任务报告
+│   │   ├── logs/               # 执行日志
+│   │   └── reports/            # 历史报告
+│   │
+│   └── specs/                  # 技术规范
 │
-├── configs/
-│   └── redis/                  # Redis配置
+├── config/                     # 配置文件
+├── data/                       # 数据目录
+├── models/                     # 模型存储
 │
-├── docs/
-│   ├── DEPLOYMENT.md           # 部署文档
-│   └── issues/                 # 工单与进展报告
-│
+├── gemini_review_bridge.py     # Gate 2 AI 智能审查
+├── main.py                     # 主入口
+├── requirements.txt            # 依赖包
 └── docker-compose.yml
 ```
 
@@ -323,12 +353,29 @@ signal_service/         3          550
 
 ---
 
-## 📚 文档
+## 📚 完整文档导航
 
-- [部署文档](docs/DEPLOYMENT.md)
-- [API文档](docs/API.md)
-- [工单报告](docs/issues/)
-- [故障排查](docs/TROUBLESHOOTING.md)
+### 🚀 入门指南
+- [部署指南](docs/guides/DEPLOYMENT.md)
+- [快速开始](docs/guides/QUICK_START.md)
+- [ML 训练指南](docs/guides/ML_TRAINING_GUIDE.md)
+- [回测指南](docs/guides/BACKTEST_GUIDE.md)
+
+### 📖 系统文档
+- [开发协议 v4.3](docs/references/[System%20Instruction%20MT5-CRS%20Development%20Protocol%20v4.3].md)（关键）
+- [基础设施档案](docs/references/📄%20MT5-CRS%20基础设施资产全景档案.md.md)（生产环境）
+- [任务执行模板](docs/references/task.md)
+- [工作流协议](docs/references/WORKFLOW_PROTOCOL.md)
+
+### 📊 任务和报告
+- [已完成任务](docs/archive/tasks/) - 所有 Task 的完成报告
+- [执行日志](docs/archive/logs/) - 验证和审计日志
+- [报告存档](docs/archive/reports/) - 历史报告
+
+### 🔧 故障排查和扩展
+- [SSH 设置指南](docs/guides/DEPLOYMENT_GTW_SSH_SETUP.md)
+- [网络验证](docs/guides/DEPLOYMENT_INF_NETWORK_VERIFICATION.md)
+- [风险控制集成](docs/guides/RISK_CONTROL_INTEGRATION_GUIDE.md)
 
 ---
 
@@ -371,4 +418,18 @@ MIT License - 详见 [LICENSE](LICENSE)
 
 ---
 
-*最后更新：2025-12-19*
+---
+
+## 🔄 版本历史
+
+- **v1.1** (进行中) - 策略研究阶段，文档重构完成（Task #091）
+- **v1.0** - 基础设施完成（2025-12-19）
+  - ✅ Redis Streams 事件总线
+  - ✅ EODHD News API 集成
+  - ✅ FinBERT 目标级情感分析
+  - ✅ 多资产信号生成
+  - ✅ Protocol v4.3 零信任开发协议
+
+---
+
+*最后更新：2026-01-11（Task #091 文档重构）*
