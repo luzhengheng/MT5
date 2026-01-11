@@ -93,6 +93,9 @@ def main():
 
         # Create MT5 service (handles trading)
         mt5 = MT5Service()
+        if not mt5.connect():
+            logger.error("Failed to connect MT5 Service")
+            sys.exit(1)
 
         logger.info("Initializing ZMQ Gateway...")
         # Create ZMQ gateway
