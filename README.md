@@ -20,10 +20,10 @@
 |------|------|---------|
 | 🚀 **快速开始** | 首次部署和运行 | [docs/guides/](docs/guides/) |
 | 📚 **参考文档** | 系统指令、协议、架构 | [docs/references/](docs/references/) |
-| 🏗️ **基础设施** | 服务器、网络、配置 | [docs/references/📄 MT5-CRS 基础设施资产全景档案.md.md](docs/references/) |
+| 🏗️ **基础设施** | 服务器、网络、配置 | [MT5-CRS 基础设施档案](docs/references/📄%20MT5-CRS%20基础设施资产全景档案.md.md) |
 | 📦 **任务存档** | 已完成的任务报告 | [docs/archive/tasks/](docs/archive/tasks/) |
 | 📊 **执行日志** | 验证和审计日志 | [docs/archive/logs/](docs/archive/logs/) |
-| 🔍 **工作流** | 开发协议（Protocol v4.3） | [docs/references/[System Instruction MT5-CRS Development Protocol v4.3].md](docs/references/) |
+| 🔍 **工作流** | 开发协议（Protocol v4.3） | [开发协议 v4.3](docs/references/SYSTEM_INSTRUCTION_MT5_CRS_DEVELOPMENT_PROTOCOL_V2.md) |
 
 ---
 
@@ -234,7 +234,7 @@ python3 test_end_to_end.py
 redis-cli XREVRANGE mt5:events:signals + - COUNT 5
 ```
 
-详细部署文档：[DEPLOYMENT.md](docs/DEPLOYMENT.md)
+详细部署文档：[DEPLOYMENT.md](docs/guides/DEPLOYMENT.md)
 
 ---
 
@@ -264,9 +264,9 @@ MT5-CRS/
 │   │   └── ...
 │   │
 │   ├── references/             # 📖 参考文档
-│   │   ├── [System Instruction...].md
+│   │   ├── SYSTEM_INSTRUCTION_MT5_CRS_DEVELOPMENT_PROTOCOL_V2.md
 │   │   ├── 📄 MT5-CRS 基础设施资产全景档案.md.md
-│   │   └── task.md
+│   │   └── WORKFLOW_PROTOCOL.md
 │   │
 │   ├── archive/                # 📦 归档区
 │   │   ├── tasks/              # 已完成任务报告
@@ -356,16 +356,16 @@ signal_service/         3          550
 ## 📚 完整文档导航
 
 ### 🚀 入门指南
-- [部署指南](docs/guides/DEPLOYMENT.md)
-- [快速开始](docs/guides/QUICK_START.md)
-- [ML 训练指南](docs/guides/ML_TRAINING_GUIDE.md)
-- [回测指南](docs/guides/BACKTEST_GUIDE.md)
+- [部署指南](docs/guides/DEPLOYMENT.md) - 完整的系统部署流程
+- [快速开始](docs/guides/QUICK_START.md) - 新用户入门指南
+- [ML 训练指南](docs/guides/ML_TRAINING_GUIDE.md) - FinBERT 模型训练
+- [回测指南](docs/guides/BACKTEST_GUIDE.md) - 历史数据回测
 
 ### 📖 系统文档
-- [开发协议 v4.3](docs/references/[System%20Instruction%20MT5-CRS%20Development%20Protocol%20v4.3].md)（关键）
+- [开发协议 v4.3](docs/references/SYSTEM_INSTRUCTION_MT5_CRS_DEVELOPMENT_PROTOCOL_V2.md)（关键）
 - [基础设施档案](docs/references/📄%20MT5-CRS%20基础设施资产全景档案.md.md)（生产环境）
-- [任务执行模板](docs/references/task.md)
 - [工作流协议](docs/references/WORKFLOW_PROTOCOL.md)
+- [AI 同步提示](docs/references/AI_SYNC_PROMPT.md)
 
 ### 📊 任务和报告
 - [已完成任务](docs/archive/tasks/) - 所有 Task 的完成报告
@@ -373,9 +373,9 @@ signal_service/         3          550
 - [报告存档](docs/archive/reports/) - 历史报告
 
 ### 🔧 故障排查和扩展
-- [SSH 设置指南](docs/guides/DEPLOYMENT_GTW_SSH_SETUP.md)
-- [网络验证](docs/guides/DEPLOYMENT_INF_NETWORK_VERIFICATION.md)
-- [风险控制集成](docs/guides/RISK_CONTROL_INTEGRATION_GUIDE.md)
+- [SSH 设置指南](docs/guides/DEPLOYMENT_GTW_SSH_SETUP.md) - Windows Gateway SSH 配置
+- [网络验证](docs/guides/DEPLOYMENT_INF_NETWORK_VERIFICATION.md) - 新加坡网络诊断
+- [风险控制集成](docs/guides/RISK_CONTROL_INTEGRATION_GUIDE.md) - 风险管理模块集成
 
 ---
 
