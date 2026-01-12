@@ -3,6 +3,9 @@
 """
 MT5-CRS Task Auditor (Clean Version)
 Validates the completion status of the current task.
+
+Protocol: v4.3 (Zero-Trust Edition)
+Includes infrastructure path validation and governance tool checks.
 """
 
 import sys
@@ -11,6 +14,7 @@ import logging
 import warnings
 import json
 import subprocess
+from pathlib import Path
 
 # 全局设置
 logging.disable(logging.CRITICAL)
@@ -1712,8 +1716,56 @@ def audit_task_023():
     return results
 
 
+def check_environment():
+    """
+    检查环境基础设施完整性 (Fail-Closed)
+
+    Raises:
+        FileNotFoundError: 如果任何关键工具缺失
+    """
+    print("\n" + "=" * 80)
+    print("🔐 INFRASTRUCTURE CHECK (Zero-Trust Mode)")
+    print("=" * 80)
+
+    try:
+        # 导入路径配置中心
+        sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+        from src.config.paths import verify_infrastructure, resolve_tool
+
+        print("\n✅ 导入 src.config.paths 成功")
+
+        # 验证基础设施
+        verify_infrastructure()
+
+        # 验证核心治理工具
+        print("\n🔍 验证核心治理工具...")
+        ai_bridge = resolve_tool("AI_BRIDGE")
+        print(f"   ✅ AI_BRIDGE 已验证: {ai_bridge}")
+
+        nexus = resolve_tool("NEXUS")
+        print(f"   ✅ NEXUS 已验证: {nexus}")
+
+        print("\n✅ Infrastructure check PASSED")
+        return True
+
+    except Exception as e:
+        print(f"\n❌ Infrastructure check FAILED")
+        print(f"   Error: {e}")
+        print(f"\n   🚨 Critical Infrastructure Missing: {e}")
+        print(f"   This file is required for AI audit pipeline.")
+        raise
+
+
 def audit():
     """主审计入口函数"""
+    # 第一步：检查环境基础设施 (Fail-Closed)
+    try:
+        check_environment()
+    except Exception as e:
+        print(f"\n❌ FATAL: Infrastructure validation failed")
+        print(f"   {e}")
+        sys.exit(1)
+
     # 运行 Task 023 审计 (最新任务)
     results = audit_task_023()
 
