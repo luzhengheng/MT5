@@ -1,0 +1,8 @@
+{
+  "symbol": "AAPL.US",
+  "optimal_d": 0.05,
+  "adf_pvalue": 0.027785281036828875,
+  "is_stationary": true,
+  "correlation": 0.9977851526698651,
+  "data_rows": 11361
+}

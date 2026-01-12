@@ -329,11 +329,25 @@
 │       └── redis.conf
 ├── examples
 │   └── 01_basic_feature_engineering.py
-├── export_log_1768135974.log
 ├── exports
-│   └── git_history_20260111_205254.md
+│   ├── AI_PROMPT_20260111_205254.md
+│   ├── AI_PROMPT_20260111_205738.md
+│   ├── CONTEXT_SUMMARY_20260111_205254.md
+│   ├── CONTEXT_SUMMARY_20260111_205738.md
+│   ├── core_files_20260111_205254.md
+│   ├── core_files_20260111_205738.md
+│   ├── documents_20260111_205254.md
+│   ├── documents_20260111_205738.md
+│   ├── EXPORT_EXECUTION_REPORT_20260111_205738.md
+│   ├── git_history_20260111_205254.md
+│   ├── git_history_20260111_205738.md
+│   ├── git_history_20260111_220420.md
+│   ├── project_structure_20260111_205254.md
+│   ├── project_structure_20260111_205738.md
+│   └── README.md
 ├── gemini_review_bridge.py
 ├── logs
+│   └── sentinel_daemon.log
 ├── mlruns
 │   ├── 0
 │   │   └── meta.yaml
@@ -374,7 +388,6 @@
 ├── README.md
 ├── requirements.txt
 ├── scripts
-│   ├── add_issue_content_to_notion.py
 │   ├── align_xgboost.sh
 │   ├── archive
 │   ├── audit
@@ -398,45 +411,22 @@
 │   │   ├── audit_task_078.py
 │   │   └── audit_template.py
 │   ├── audit_trigger.txt
-│   ├── backup_notion_full.py
-│   ├── bulk_loader_cli.py
-│   ├── calibrate_threshold.py
 │   ├── check_versions.sh
-│   ├── compute_features.py
-│   ├── create_notion_issue.py
-│   ├── create_phase1_monolith.py
+│   ├── core
 │   ├── data
 │   │   ├── content_backfill_map.py
 │   │   └── historical_map.py
-│   ├── dataset_builder.py
-│   ├── debug_bridge_workflow.py
-│   ├── debug_eodhd.py
-│   ├── debug_gemini_api.py
-│   ├── debug_notion_db.py
-│   ├── debug_raw_api.py
 │   ├── debug_remote_training.sh
 │   ├── deploy
 │   │   ├── start_monitoring_podman.sh
 │   │   └── start_redis_services.sh
 │   ├── deploy_all.sh
-│   ├── deploy_baseline.py
 │   ├── deploy_h1_model.sh
 │   ├── deploy_hub_serving.sh
 │   ├── deploy_to_windows.sh
-│   ├── diagnose_ai_bridge.py
-│   ├── diagnose_gateway.py
-│   ├── diagnostic_report.py
 │   ├── dummy_trigger.txt
-│   ├── emergency_backfill.py
-│   ├── eval_ensemble.py
-│   ├── fill_history_details.py
 │   ├── fix_remote_env.sh
-│   ├── gemini_review_bridge.py
-│   ├── gemini_review_demo.py
-│   ├── health_check.py
-│   ├── inspect_notion_db.py
 │   ├── install_service.sh
-│   ├── list_notion_databases.py
 │   ├── maintenance
 │   │   ├── archive_refactor.py
 │   │   ├── check_connectivity.py
@@ -459,13 +449,7 @@
 │   │   ├── setup_ssh_keys.sh
 │   │   ├── sync_nodes.sh
 │   │   └── upgrade_venv_to_39.py
-│   ├── migrate_and_clean_notion.py
-│   ├── mock_feature_api.py
-│   ├── mock_market_data_publisher.py
-│   ├── monitor_soak_test.py
-│   ├── monitor_training.py
 │   ├── network_diagnostics.sh
-│   ├── nexus_with_proxy.py
 │   ├── ops
 │   │   ├── check_options.py
 │   │   ├── check_schema.py
@@ -485,32 +469,9 @@
 │   │   └── ops_verify_mesh.py
 │   ├── ops_force_switch.sh
 │   ├── ops_forensic_analysis.sh
-│   ├── probe_gateway.py
-│   ├── probe_live_gateway.py
-│   ├── project_cli.py
-│   ├── promote_model.py
-│   ├── quick_create_issue.py
-│   ├── read_task_context.py
-│   ├── register_production_model.py
-│   ├── restore_history.py
 │   ├── restore_history.sh
-│   ├── restore_integrations.py
-│   ├── review_task_031.py
-│   ├── run_baseline_training.py
-│   ├── run_bulk_backfill.py
-│   ├── run_bulk_ingestion.py
-│   ├── run_dashboard_test.py
-│   ├── run_deep_training_h1.py
-│   ├── run_deep_training.py
-│   ├── run_deep_training_synthetic.py
-│   ├── run_feature_pipeline.py
-│   ├── run_ingestion_pilot.py
 │   ├── run_live.sh
-│   ├── run_optimization.py
-│   ├── run_paper_trading.py
 │   ├── run_remote_training.sh
-│   ├── sanitize_env.py
-│   ├── seed_notion_nexus.py
 │   ├── setup
 │   │   ├── init_eodhd_db.py
 │   │   ├── init_feast.py
@@ -519,28 +480,83 @@
 │   │   ├── install_ml_stack.py
 │   │   ├── setup_inf_env.sh
 │   │   └── setup_known_hosts.sh
-│   ├── setup_github_notion_sync.py
 │   ├── setup_win_ssh.ps1
-│   ├── smart_restore_v2.py
-│   ├── smart_restore_v3.py
-│   ├── start_windows_gateway.py
-│   ├── surgical_restore.py
-│   ├── sync_missing_ticket.py
 │   ├── task_014_operator_guide.sh
-│   ├── train_baseline.py
-│   ├── train_dl_baseline.py
-│   ├── transition_011_to_012.py
-│   ├── tune_lstm.py
-│   ├── uat_task_034.py
-│   ├── update_notion_body.py
-│   ├── update_notion_from_git.py
 │   ├── utils
+│   │   ├── add_issue_content_to_notion.py
+│   │   ├── backup_notion_full.py
+│   │   ├── bulk_loader_cli.py
 │   │   ├── bulk_resync.py
+│   │   ├── calibrate_threshold.py
+│   │   ├── compute_features.py
+│   │   ├── create_notion_issue.py
+│   │   ├── create_phase1_monolith.py
+│   │   ├── dataset_builder.py
+│   │   ├── debug_bridge_workflow.py
+│   │   ├── debug_eodhd.py
+│   │   ├── debug_gemini_api.py
+│   │   ├── debug_notion_db.py
+│   │   ├── debug_raw_api.py
+│   │   ├── deploy_baseline.py
+│   │   ├── diagnose_ai_bridge.py
+│   │   ├── diagnose_gateway.py
+│   │   ├── diagnostic_report.py
+│   │   ├── emergency_backfill.py
+│   │   ├── eval_ensemble.py
+│   │   ├── fill_history_details.py
+│   │   ├── gemini_review_bridge.py
+│   │   ├── gemini_review_demo.py
+│   │   ├── health_check.py
 │   │   ├── __init__.py
+│   │   ├── inspect_notion_db.py
+│   │   ├── list_notion_databases.py
+│   │   ├── migrate_and_clean_notion.py
+│   │   ├── mock_feature_api.py
+│   │   ├── mock_market_data_publisher.py
+│   │   ├── monitor_soak_test.py
+│   │   ├── monitor_training.py
+│   │   ├── nexus_with_proxy.py
 │   │   ├── notion_updater.py
-│   │   └── openai_audit_adapter.py
-│   ├── validate_data.py
-│   ├── validate_model.py
+│   │   ├── openai_audit_adapter.py
+│   │   ├── probe_gateway.py
+│   │   ├── probe_live_gateway.py
+│   │   ├── project_cli.py
+│   │   ├── promote_model.py
+│   │   ├── quick_create_issue.py
+│   │   ├── read_task_context.py
+│   │   ├── register_production_model.py
+│   │   ├── restore_history.py
+│   │   ├── restore_integrations.py
+│   │   ├── review_task_031.py
+│   │   ├── run_baseline_training.py
+│   │   ├── run_bulk_backfill.py
+│   │   ├── run_bulk_ingestion.py
+│   │   ├── run_dashboard_test.py
+│   │   ├── run_deep_training_h1.py
+│   │   ├── run_deep_training.py
+│   │   ├── run_deep_training_synthetic.py
+│   │   ├── run_feature_pipeline.py
+│   │   ├── run_ingestion_pilot.py
+│   │   ├── run_optimization.py
+│   │   ├── run_paper_trading.py
+│   │   ├── sanitize_env.py
+│   │   ├── seed_notion_nexus.py
+│   │   ├── setup_github_notion_sync.py
+│   │   ├── smart_restore_v2.py
+│   │   ├── smart_restore_v3.py
+│   │   ├── start_windows_gateway.py
+│   │   ├── surgical_restore.py
+│   │   ├── sync_missing_ticket.py
+│   │   ├── train_baseline.py
+│   │   ├── train_dl_baseline.py
+│   │   ├── transition_011_to_012.py
+│   │   ├── tune_lstm.py
+│   │   ├── uat_task_034.py
+│   │   ├── update_notion_body.py
+│   │   ├── update_notion_from_git.py
+│   │   ├── validate_data.py
+│   │   ├── validate_model.py
+│   │   └── wipe_all_data.py
 │   ├── verify
 │   │   ├── test_audit_connection.py
 │   │   ├── test_bridge_connectivity.py
@@ -604,8 +620,7 @@
 │   │   └── verify_training.py
 │   ├── verify_network.sh
 │   ├── verify_task_085_hub.sh
-│   ├── verify_task_085_inf.sh
-│   └── wipe_all_data.py
+│   └── verify_task_085_inf.sh
 ├── src
 │   ├── ai_probe_test.py
 │   ├── backtesting
@@ -937,5 +952,5 @@
         ├── jupyter
         └── man
 
-168 directories, 766 files
+169 directories, 780 files
 ```

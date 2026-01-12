@@ -9,8 +9,8 @@ import os
 
 class EODHDTimescaleLoader:
     def __init__(self):
-        # 默认使用 demo key 进行测试
-        self.api_key = os.getenv("EODHD_API_KEY", "demo") 
+        # 从环境变量读取 API key
+        self.api_key = os.getenv("EODHD_API_TOKEN", "demo") 
         self.base_url = "https://eodhistoricaldata.com/api"
         self.db = TimescaleClient()
         self._init_schema()
