@@ -104,29 +104,71 @@ def extract_task_info(page_data):
     }
 
 def get_page_content(page_id: str):
-    """Get the content blocks of a Notion page"""
+    """Get the content blocks of a Notion page with pagination support"""
     url = f"https://api.notion.com/v1/blocks/{page_id}/children"
     headers = get_notion_headers()
 
-    response = requests.get(url, headers=headers)
-    response.raise_for_status()
+    all_blocks = []
+    has_more = True
+    start_cursor = None
 
-    return response.json()
+    while has_more:
+        params = {"page_size": 100}
+        if start_cursor:
+            params["start_cursor"] = start_cursor
 
-def extract_text_from_blocks(blocks_data):
-    """Extract text content from Notion blocks"""
+        response = requests.get(url, headers=headers, params=params)
+        response.raise_for_status()
+        data = response.json()
+
+        all_blocks.extend(data.get("results", []))
+        has_more = data.get("has_more", False)
+        start_cursor = data.get("next_cursor")
+
+    return {"results": all_blocks}
+
+def get_child_blocks(block_id: str):
+    """Recursively get child blocks"""
+    url = f"https://api.notion.com/v1/blocks/{block_id}/children"
+    headers = get_notion_headers()
+
+    all_blocks = []
+    has_more = True
+    start_cursor = None
+
+    while has_more:
+        params = {"page_size": 100}
+        if start_cursor:
+            params["start_cursor"] = start_cursor
+
+        response = requests.get(url, headers=headers, params=params)
+        response.raise_for_status()
+        data = response.json()
+
+        all_blocks.extend(data.get("results", []))
+        has_more = data.get("has_more", False)
+        start_cursor = data.get("next_cursor")
+
+    return all_blocks
+
+def extract_text_from_blocks(blocks_data, indent_level=0):
+    """Extract text content from Notion blocks with recursive child block support"""
     if not blocks_data or "results" not in blocks_data:
         return ""
 
+    indent = "  " * indent_level
     text_content = []
+
     for block in blocks_data["results"]:
         block_type = block.get("type")
+        block_id = block.get("id")
+        has_children = block.get("has_children", False)
 
         if block_type == "paragraph":
             rich_text = block.get("paragraph", {}).get("rich_text", [])
             text = "".join([t.get("plain_text", "") for t in rich_text])
             if text:
-                text_content.append(text)
+                text_content.append(f"{indent}{text}")
 
         elif block_type == "heading_1":
             rich_text = block.get("heading_1", {}).get("rich_text", [])
@@ -150,7 +192,21 @@ def extract_text_from_blocks(blocks_data):
             rich_text = block.get("bulleted_list_item", {}).get("rich_text", [])
             text = "".join([t.get("plain_text", "") for t in rich_text])
             if text:
-                text_content.append(f"  • {text}")
+                text_content.append(f"{indent}• {text}")
+
+        elif block_type == "numbered_list_item":
+            rich_text = block.get("numbered_list_item", {}).get("rich_text", [])
+            text = "".join([t.get("plain_text", "") for t in rich_text])
+            if text:
+                text_content.append(f"{indent}• {text}")
+
+        elif block_type == "to_do":
+            rich_text = block.get("to_do", {}).get("rich_text", [])
+            text = "".join([t.get("plain_text", "") for t in rich_text])
+            checked = block.get("to_do", {}).get("checked", False)
+            checkbox = "☑" if checked else "☐"
+            if text:
+                text_content.append(f"{indent}{checkbox} {text}")
 
         elif block_type == "code":
             rich_text = block.get("code", {}).get("rich_text", [])
@@ -158,6 +214,20 @@ def extract_text_from_blocks(blocks_data):
             language = block.get("code", {}).get("language", "")
             if text:
                 text_content.append(f"\n```{language}\n{text}\n```\n")
+
+        # Recursively get child blocks
+        if has_children:
+            try:
+                child_blocks = get_child_blocks(block_id)
+                if child_blocks:
+                    child_content = extract_text_from_blocks(
+                        {"results": child_blocks},
+                        indent_level + 1
+                    )
+                    if child_content:
+                        text_content.append(child_content)
+            except Exception as e:
+                print(f"Warning: Could not fetch children for block {block_id}: {e}")
 
     return "\n".join(text_content)
 

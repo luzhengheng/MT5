@@ -1,0 +1,14 @@
+{
+  "EURUSD": {
+    "optimal_d": 0.30000000000000004,
+    "adf_pvalue": 0.02534603447258596,
+    "is_stationary": true,
+    "correlation": 0.8644795025030863
+  },
+  "AAPL": {
+    "optimal_d": 0.0,
+    "adf_pvalue": 0.012761192614302353,
+    "is_stationary": true,
+    "correlation": 0.9869714177201899
+  }
+}
