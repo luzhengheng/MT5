@@ -2,15 +2,15 @@
 
 ```markdown
 # 🚀 MIGRATION PROTOCOL (System State Snapshot)
-**Generated**: 2026-01-13 (Post-Task #098)
+**Generated**: 2026-01-14 (Post-Task #099)
 **Project**: MT5-CRS (Algorithmic Trading System)
 **Current Phase**: Phase 3 - Data Engineering (Cold Path)
 
 ## 1. 🟢 当前状态 (Current Status)
-系统刚刚完成了 **非结构化数据基建**。我们拥有了“左脑”（结构化数据）和“右脑”（舆情数据），但它们目前在 Hub 节点上是分离的。
+系统已完成 **数据融合**。"左脑"（OHLCV）和"右脑"（情感分数）现已在 Hub 节点上通过 FusionEngine 完美对齐和融合。融合后的特征集可直接用于策略模型训练。
 * **Active Agent**: Hub Agent (172.19.141.254)
 * **Protocol Version**: v4.3 (Zero-Trust Edition)
-* **Last Completed Task**: Task #098 (Sentiment Pipeline)
+* **Last Completed Task**: Task #099 (Cross-Domain Data Fusion)
 
 ## 2. 🗺️ 架构快照 (Architecture Snapshot V1.2)
 * **Hub Node (sg-nexus-hub-01)**:
@@ -28,13 +28,14 @@
 * **Task #096 (Feature Eng)**: TA-Lib 计算 RSI/MACD -> TimescaleDB (Done). **[决策点: 严禁使用 LLM 进行数学计算]**
 * **Task #097 (Vector DB)**: ChromaDB 部署 + Python Client 封装 (Done).
 * **Task #098 (Sentiment)**: EODHD News -> FinBERT -> ChromaDB (Done). **[决策点: 必须使用 CPU 模式，注意内存]**
+* **Task #099 (Fusion)**: 时空数据融合引擎 (Done). ✅ **[成就: 时间窗口对齐 + 缺失值处理完美实现]**
 
 ## 4. 🔮 下一步战略 (Next Strategy)
-* **Current Blocker**: 数据在 Hub 本地，GPU 节点无法访问。
-* **Immediate Goal (Task #099)**: 数据融合 (Fusion)。
-    * 动作: 将 SQL 中的特征与 Vector DB 中的情感分按时间对齐 (Merge AsOf)。
-    * 产出: `train_set.parquet`。
-    * 传输: Upload to OSS (S3 Protocol).
+* **Current Status**: 融合数据已就绪，可用于策略开发。
+* **Immediate Goal (Task #100)**: 策略引擎激活 (Strategy Engine Activation)。
+    * 动作: 使用 Task #099 融合数据进行策略信号回测。
+    * 产出: 回测报告 + 最优参数集。
+    * 后续: 激活 INF 节点策略大脑。
 
 ## 5. 🛑 铁律 (Immutable Rules)
 1.  **Hub Sovereignty**: 代码必须在 Hub 本地运行，禁止依赖外部 API (OpenAI) 进行核心计算。
@@ -148,7 +149,8 @@ Phase 4: Synchronization (同步)
 * [x] **Cold Data**: EODHD History -> TimescaleDB (Ready)
 * [x] **Features**: TA-Lib Indicators -> TimescaleDB (Ready)
 * [x] **Sentiment**: News -> FinBERT -> ChromaDB (Ready)
-* [ ] **Fusion**: SQL + Vector -> Parquet (Pending Task #099)
+* [x] **Fusion**: SQL + Vector -> Parquet (Ready - Task #099 Completed)
+* [ ] **Strategy**: Backtest & Optimization (Pending Task #100)
 
 ```
 
@@ -159,6 +161,12 @@ Phase 4: Synchronization (同步)
 * **Task #096 (2026-01-13)**: Technical Feature Engineering (Done).
 * **Task #097 (2026-01-13)**: Vector DB Infrastructure (Done).
 * **Task #098 (2026-01-13)**: Sentiment Analysis Pipeline (Done).
-* **Task #099 (Pending)**: Cross-Border Data Fusion.
+* **Task #099 (2026-01-14)**: Cross-Domain Data Fusion (Done). ✅
+  - FusionEngine 实现: 时间窗口对齐 + 缺失值处理
+  - Gate 1 (TDD): 15/15 tests passed ✅
+  - Gate 2 (AI Review): Approved for production ✅
+  - Physical Forensics: UUID + Token + Timestamp verified ✅
+  - Commit: c5735e7
+* **Task #100 (Pending)**: Strategy Engine Activation (待启动).
 
 ```
