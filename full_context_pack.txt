@@ -1,6 +1,6 @@
 ==================================================
 📦 MT5-CRS 全域资产数据包 (Full Context Pack)
-Generated: 2026年 01月 13日 星期二 17:35:32 CST
+Generated: 2026年 01月 13日 星期二 21:38:28 CST
 ==================================================
 
 
@@ -174,6 +174,22 @@ Generated: 2026年 01月 13日 星期二 17:35:32 CST
 │   ├── ssh_config_template
 │   └── strategies.yaml
 ├── data
+│   ├── chroma
+│   │   ├── chroma-collections.parquet
+│   │   ├── chroma-embeddings.parquet
+│   │   └── index
+│   │       ├── id_to_uuid_4e7ce8a4-6a3d-49cb-8015-61491ff7213e.pkl
+│   │       ├── id_to_uuid_82eafc05-fd22-41f5-bc69-5d9b2821b22f.pkl
+│   │       ├── id_to_uuid_868f6050-02a4-4b3d-8cc2-9e830004a7b5.pkl
+│   │       ├── index_4e7ce8a4-6a3d-49cb-8015-61491ff7213e.bin
+│   │       ├── index_82eafc05-fd22-41f5-bc69-5d9b2821b22f.bin
+│   │       ├── index_868f6050-02a4-4b3d-8cc2-9e830004a7b5.bin
+│   │       ├── index_metadata_4e7ce8a4-6a3d-49cb-8015-61491ff7213e.pkl
+│   │       ├── index_metadata_82eafc05-fd22-41f5-bc69-5d9b2821b22f.pkl
+│   │       ├── index_metadata_868f6050-02a4-4b3d-8cc2-9e830004a7b5.pkl
+│   │       ├── uuid_to_id_4e7ce8a4-6a3d-49cb-8015-61491ff7213e.pkl
+│   │       ├── uuid_to_id_82eafc05-fd22-41f5-bc69-5d9b2821b22f.pkl
+│   │       └── uuid_to_id_868f6050-02a4-4b3d-8cc2-9e830004a7b5.pkl
 │   ├── eurusd_m1_features_labels.parquet
 │   ├── meta
 │   │   └── trial_registry.json
@@ -25806,6 +25822,20 @@ Generated: 2026年 01月 13日 星期二 17:35:32 CST
 │   │       │   ├── QUICK_START.md
 │   │       │   ├── SYNC_GUIDE.md
 │   │       │   └── VERIFY_LOG.log
+│   │       ├── TASK_097
+│   │       │   ├── AI_REVIEW.md
+│   │       │   ├── COMPLETION_CERTIFICATE.txt
+│   │       │   ├── COMPLETION_REPORT.md
+│   │       │   ├── GEMINI_REVIEW_OUTPUT.md
+│   │       │   ├── QUICK_START.md
+│   │       │   ├── SYNC_GUIDE.md
+│   │       │   └── VERIFY_LOG.log
+│   │       ├── TASK_098
+│   │       │   ├── COMPLETION_CERTIFICATE.txt
+│   │       │   ├── COMPLETION_REPORT.md
+│   │       │   ├── QUICK_START.md
+│   │       │   ├── SYNC_GUIDE.md
+│   │       │   └── VERIFY_LOG.log
 │   │       ├── TASK_099_01_PLAN.md
 │   │       ├── TASK_099_02_PLAN.md
 │   │       ├── WORK_ORDER_011_PROGRESS.md
@@ -26139,6 +26169,8 @@ Generated: 2026年 01月 13日 星期二 17:35:32 CST
 │   │   ├── audit_task_095.py
 │   │   └── audit_template.py
 │   ├── audit_task_096.py
+│   ├── audit_task_097.py
+│   ├── audit_task_098.py
 │   ├── audit_trigger.txt
 │   ├── check_versions.sh
 │   ├── core
@@ -26146,7 +26178,9 @@ Generated: 2026年 01月 13日 星期二 17:35:32 CST
 │   │   ├── content_backfill_map.py
 │   │   ├── eodhd_bulk_loader.py
 │   │   ├── feature_engine.py
-│   │   └── historical_map.py
+│   │   ├── historical_map.py
+│   │   ├── news_sentiment_loader.py
+│   │   └── vector_client.py
 │   ├── debug_remote_training.sh
 │   ├── deploy
 │   │   ├── start_monitoring_podman.sh
@@ -26624,6 +26658,8 @@ Generated: 2026年 01月 13日 星期二 17:35:32 CST
 ├── systemd
 │   ├── mt5-sentinel.logrotate
 │   └── mt5-sentinel.service
+├── TASK_097_AUDIT_REPORT.json
+├── TASK_098_AUDIT_REPORT.json
 ├── tests
 │   ├── conftest.py
 │   ├── __init__.py
@@ -26657,21 +26693,22 @@ Generated: 2026年 01月 13日 星期二 17:35:32 CST
 │       ├── test_basic_features.py
 │       ├── test_dq_score.py
 │       └── test_labeling.py
-└── var
-    └── cache
-        └── models
-            ├── 2120f4f96b5830e5a91fe94d242471b0133b0976c8d6e081594ab837ac5f17bc.ef97278c578016c8bb785f15296476b12eae86423097fed78719d1c8197a3430.lock
-            ├── e3709a60694f45adca209a405cc69ce2b5d47b1cae60696ed9a901426be8c43d.8b6dccc90d16201c6d7ab0f3c6cc38e74b5f2fe587f6efadc9fa71fc0a00c606.lock
-            ├── ProsusAI--finbert
-            │   ├── config.json
-            │   ├── pytorch_model.bin
-            │   ├── special_tokens_map.json
-            │   ├── tokenizer_config.json
-            │   └── vocab.txt
-            ├── tmpn8jujw5m
-            └── tmpov9ope0u
+├── var
+│   └── cache
+│       └── models
+│           ├── 2120f4f96b5830e5a91fe94d242471b0133b0976c8d6e081594ab837ac5f17bc.ef97278c578016c8bb785f15296476b12eae86423097fed78719d1c8197a3430.lock
+│           ├── e3709a60694f45adca209a405cc69ce2b5d47b1cae60696ed9a901426be8c43d.8b6dccc90d16201c6d7ab0f3c6cc38e74b5f2fe587f6efadc9fa71fc0a00c606.lock
+│           ├── ProsusAI--finbert
+│           │   ├── config.json
+│           │   ├── pytorch_model.bin
+│           │   ├── special_tokens_map.json
+│           │   ├── tokenizer_config.json
+│           │   └── vocab.txt
+│           ├── tmpn8jujw5m
+│           └── tmpov9ope0u
+└── VERIFY_LOG.log
 
-295 directories, 26369 files
+299 directories, 26402 files
 
 
 >>> PART 2: 基础设施档案 (V1.2 Live)
