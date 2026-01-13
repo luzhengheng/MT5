@@ -95,5 +95,3 @@ src/feature_repo/data/
 src/feature_repo/registry.db
 src/feature_repo/registry.db-wal
 data/registry.db
-.env
-data/
