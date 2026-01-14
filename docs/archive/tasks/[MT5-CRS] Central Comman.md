@@ -1,10 +1,14 @@
 # [MT5-CRS] Central Command
 
+🔗 **Agent Quick Reference (Critical File Locations)**
+- **Central Command Document**: [`docs/archive/tasks/[MT5-CRS] Central Comman.md`](docs/archive/tasks/[MT5-CRS]%20Central%20Comman.md)
+- **Gemini Review Bridge**: [`scripts/ai_governance/gemini_review_bridge.py`](scripts/ai_governance/gemini_review_bridge.py)
+
 ```markdown
 # 🚀 MIGRATION PROTOCOL (System State Snapshot)
-**Generated**: 2026-01-14 (Post-Task #099)
+**Generated**: 2026-01-14 (Post-Task #100)
 **Project**: MT5-CRS (Algorithmic Trading System)
-**Current Phase**: Phase 3 - Data Engineering (Cold Path)
+**Current Phase**: Phase 4 - Strategy Engineering
 
 ## 1. 🟢 当前状态 (Current Status)
 系统已完成 **策略引擎原型开发**。策略基座（StrategyBase）已建立，SentimentalMomentum 混合因子策略已实现并通过双重门禁审查。系统现已从"数据处理者"演进为"决策制定者"。
