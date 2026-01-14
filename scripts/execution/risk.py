@@ -20,8 +20,30 @@ import threading
 import json
 import os
 from datetime import datetime
+import tempfile
+
+try:
+    import fcntl
+    FCNTL_AVAILABLE = True
+except ImportError:
+    FCNTL_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
+
+
+class OrderStateEncoder(json.JSONEncoder):
+    """
+    Custom JSON encoder for order state serialization (P1 fix)
+    Handles Decimal, datetime, and other special types
+    """
+    def default(self, obj):
+        from decimal import Decimal
+
+        if isinstance(obj, Decimal):
+            return float(obj)
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
 
 
 class RiskManager:
@@ -158,16 +180,74 @@ class RiskManager:
             self.open_orders = {}
 
     def _save_persisted_state(self) -> None:
-        """Save orders to disk for recovery (P0 fix)"""
+        """
+        Save orders to disk with atomic writes and file locks (P1 fixes)
+        - Temp file + rename for atomicity
+        - Custom encoder for special types
+        - File locks for multi-process safety
+        """
+        tmp_path = None
+        lock_file = None
         try:
             data = {
                 'orders': self.open_orders,
-                'timestamp': datetime.now().isoformat()
+                'timestamp': datetime.now().isoformat(),
+                'version': '1.0'
             }
-            with open(self.state_persist_path, 'w') as f:
-                json.dump(data, f, indent=2)
+
+            dir_path = os.path.dirname(self.state_persist_path)
+
+            # Optional: Acquire file lock for multi-process safety (P1 fix)
+            if FCNTL_AVAILABLE:
+                lock_path = self.state_persist_path + '.lock'
+                try:
+                    lock_file = open(lock_path, 'w')
+                    fcntl.flock(lock_file.fileno(), fcntl.LOCK_EX)
+                except Exception as e:
+                    logger.warning(f"Could not acquire file lock: {e}")
+
+            # 1. Write to temporary file in same directory
+            with tempfile.NamedTemporaryFile(
+                mode='w',
+                dir=dir_path,
+                prefix='.orders_',
+                suffix='.tmp',
+                delete=False,
+                encoding='utf-8'
+            ) as tmp:
+                # Use custom encoder for special types (P1 fix)
+                json.dump(data, tmp, indent=2, cls=OrderStateEncoder)
+                tmp.flush()
+                # Ensure written to disk
+                os.fsync(tmp.fileno())
+                tmp_path = tmp.name
+
+            # 2. Atomic rename (POSIX atomic operation)
+            os.replace(tmp_path, self.state_persist_path)
+            logger.info(
+                f"💾 Persisted {len(self.open_orders)} orders "
+                f"atomically to {self.state_persist_path}"
+            )
+
         except Exception as e:
-            logger.error(f"❌ Failed to persist state: {e}")
+            # Cleanup temp file if write failed
+            if tmp_path and os.path.exists(tmp_path):
+                try:
+                    os.unlink(tmp_path)
+                except Exception:
+                    pass
+            logger.error(
+                f"❌ Failed to persist state atomically: {e}"
+            )
+        finally:
+            # Release file lock
+            if lock_file:
+                try:
+                    if FCNTL_AVAILABLE:
+                        fcntl.flock(lock_file.fileno(), fcntl.LOCK_UN)
+                    lock_file.close()
+                except Exception:
+                    pass
 
     def validate_order(
         self,
@@ -295,6 +375,55 @@ class RiskManager:
                 )
                 return True
             return False
+
+    def check_and_register_atomic(
+        self,
+        symbol: str,
+        action: str,
+        volume: float,
+        price: float
+    ) -> Tuple[bool, str]:
+        """
+        Atomic check-and-register operation (P1 fix)
+        Prevents TOCTOU race condition between check_duplicate and register
+
+        Args:
+            symbol: Trading symbol
+            action: Order action
+            volume: Position size
+            price: Entry price
+
+        Returns:
+            (success: bool, message: str)
+        """
+        with self._order_lock:  # Single atomic operation
+            key = f"{symbol}_{action}"
+
+            # Check for duplicate
+            if key in self.open_orders:
+                logger.warning(
+                    f"⚠️ Duplicate order detected: {symbol} {action}"
+                )
+                return False, f"Duplicate order: {key} already exists"
+
+            # Register order atomically
+            self.open_orders[key] = {
+                'symbol': symbol,
+                'action': action,
+                'volume': volume,
+                'price': price,
+                'registered_at': datetime.now().isoformat()
+            }
+
+            logger.info(
+                f"📝 Atomic register: {symbol} {action} "
+                f"{volume} @ {price}"
+            )
+
+            # Persist atomically
+            self._save_persisted_state()
+
+            return True, f"Order registered: {key}"
 
     def register_order(
         self,
