@@ -92,7 +92,7 @@ class FusionEngine:
                       resampling in fusion step)
 
         Returns:
-            DataFrame with columns: [timestamp, symbol, open, high, low,
+            DataFrame with columns: [time, symbol, open, high, low,
                                      close, volume]
         """
         try:
@@ -104,12 +104,12 @@ class FusionEngine:
             start_time = end_time - timedelta(days=days)
 
             query = """
-                SELECT timestamp, symbol, open, high, low, close, volume
+                SELECT time, symbol, open, high, low, close, volume
                 FROM market_data
                 WHERE symbol = %s
-                  AND timestamp >= %s
-                  AND timestamp <= %s
-                ORDER BY timestamp ASC
+                  AND time >= %s
+                  AND time <= %s
+                ORDER BY time ASC
             """
 
             cur.execute(query, (symbol, start_time, end_time))
@@ -127,12 +127,12 @@ class FusionEngine:
             # Create DataFrame
             df = pd.DataFrame(
                 rows,
-                columns=['timestamp', 'symbol', 'open', 'high',
+                columns=['time', 'symbol', 'open', 'high',
                         'low', 'close', 'volume']
             )
 
-            df['timestamp'] = pd.to_datetime(df['timestamp'])
-            df = df.set_index('timestamp')
+            df['time'] = pd.to_datetime(df['time'])
+            df = df.set_index('time')
             df = df.sort_index()
 
             logger.info(
@@ -187,7 +187,7 @@ class FusionEngine:
             # Get all documents with metadata
             results = collection.get(
                 where=where_filter,
-                include=["metadatas", "documents", "distances"]
+                include=["metadatas", "documents"]
             )
 
             if not results or not results.get('metadatas'):
