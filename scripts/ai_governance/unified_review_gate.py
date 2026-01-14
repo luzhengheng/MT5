@@ -171,6 +171,172 @@ class UnifiedReviewGate:
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
         }
 
+    def _call_claude_api(self, prompt: str, is_high_risk: bool) -> Tuple[bool, str, Dict]:
+        """
+        调用 Claude API（通过 OpenAI 兼容的供应商 API）
+        """
+        model = "claude-opus-4-5-thinking"
+        thinking_budget = 16000 if is_high_risk else 8000
+        timeout = self.request_timeout
+
+        # OpenAI 兼容格式的 Claude 调用
+        payload = {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 1.0,
+            "max_tokens": 32000,
+            "thinking": {
+                "type": "enabled",
+                "budget_tokens": thinking_budget
+            }
+        }
+
+        # 使用供应商提供的 OpenAI 兼容端点
+        url = f"{self.vendor_base_url}/chat/completions"
+
+        self.log(f"[API] Calling Claude at {url}")
+        self.log(f"[TRANSPORT] curl_cffi impersonate={self.browser_impersonate}")
+        self.log(f"[MODEL] {model} (thinking_budget={thinking_budget})")
+
+        try:
+            response = requests.post(
+                url,
+                json=payload,
+                headers=self._get_auth_headers(is_claude=True),
+                impersonate=self.browser_impersonate,
+                timeout=timeout
+            )
+
+            if response.status_code != 200:
+                self.log(
+                    f"[ERROR] Claude API 返回 {response.status_code}: {response.text[:500]}",
+                    level="ERROR"
+                )
+                return False, "", {"error": response.status_code}
+
+            result_content = ""
+            thinking_content = ""
+            token_usage = {}
+
+            # OpenAI 兼容格式响应
+            resp_data = response.json()
+
+            # 提取主要内容
+            if 'choices' in resp_data and resp_data['choices']:
+                choice = resp_data['choices'][0]
+                if 'message' in choice:
+                    msg = choice['message']
+                    if 'content' in msg:
+                        result_content += msg['content']
+                    # 尝试从 thinking 字段提取
+                    if 'thinking' in msg:
+                        thinking_content += msg['thinking']
+
+            if 'usage' in resp_data:
+                token_usage = resp_data['usage']
+
+            # 记录思维链
+            if thinking_content:
+                self.log(f"[THINKING] Claude Deep Thinking Content:")
+                self.log(thinking_content[:1000] + "..." if len(thinking_content) > 1000 else thinking_content)
+
+            metadata = {
+                "model": model,
+                "browser": self.browser_impersonate,
+                "thinking_enabled": True,
+                "token_usage": token_usage,
+                "has_thinking": bool(thinking_content)
+            }
+
+            self.log(f"[SUCCESS] Claude API 调用成功", level="SUCCESS")
+            if token_usage:
+                self.log(f"[TOKENS] Input: {token_usage.get('prompt_tokens', 0)}, Output: {token_usage.get('completion_tokens', 0)}")
+
+            return True, result_content, metadata
+
+        except requests.RequestException as e:
+            self.log(f"[ERROR] Claude API 请求异常: {e}", level="ERROR")
+            return False, "", {"error": str(e)}
+
+    def _call_gemini_api(self, prompt: str, is_high_risk: bool) -> Tuple[bool, str, Dict]:
+        """
+        调用 Gemini API（通过 OpenAI 兼容的供应商 API）
+        """
+        model = "gemini-3-pro-preview"
+        timeout = self.request_timeout
+
+        # OpenAI 兼容格式的 Gemini 调用
+        payload = {
+            "model": model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.7,
+            "max_tokens": 8000,
+        }
+
+        # 使用供应商提供的 OpenAI 兼容端点
+        url = f"{self.vendor_base_url}/chat/completions"
+
+        self.log(f"[API] Calling Gemini at {url}")
+        self.log(f"[TRANSPORT] curl_cffi impersonate={self.browser_impersonate}")
+        self.log(f"[MODEL] {model}")
+
+        try:
+            response = requests.post(
+                url,
+                json=payload,
+                headers=self._get_auth_headers(is_claude=False),
+                impersonate=self.browser_impersonate,
+                timeout=timeout
+            )
+
+            if response.status_code != 200:
+                self.log(
+                    f"[ERROR] Gemini API 返回 {response.status_code}: "
+                    f"{response.text[:500]}",
+                    level="ERROR"
+                )
+                return False, "", {"error": response.status_code}
+
+            result_content = ""
+            token_usage = {}
+
+            # OpenAI 兼容格式响应
+            resp_data = response.json()
+
+            # 提取主要内容
+            if 'choices' in resp_data and resp_data['choices']:
+                choice = resp_data['choices'][0]
+                if 'message' in choice:
+                    msg = choice['message']
+                    if 'content' in msg:
+                        result_content += msg['content']
+
+            if 'usage' in resp_data:
+                token_usage = resp_data['usage']
+
+            metadata = {
+                "model": model,
+                "browser": self.browser_impersonate,
+                "thinking_enabled": False,
+                "token_usage": token_usage,
+                "has_thinking": False
+            }
+
+            self.log(f"[SUCCESS] Gemini API 调用成功", level="SUCCESS")
+            if token_usage:
+                input_tokens = token_usage.get('prompt_tokens', 0)
+                output_tokens = token_usage.get('completion_tokens', 0)
+                self.log(
+                    f"[TOKENS] Input: {input_tokens}, Output: {output_tokens}",
+                    level="INFO"
+                )
+
+            return True, result_content, metadata
+
+        except requests.RequestException as e:
+            self.log(f"[ERROR] Gemini API 请求异常: {e}", level="ERROR")
+            return False, "", {"error": str(e)}
+
     def call_ai_api(
         self,
         prompt: str,
@@ -188,129 +354,10 @@ class UnifiedReviewGate:
         返回:
             (success: bool, result: str, metadata: Dict)
         """
-
-        try:
-            # 选择模型和超时
-            if use_claude:
-                model = "claude-opus-4-5-thinking"
-                timeout = self.request_timeout
-                thinking_budget = 16000 if is_high_risk else 8000
-            else:
-                model = "gemini-3-pro-preview"
-                timeout = self.request_timeout
-                thinking_budget = None
-
-            # 构造Payload
-            payload = {
-                "model": model,
-                "messages": [{"role": "user", "content": prompt}],
-                "stream": True,  # 流式以防止长连接中断
-                "temperature": 1.0 if use_claude else 0.7,
-                "max_tokens": 32000 if use_claude else 8000,
-            }
-
-            # Claude特殊注入（Thinking Mode）
-            if use_claude:
-                payload["thinking"] = {
-                    "type": "enabled",
-                    "budget_tokens": thinking_budget
-                }
-                # 双重注入兼容不同网关格式
-                payload["extra_body"] = {
-                    "thinking": {
-                        "type": "enabled",
-                        "budget_tokens": thinking_budget
-                    }
-                }
-
-            # 浏览器伪装发送
-            url = f"{self.vendor_base_url}/chat/completions"
-
-            self.log(f"[API] Calling {model} at {url}")
-            self.log(f"[TRANSPORT] Using curl_cffi with impersonate={self.browser_impersonate}")
-            self.log(f"[TIMEOUT] {timeout}s (High-Risk: {is_high_risk})")
-
-            response = requests.post(
-                url,
-                json=payload,
-                headers=self._get_auth_headers(is_claude=use_claude),
-                impersonate=self.browser_impersonate,
-                timeout=timeout
-            )
-
-            if response.status_code != 200:
-                self.log(
-                    f"[ERROR] API返回错误: {response.status_code} - {response.text[:500]}",
-                    level="ERROR"
-                )
-                return False, "", {"error": response.status_code}
-
-            # 解析流式响应
-            result_content = ""
-            thinking_content = ""
-            token_usage = {}
-
-            for line in response.iter_lines():
-                if not line:
-                    continue
-
-                line = line.decode('utf-8') if isinstance(line, bytes) else line
-
-                # SSE格式处理
-                if line.startswith('data: '):
-                    try:
-                        data = json.loads(line[6:])
-
-                        # 提取内容
-                        if 'choices' in data and data['choices']:
-                            choice = data['choices'][0]
-                            if 'delta' in choice and 'content' in choice['delta']:
-                                result_content += choice['delta']['content']
-
-                            # Claude思维链提取
-                            if 'thinking' in choice.get('delta', {}):
-                                thinking_content += choice['delta']['thinking']
-
-                        # 提取token使用情况
-                        if 'usage' in data:
-                            token_usage = data['usage']
-
-                    except json.JSONDecodeError:
-                        pass
-
-            # 记录思维链到日志（但不输出到报告）
-            if thinking_content:
-                self.log(f"[THINKING] <thinking>", level="INFO")
-                self.log(thinking_content, level="INFO")
-                self.log(f"[/THINKING]", level="INFO")
-
-            # 整合元数据
-            metadata = {
-                "model": model,
-                "browser": self.browser_impersonate,
-                "thinking_enabled": use_claude,
-                "token_usage": token_usage,
-                "has_thinking": bool(thinking_content)
-            }
-
-            self.log(f"[SUCCESS] API调用成功", level="SUCCESS")
-            self.log(f"[TOKENS] {json.dumps(token_usage)}")
-
-            return True, result_content, metadata
-
-        except requests.Timeout:
-            self.log(
-                f"[ERROR] 请求超时 (timeout={timeout}s)",
-                level="ERROR"
-            )
-            return False, "", {"error": "timeout"}
-
-        except Exception as e:
-            self.log(
-                f"[ERROR] 未知错误: {type(e).__name__}: {str(e)[:200]}",
-                level="ERROR"
-            )
-            return False, "", {"error": str(e)}
+        if use_claude:
+            return self._call_claude_api(prompt, is_high_risk)
+        else:
+            return self._call_gemini_api(prompt, is_high_risk)
 
     # ========================================================================
     # 审查执行
