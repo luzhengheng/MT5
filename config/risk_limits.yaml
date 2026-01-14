@@ -1,0 +1,80 @@
+# Task #105 - Live Risk Monitor Configuration
+# Protocol v4.3 (Zero-Trust Edition) - Risk Limits & Thresholds
+
+risk:
+  # Account-level risk limits
+  max_daily_drawdown: 0.02          # 2% maximum daily drawdown (hard limit)
+  max_intraday_loss: 0.05           # 5% maximum intraday loss
+  max_account_leverage: 5.0         # 5x maximum leverage
+  max_single_position_size: 1.0     # Maximum 1.0 lot per single symbol
+  max_correlation_exposure: 0.85    # 85% max correlation exposure
+  
+  # Position limits
+  max_open_positions: 10            # Maximum 10 concurrent open positions
+  max_daily_trades: 50              # Maximum 50 trades per day
+  
+  # Volatility limits
+  max_acceptable_volatility: 0.25   # 25% maximum acceptable volatility
+  volatility_window_minutes: 60     # Calculate volatility over 60 minutes
+  
+  # Time-based limits
+  trading_hours_start: "09:30"      # Trading starts at 9:30 AM UTC
+  trading_hours_end: "16:00"        # Trading ends at 4:00 PM UTC
+  weekend_trading: false            # No weekend trading
+  
+  # Kill Switch Configuration
+  kill_switch_mode: "auto"          # Automatic kill switch triggering
+  # Note: kill_switch_enable_file path should be set via MT5_CRS_LOCK_DIR env var
+  # Example: export MT5_CRS_LOCK_DIR=/var/run/mt5_crs (requires appropriate permissions)
+  # Default fallback: ${XDG_RUNTIME_DIR}/mt5_crs_kill_switch.lock or secure temp location
+  kill_switch_enable_file: "${MT5_CRS_LOCK_DIR:-${XDG_RUNTIME_DIR:-/tmp}/mt5_crs_kill_switch.lock}"
+  
+  # Recovery & Monitoring
+  recovery_cooldown_seconds: 60     # 60 seconds cooldown after kill switch
+  enable_pnl_tracking: true         # Track PnL in real-time
+  enable_exposure_tracking: true    # Track exposure in real-time
+  log_level: "INFO"                 # Logging level (DEBUG, INFO, WARNING, ERROR)
+
+# Alert thresholds (when to trigger warnings without killing)
+alerts:
+  drawdown_warning: 0.01            # 1% drawdown warning
+  leverage_warning: 3.0             # 3x leverage warning
+  exposure_warning: 0.75            # 75% exposure warning
+  
+# Account state
+account:
+  initial_balance: 100000.0         # Initial account balance ($100K)
+  live_balance_tracking: true       # Track live balance updates
+  
+# Risk calculation methods
+calculations:
+  pnl_method: "mark_to_market"      # Use mark-to-market for PnL
+  exposure_calculation: "notional"  # Calculate exposure as notional value
+  greek_calculation: "simplified"   # Use simplified Greeks (delta, gamma)
+
+# Monitoring
+monitoring:
+  tick_analysis_enabled: true       # Analyze every tick for risk
+  millisecond_precision: true       # Use millisecond precision for timing
+  circuit_breaker_integration: true # Integrate with Task #104 Kill Switch
+  zmq_event_listener: true          # Listen to ZMQ event stream from Inf node
+  
+# Emergency protocols
+emergency:
+  auto_liquidation_enabled: false   # Auto-liquidate on extreme drawdown (currently disabled)
+  # Note: If auto_liquidation_enabled is true, set appropriate threshold below
+  # liquidation_drawdown_threshold is only used when auto_liquidation_enabled=true
+  liquidation_drawdown_threshold: 0.10  # 10% drawdown triggers liquidation (if enabled)
+  market_order_only: true           # Use market orders in emergency
+  notify_admin: true                # Send alerts to admin
+  
+# Physical forensics (zero-trust evidence)
+forensics:
+  record_all_alerts: true           # Record all risk alerts
+  record_all_kills: true            # Record all kill switch activations
+  timestamp_precision_us: true      # Use microsecond precision timestamps
+  # Note: evidence_file path should be set via MT5_CRS_LOG_DIR env var
+  # Example: export MT5_CRS_LOG_DIR=/var/log/mt5_crs (must be writable)
+  # Default fallback: ${XDG_STATE_HOME}/mt5_crs/evidence.log
+  evidence_file: "${MT5_CRS_LOG_DIR:-${XDG_STATE_HOME:-$HOME/.local/share}/mt5_crs}/risk_monitor_evidence.log"
+
