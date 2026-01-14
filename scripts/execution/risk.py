@@ -16,6 +16,10 @@ Author: MT5-CRS Hub Agent
 
 import logging
 from typing import Dict, Optional, Tuple
+import threading
+import json
+import os
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +41,8 @@ class RiskManager:
         risk_pct: float = 1.0,
         max_spread_pips: float = 50.0,
         min_volume: float = 0.01,
-        max_volume: float = 100.0
+        max_volume: float = 100.0,
+        state_persist_path: Optional[str] = None
     ):
         """
         Initialize RiskManager
@@ -48,17 +53,31 @@ class RiskManager:
             max_spread_pips: Maximum acceptable spread in pips
             min_volume: Minimum order volume (lot size)
             max_volume: Maximum order volume (lot size)
+            state_persist_path: Optional path for persisting open orders (P0 fix)
         """
         self.account_balance = account_balance
         self.risk_pct = risk_pct
         self.max_spread_pips = max_spread_pips
         self.min_volume = min_volume
         self.max_volume = max_volume
-        self.open_orders = {}  # Track open orders by symbol
+        self.open_orders = {}  # In-memory cache
+        persist_dir = os.path.join(
+            os.path.dirname(__file__), '../../var/state'
+        )
+        self.state_persist_path = state_persist_path or os.path.join(
+            persist_dir, 'orders.json'
+        )
+        self._order_lock = threading.RLock()  # Thread-safe lock (P0 fix)
+
+        # Create persistence directory if needed
+        os.makedirs(os.path.dirname(self.state_persist_path), exist_ok=True)
+
+        # Load persisted state if exists
+        self._load_persisted_state()
 
         logger.info(
-            f"✅ RiskManager initialized: "
-            f"Balance=${account_balance}, Risk={risk_pct}%"
+            f"✅ RiskManager initialized: Balance=${account_balance}, "
+            f"Risk={risk_pct}%, Persistence: {self.state_persist_path}"
         )
 
     def calculate_lot_size(
@@ -118,10 +137,37 @@ class RiskManager:
 
         logger.info(
             f"📊 Calculated lot size: {lot_size:.4f} "
-            f"(Balance=${balance}, Entry={entry_price}, SL={stop_loss_price})"
+            f"(Balance=${balance}, Entry={entry_price}, "
+            f"SL={stop_loss_price})"
         )
 
         return lot_size
+
+    def _load_persisted_state(self) -> None:
+        """Load persisted orders from disk (P0 fix)"""
+        try:
+            if os.path.exists(self.state_persist_path):
+                with open(self.state_persist_path, 'r') as f:
+                    data = json.load(f)
+                    self.open_orders = data.get('orders', {})
+                    logger.info(
+                        f"✅ Loaded {len(self.open_orders)} persisted orders"
+                    )
+        except Exception as e:
+            logger.warning(f"⚠️ Could not load persisted state: {e}")
+            self.open_orders = {}
+
+    def _save_persisted_state(self) -> None:
+        """Save orders to disk for recovery (P0 fix)"""
+        try:
+            data = {
+                'orders': self.open_orders,
+                'timestamp': datetime.now().isoformat()
+            }
+            with open(self.state_persist_path, 'w') as f:
+                json.dump(data, f, indent=2)
+        except Exception as e:
+            logger.error(f"❌ Failed to persist state: {e}")
 
     def validate_order(
         self,
@@ -134,7 +180,7 @@ class RiskManager:
         Checks:
         1. Required fields present
         2. Action is valid (BUY/SELL)
-        3. Prices are non-negative
+        3. Prices are non-negative (P0 FIX: Enhanced validation)
         4. Volume is within bounds
         5. SL < Entry Price (for BUY) or SL > Entry Price (for SELL)
         6. TP > Entry Price (for BUY) or TP < Entry Price (for SELL)
@@ -147,11 +193,11 @@ class RiskManager:
         Returns:
             (is_valid, error_message)
         """
-        # Check required fields
-        required_fields = ['action', 'symbol', 'volume', 'type']
-        for field in required_fields:
-            if field not in order:
-                return False, f"❌ Missing required field: {field}"
+        # Check required fields (P0 FIX: More explicit)
+        required_fields = ['action', 'symbol', 'volume', 'type', 'price']
+        missing_fields = [f for f in required_fields if f not in order]
+        if missing_fields:
+            return False, f"❌ Missing required fields: {missing_fields}"
 
         # Check action is valid (support both human-readable and MT5 format)
         valid_actions = [
@@ -162,23 +208,30 @@ class RiskManager:
             return False, f"❌ Invalid action: {order['action']}"
 
         # Check volume is within bounds
-        volume = order.get('volume', 0)
+        try:
+            volume = float(order.get('volume', 0))
+        except (ValueError, TypeError):
+            return False, f"❌ Volume must be numeric: {order.get('volume')}"
+
         if volume < self.min_volume or volume > self.max_volume:
             return False, (
                 f"❌ Volume {volume} outside bounds "
                 f"[{self.min_volume}, {self.max_volume}]"
             )
 
-        # Check prices
-        entry_price = order.get('price', 0)
-        sl = order.get('sl', 0)
-        tp = order.get('tp', 0)
+        # Check prices (P0 FIX: Better error handling)
+        try:
+            entry_price = float(order.get('price', 0))
+            sl = float(order.get('sl', 0))
+            tp = float(order.get('tp', 0))
+        except (ValueError, TypeError) as e:
+            return False, f"❌ Price fields must be numeric: {e}"
 
         if entry_price <= 0:
             return False, f"❌ Entry price must be positive: {entry_price}"
 
         if sl < 0 or tp < 0:
-            return False, f"❌ SL and TP must be non-negative"
+            return False, "❌ SL and TP must be non-negative"
 
         # Validate SL/TP logic for BUY orders
         if order['action'] == 'BUY' or order['type'] == 'ORDER_TYPE_BUY':
@@ -209,7 +262,7 @@ class RiskManager:
         # Check spread if current price is provided
         if current_price and current_price > 0:
             spread = abs(current_price - entry_price)
-            if spread > self.max_spread_pips:
+            if spread > self.max_spread_pips:  # noqa: E501
                 return False, (
                     f"❌ Spread {spread} exceeds max {self.max_spread_pips} pips"
                 )
@@ -223,6 +276,7 @@ class RiskManager:
     ) -> bool:
         """
         Check if an order in the same direction already exists for symbol
+        (Thread-safe - P0 fix)
 
         This prevents accidental double-opening of positions
 
@@ -233,13 +287,14 @@ class RiskManager:
         Returns:
             True if duplicate detected, False otherwise
         """
-        key = f"{symbol}_{action}"
-        if key in self.open_orders:
-            logger.warning(
-                f"⚠️ Duplicate order detected for {symbol} {action}"
-            )
-            return True
-        return False
+        with self._order_lock:  # Thread-safe (P0 fix)
+            key = f"{symbol}_{action}"
+            if key in self.open_orders:
+                logger.warning(
+                    f"⚠️ Duplicate order detected for {symbol} {action}"
+                )
+                return True
+            return False
 
     def register_order(
         self,
@@ -250,6 +305,7 @@ class RiskManager:
     ) -> None:
         """
         Register an executed order to track open positions
+        (Thread-safe with persistence - P0 fix)
 
         Args:
             symbol: Trading symbol
@@ -257,17 +313,21 @@ class RiskManager:
             volume: Position size
             price: Entry price
         """
-        key = f"{symbol}_{action}"
-        self.open_orders[key] = {
-            'symbol': symbol,
-            'action': action,
-            'volume': volume,
-            'price': price
-        }
-        logger.info(
-            f"📝 Registered order: {symbol} {action} "
-            f"{volume} @ {price}"
-        )
+        with self._order_lock:  # Thread-safe (P0 fix)
+            key = f"{symbol}_{action}"
+            self.open_orders[key] = {
+                'symbol': symbol,
+                'action': action,
+                'volume': volume,
+                'price': price,
+                'registered_at': datetime.now().isoformat()
+            }
+            logger.info(
+                f"📝 Registered order: {symbol} {action} "
+                f"{volume} @ {price}"
+            )
+            # Persist to disk (P0 fix)
+            self._save_persisted_state()
 
     def unregister_order(
         self,
@@ -275,16 +335,19 @@ class RiskManager:
         action: str
     ) -> None:
         """
-        Unregister a closed order
+        Unregister a closed order (Thread-safe - P0 fix)
 
         Args:
             symbol: Trading symbol
             action: Order action
         """
-        key = f"{symbol}_{action}"
-        if key in self.open_orders:
-            del self.open_orders[key]
-            logger.info(f"✅ Unregistered order: {key}")
+        with self._order_lock:  # Thread-safe (P0 fix)
+            key = f"{symbol}_{action}"
+            if key in self.open_orders:
+                del self.open_orders[key]
+                logger.info(f"✅ Unregistered order: {key}")
+                # Persist to disk (P0 fix)
+                self._save_persisted_state()
 
     def calculate_tp_sl(
         self,

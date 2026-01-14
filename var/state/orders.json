@@ -1,0 +1,12 @@
+{
+  "orders": {
+    "AAPL_BUY": {
+      "symbol": "AAPL",
+      "action": "BUY",
+      "volume": 0.5,
+      "price": 150.0,
+      "registered_at": "2026-01-14T15:49:37.513917"
+    }
+  },
+  "timestamp": "2026-01-14T15:49:37.513938"
+}
