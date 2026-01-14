@@ -85,11 +85,15 @@ Core Philosophy: HUB Sovereignty, Double-Gate Verification, Zero-Trust Forensics
  * Gate 1 (Local Audit - 静态/单元测试):
    * 工具: audit_current_task.py (包含 pylint, pytest, mypy)。
    * 标准: 零报错 (Zero Errors)。任何红色的 Traceback 都是阻断信号。
- * Gate 2 (AI Architect - 新版智能审查，Task #102+):
-   * 工具:
-     * 📍 scripts/ai_governance/unified_review_gate.py (统一审查入口，启用成本优化)
-     * 📍 scripts/ai_governance/gemini_review_bridge.py (Gemini 最终评审，带缓存)
-   * 标准: 双系统通过 "PASS" + 成本优化率 ≥ 80%。
+ * Gate 2 (AI Architect - 统一双引擎智能审查，Task #102+):
+   * 核心工具:
+     * 📍 scripts/ai_governance/unified_review_gate.py
+       └─ 统一审查入口（包含 Claude + Gemini 双引擎内置）
+       └─ 启用成本优化器：缓存 + 批处理 + 智能路由
+       └─ 内部调用 call_ai_api() 根据风险等级选择最优引擎
+   * 支持工具 (可选):
+     * 📍 scripts/ai_governance/gemini_review_bridge.py (特殊场景：Cloudflare 穿透、独立深度审查)
+   * 标准: unified_review_gate 通过 "PASS" + 成本优化率 ≥ 80%。
    * 禁止: 严禁在 Gate 2 通过前执行 git commit。
    * 详见 Phase 3: The Zero-Trust Audit Loop 中的具体执行步骤。
 🔄 铁律 II：自主闭环 (The Autonomous Loop)
@@ -130,21 +134,27 @@ Phase 2: Execution & Traceability (执行与留痕)
  * Documentation: 生成/更新“四大金刚”文档 (Report, QuickStart, Log, SyncGuide)。
 Phase 3: The Zero-Trust Audit Loop (零信任审计循环) 🤖
 此阶段由 Agent 自主驱动，必须严格遵守物理验证步骤。
- * Trigger: 运行新版审查系统（Task #102 起有效）
-   * Step 1 (统一审查入口): python3 scripts/ai_governance/unified_review_gate.py | tee VERIFY_LOG.log
-   * Step 2 (Gemini 最终评审): python3 scripts/ai_governance/gemini_review_bridge.py | tee -a VERIFY_LOG.log
+ * Trigger: 运行新版统一审查系统（Task #102 起有效）
+   * 🟢 **主要**: python3 scripts/ai_governance/unified_review_gate.py | tee VERIFY_LOG.log
+     └─ ✅ 内部根据风险等级自动路由 Claude (高危) 或 Gemini (低危)
+     └─ ✅ 自动启用成本优化（缓存+批处理+智能路由）
+     └─ ✅ 返回 "PASS/REJECT/FEEDBACK" + 成本指标
+   * 🟡 **可选**: python3 scripts/ai_governance/gemini_review_bridge.py | tee -a VERIFY_LOG.log
+     └─ 仅用于特殊场景：Cloudflare 穿透、独立深度审查、特殊控制流验证
+     └─ 不是常规 Gate 2 流程的一部分
  * Gate 1 Check:
    * ❌ Fail: 读取 Traceback -> 分析根因 -> 修改代码 -> GOTO 1。
    * ✅ Pass: 进入 Gate 2。
- * Gate 2 Check (新版双系统审查):
+ * Gate 2 Check (新版统一审查):
    * ⚠️ Pre-Check (成本审计): 检查 unified_review_gate 的成本指标
      * 若 cost_reduction_rate < 80% -> 优化审查工作流 -> GOTO 1（重跑审查）。
-   * Step 1 (unified_review_gate):
+   * unified_review_gate 审查 (单一引擎选择):
      * ❌ Reject/Feedback: 读取 AI 建议 -> 重构代码 -> 更新文档 -> GOTO 1。
-     * ✅ Pass: 进入 Step 2。
-   * Step 2 (gemini_review_bridge):
-     * ❌ Reject/Feedback: 读取 AI 建议 -> 重构代码 -> 更新文档 -> GOTO 1。
-     * ✅ Approve (双系统通过 + 成本优化达标): 进入物理验尸环节。
+     * ✅ Pass (成本优化达标): 进入物理验尸环节。
+   * [仅特殊情况] gemini_review_bridge 独立审查:
+     * 触发条件: 主审查不确定性 > 阈值 OR 控制流无法验证
+     * ❌ Reject/Feedback: 读取补充意见 -> 补充修改 -> 重跑 unified_review_gate。
+     * ✅ Confirm: 支持主审查结果。
  * Forensic Verification (物理验尸) [MANDATORY]:
    * Action: Agent 必须执行以下命令验证新版审查系统的物理证据：
      * grep -E "Token Usage|UUID|Session ID|cost_reduction_rate|cache_hit_rate" VERIFY_LOG.log
