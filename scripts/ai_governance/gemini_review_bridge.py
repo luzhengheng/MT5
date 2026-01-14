@@ -268,10 +268,10 @@ def external_ai_review(diff_content, session_id, audit_mode="INCREMENTAL"):
             json={
                 "model": GEMINI_MODEL,
                 "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.3 
+                "temperature": 0.3
             },
-            timeout=60,
-            impersonate="chrome110" 
+            timeout=180,
+            impersonate="chrome110"
         )
         
         if resp.status_code == 200:
@@ -321,13 +321,13 @@ def external_ai_review(diff_content, session_id, audit_mode="INCREMENTAL"):
             return "FATAL_ERROR", session_id
 
     except requests.ConnectTimeout:
-        log(f"[FATAL] 连接超时: 无法连接API服务器 (timeout=60s)", "ERROR")
+        log(f"[FATAL] 连接超时: 无法连接API服务器 (timeout=180s)", "ERROR")
         log(f"检查项: 1) 网络连接  2) VPN 状态  3) API 地址正确性", "ERROR")
         log(f"API 地址: {GEMINI_BASE_URL}", "ERROR")
         return "FATAL_ERROR", session_id
 
     except requests.ReadTimeout:
-        log(f"[FATAL] 读取超时: API服务器响应过慢 (timeout=60s)", "ERROR")
+        log(f"[FATAL] 读取超时: API服务器响应过慢 (timeout=180s)", "ERROR")
         log(f"API 地址: {GEMINI_BASE_URL}", "ERROR")
         return "FATAL_ERROR", session_id
 
