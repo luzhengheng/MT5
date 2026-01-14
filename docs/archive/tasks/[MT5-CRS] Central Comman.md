@@ -2,7 +2,7 @@
 
 🔗 **Agent Quick Reference (Critical File Locations)**
 - **Central Command Document**: [`docs/archive/tasks/[MT5-CRS] Central Comman.md`](docs/archive/tasks/[MT5-CRS]%20Central%20Comman.md)
-- **Gemini Review Bridge**: [`scripts/ai_governance/gemini_review_bridge.py`](scripts/ai_governance/gemini_review_bridge.py)
+- **Unified Review Gate**: [`scripts/ai_governance/unified_review_gate.py`](scripts/ai_governance/unified_review_gate.py) (主审查工具)
 
 ```markdown
 # 🚀 MIGRATION PROTOCOL (System State Snapshot)
@@ -122,8 +122,7 @@ Core Philosophy: HUB Sovereignty, Double-Gate Verification, Zero-Trust Forensics
        └─ 统一审查入口（包含 Claude + Gemini 双引擎内置）
        └─ 启用成本优化器：缓存 + 批处理 + 智能路由
        └─ 内部调用 call_ai_api() 根据风险等级选择最优引擎
-   * 支持工具 (可选):
-     * 📍 scripts/ai_governance/gemini_review_bridge.py (特殊场景：Cloudflare 穿透、独立深度审查)
+       └─ 自动生成 Session ID 和物理验证证据
    * 标准: unified_review_gate 通过 "PASS" + 成本优化率 ≥ 80%。
    * 禁止: 严禁在 Gate 2 通过前执行 git commit。
    * 详见 Phase 3: The Zero-Trust Audit Loop 中的具体执行步骤。
@@ -140,8 +139,7 @@ Claude CLI (Agent) 必须具备“自我修复”的意识。
  * Anti-Hallucination: 严禁根据上下文"脑补"或"模拟"脚本执行结果。
  * Physical Proof (物理证据): 所有 Gate 2 审查必须在新版审查系统执行后立即进行终端回显。
    * 📍 新版审查系统路径:
-     * scripts/ai_governance/unified_review_gate.py (必执行)
-     * scripts/ai_governance/gemini_review_bridge.py (必执行)
+     * scripts/ai_governance/unified_review_gate.py (主要审查工具，必执行)
  * Mandatory Echo (强制回显): Agent 必须执行以下命令验证物理证据：
    * grep -E "Token Usage|UUID|Session ID|cost_reduction_rate|cache_hit_rate" VERIFY_LOG.log
    * date
@@ -152,8 +150,8 @@ Claude CLI (Agent) 必须具备“自我修复”的意识。
    * 验证点 4: Timestamp (当前时间，误差 < 2分钟)
  * Cost Audit Integration (成本审计集成):
    * unified_review_gate 自动生成成本审计报告
-   * 成本优化率必须 ≥ 80% 才能进入 gemini_review_bridge
-   * gemini_review_bridge 进行最终 AI 审查
+   * 成本优化率必须 ≥ 80% 才能通过审查
+   * 智能路由自动选择最优 AI 引擎（Claude/Gemini）
  * No Echo = No Pass: 无法展示上述物理证据的任务，一律视为 FAIL。
 2. 标准工作流 (The Workflow)
 Phase 1: Definition (定义)
@@ -166,26 +164,21 @@ Phase 2: Execution & Traceability (执行与留痕)
 Phase 3: The Zero-Trust Audit Loop (零信任审计循环) 🤖
 此阶段由 Agent 自主驱动，必须严格遵守物理验证步骤。
  * Trigger: 运行新版统一审查系统（Task #102 起有效）
-   * 🟢 **主要**: python3 scripts/ai_governance/unified_review_gate.py | tee VERIFY_LOG.log
+   * 🟢 **标准流程**: python3 scripts/ai_governance/unified_review_gate.py | tee VERIFY_LOG.log
      └─ ✅ 内部根据风险等级自动路由 Claude (高危) 或 Gemini (低危)
      └─ ✅ 自动启用成本优化（缓存+批处理+智能路由）
      └─ ✅ 返回 "PASS/REJECT/FEEDBACK" + 成本指标
-   * 🟡 **可选**: python3 scripts/ai_governance/gemini_review_bridge.py | tee -a VERIFY_LOG.log
-     └─ 仅用于特殊场景：Cloudflare 穿透、独立深度审查、特殊控制流验证
-     └─ 不是常规 Gate 2 流程的一部分
+     └─ ✅ 生成 Session ID 和物理验证证据
  * Gate 1 Check:
    * ❌ Fail: 读取 Traceback -> 分析根因 -> 修改代码 -> GOTO 1。
    * ✅ Pass: 进入 Gate 2。
- * Gate 2 Check (新版统一审查):
+ * Gate 2 Check (统一审查流程):
    * ⚠️ Pre-Check (成本审计): 检查 unified_review_gate 的成本指标
      * 若 cost_reduction_rate < 80% -> 优化审查工作流 -> GOTO 1（重跑审查）。
-   * unified_review_gate 审查 (单一引擎选择):
+   * unified_review_gate 自动审查:
+     * 内部智能路由选择最优引擎（Claude 或 Gemini）
      * ❌ Reject/Feedback: 读取 AI 建议 -> 重构代码 -> 更新文档 -> GOTO 1。
      * ✅ Pass (成本优化达标): 进入物理验尸环节。
-   * [仅特殊情况] gemini_review_bridge 独立审查:
-     * 触发条件: 主审查不确定性 > 阈值 OR 控制流无法验证
-     * ❌ Reject/Feedback: 读取补充意见 -> 补充修改 -> 重跑 unified_review_gate。
-     * ✅ Confirm: 支持主审查结果。
  * Forensic Verification (物理验尸) [MANDATORY]:
    * Action: Agent 必须执行以下命令验证新版审查系统的物理证据：
      * grep -E "Token Usage|UUID|Session ID|cost_reduction_rate|cache_hit_rate" VERIFY_LOG.log
