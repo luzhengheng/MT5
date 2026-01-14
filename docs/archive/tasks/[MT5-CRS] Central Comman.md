@@ -85,14 +85,13 @@ Core Philosophy: HUB Sovereignty, Double-Gate Verification, Zero-Trust Forensics
  * Gate 1 (Local Audit - 静态/单元测试):
    * 工具: audit_current_task.py (包含 pylint, pytest, mypy)。
    * 标准: 零报错 (Zero Errors)。任何红色的 Traceback 都是阻断信号。
- * Gate 2 (AI Architect - 新版智能审查):
-   * 工具: unified_review_gate.py + gemini_review_bridge.py（集成 AI 成本优化器，Task #102 起有效）。
-   * 工作流:
-     * Step 1: python3 scripts/ai_governance/unified_review_gate.py (统一审查入口，启用成本优化)
-     * Step 2: python3 scripts/ai_governance/gemini_review_bridge.py (Gemini 最终评审，带缓存)
-   * 标准: 必须获得两个系统的明确 "PASS" 评价，同时成本优化率 ≥ 80%。
+ * Gate 2 (AI Architect - 新版智能审查，Task #102+):
+   * 工具:
+     * 📍 scripts/ai_governance/unified_review_gate.py (统一审查入口，启用成本优化)
+     * 📍 scripts/ai_governance/gemini_review_bridge.py (Gemini 最终评审，带缓存)
+   * 标准: 双系统通过 "PASS" + 成本优化率 ≥ 80%。
    * 禁止: 严禁在 Gate 2 通过前执行 git commit。
-   * 成本审计: 新版审查系统自动统计 API 调用减少量、缓存命中率、批处理效率。
+   * 详见 Phase 3: The Zero-Trust Audit Loop 中的具体执行步骤。
 🔄 铁律 II：自主闭环 (The Autonomous Loop)
 Claude CLI (Agent) 必须具备“自我修复”的意识。
  * Feedback is Directive: 报错信息和审查意见不是建议，是必须执行的指令。
@@ -104,15 +103,23 @@ Claude CLI (Agent) 必须具备“自我修复”的意识。
 🕵️ 铁律 IV：零信任验尸 (The Zero-Trust Forensics)
 这是 v4.3 新增的核心铁律，用于防止 AI 幻觉。自 Task #102 起，融合成本优化审计。
  * Anti-Hallucination: 严禁根据上下文"脑补"或"模拟"脚本执行结果。
- * Physical Proof (物理证据): 所有涉及新版审查系统（unified_review_gate.py + gemini_review_bridge.py）的任务，必须在执行后立即进行终端回显。
- * Mandatory Echo (强制回显): Agent 必须执行 grep 或 tail 命令读取刚生成的 VERIFY_LOG.log 文件。
+ * Physical Proof (物理证据): 所有 Gate 2 审查必须在新版审查系统执行后立即进行终端回显。
+   * 📍 新版审查系统路径:
+     * scripts/ai_governance/unified_review_gate.py (必执行)
+     * scripts/ai_governance/gemini_review_bridge.py (必执行)
+ * Mandatory Echo (强制回显): Agent 必须执行以下命令验证物理证据：
+   * grep -E "Token Usage|UUID|Session ID|cost_reduction_rate|cache_hit_rate" VERIFY_LOG.log
+   * date
+ * 验证点 (4 个):
    * 验证点 1: UUID (unified_review_gate Session ID 必须存在且唯一)
-   * 验证点 2: Token Usage (必须显示 unified_review_gate 真实消耗的 Token 数值)
-   * 验证点 3: Cost Metrics (必须显示 cost_reduction_rate, cache_hit_rate, api_calls 等成本优化指标)
-   * 验证点 4: Timestamp (必须是当前时间，误差 < 2分钟)
- * Cost Audit Integration (成本审计集成): 新版系统自动统计审查成本，所有 Gate 2 审查必须生成成本审计报告。
- * No Echo = No Pass: 无法在终端中展示上述物理证据的任务，一律视为 FAIL。
- * 特别说明: 从 Task #102 起，所有审查必须包含成本优化指标验证，成本优化率必须 ≥ 80% 才能视为通过。
+   * 验证点 2: Token Usage (unified_review_gate 真实消耗的 Token 数值)
+   * 验证点 3: Cost Metrics (cost_reduction_rate, cache_hit_rate, api_calls 等)
+   * 验证点 4: Timestamp (当前时间，误差 < 2分钟)
+ * Cost Audit Integration (成本审计集成):
+   * unified_review_gate 自动生成成本审计报告
+   * 成本优化率必须 ≥ 80% 才能进入 gemini_review_bridge
+   * gemini_review_bridge 进行最终 AI 审查
+ * No Echo = No Pass: 无法展示上述物理证据的任务，一律视为 FAIL。
 2. 标准工作流 (The Workflow)
 Phase 1: Definition (定义)
  * Action: 用户发布 /task 指令 (使用 v4.3 模版)。
@@ -124,15 +131,20 @@ Phase 2: Execution & Traceability (执行与留痕)
 Phase 3: The Zero-Trust Audit Loop (零信任审计循环) 🤖
 此阶段由 Agent 自主驱动，必须严格遵守物理验证步骤。
  * Trigger: 运行新版审查系统（Task #102 起有效）
-   * python3 scripts/ai_governance/unified_review_gate.py | tee VERIFY_LOG.log
-   * python3 scripts/ai_governance/gemini_review_bridge.py | tee -a VERIFY_LOG.log
+   * Step 1 (统一审查入口): python3 scripts/ai_governance/unified_review_gate.py | tee VERIFY_LOG.log
+   * Step 2 (Gemini 最终评审): python3 scripts/ai_governance/gemini_review_bridge.py | tee -a VERIFY_LOG.log
  * Gate 1 Check:
    * ❌ Fail: 读取 Traceback -> 分析根因 -> 修改代码 -> GOTO 1。
    * ✅ Pass: 进入 Gate 2。
- * Gate 2 Check (新版):
-   * ❌ Reject/Feedback: 读取 unified_review_gate 和 gemini_review_bridge 的 AI 建议 -> 重构代码 -> 更新文档 -> GOTO 1。
-   * ⚠️ Warning (成本审计失败): 若成本优化率 < 80% -> 优化审查工作流 -> GOTO 1。
-   * ✅ Approve (双系统通过 + 成本优化达标): 进入物理验尸环节。
+ * Gate 2 Check (新版双系统审查):
+   * ⚠️ Pre-Check (成本审计): 检查 unified_review_gate 的成本指标
+     * 若 cost_reduction_rate < 80% -> 优化审查工作流 -> GOTO 1（重跑审查）。
+   * Step 1 (unified_review_gate):
+     * ❌ Reject/Feedback: 读取 AI 建议 -> 重构代码 -> 更新文档 -> GOTO 1。
+     * ✅ Pass: 进入 Step 2。
+   * Step 2 (gemini_review_bridge):
+     * ❌ Reject/Feedback: 读取 AI 建议 -> 重构代码 -> 更新文档 -> GOTO 1。
+     * ✅ Approve (双系统通过 + 成本优化达标): 进入物理验尸环节。
  * Forensic Verification (物理验尸) [MANDATORY]:
    * Action: Agent 必须执行以下命令验证新版审查系统的物理证据：
      * grep -E "Token Usage|UUID|Session ID|cost_reduction_rate|cache_hit_rate" VERIFY_LOG.log
