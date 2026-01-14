@@ -26,6 +26,7 @@ LOG_FILE = "VERIFY_LOG.log"
 # --- 核心配置 ---
 AUDIT_SCRIPT = "scripts/audit_current_task.py"
 ENABLE_AI_REVIEW = True # 开启云端大脑
+GEMINI_API_TIMEOUT = 180  # 外部 API 请求超时（秒）
 
 # --- 尝试导入核武器 (curl_cffi) ---
 try:
@@ -270,7 +271,7 @@ def external_ai_review(diff_content, session_id, audit_mode="INCREMENTAL"):
                 "messages": [{"role": "user", "content": prompt}],
                 "temperature": 0.3
             },
-            timeout=180,
+            timeout=GEMINI_API_TIMEOUT,
             impersonate="chrome110"
         )
         
@@ -321,13 +322,13 @@ def external_ai_review(diff_content, session_id, audit_mode="INCREMENTAL"):
             return "FATAL_ERROR", session_id
 
     except requests.ConnectTimeout:
-        log(f"[FATAL] 连接超时: 无法连接API服务器 (timeout=180s)", "ERROR")
+        log(f"[FATAL] 连接超时: 无法连接API服务器 (timeout={GEMINI_API_TIMEOUT}s)", "ERROR")
         log(f"检查项: 1) 网络连接  2) VPN 状态  3) API 地址正确性", "ERROR")
         log(f"API 地址: {GEMINI_BASE_URL}", "ERROR")
         return "FATAL_ERROR", session_id
 
     except requests.ReadTimeout:
-        log(f"[FATAL] 读取超时: API服务器响应过慢 (timeout=180s)", "ERROR")
+        log(f"[FATAL] 读取超时: API服务器响应过慢 (timeout={GEMINI_API_TIMEOUT}s)", "ERROR")
         log(f"API 地址: {GEMINI_BASE_URL}", "ERROR")
         return "FATAL_ERROR", session_id
 
