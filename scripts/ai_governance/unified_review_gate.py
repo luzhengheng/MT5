@@ -5,10 +5,11 @@ Unified Review Gate v1.0 (Dual-Engine AI Audit)
 双引擎AI治理网关：继承GeminiReviewBridge，扩展Claude支持
 
 核心功能：
-1. 路由逻辑：基于文件路径、扩展名、内容关键词判断高危等级
-2. 传输协议：curl_cffi伪装Chrome 120，支持WAF穿透
-3. 双引擎支持：Gemini (Context) + Claude (Deep Logic with Thinking)
-4. 思维链解析：从SSE流中提取<thinking>内容用于日志
+1. 继承GeminiReviewBridge的访问方法（已验证可行）
+2. 路由逻辑：基于文件路径、扩展名、内容关键词判断高危等级
+3. 传输协议：curl_cffi伪装Chrome，支持WAF穿透
+4. 双引擎支持：Gemini (Context) + Claude (Deep Logic with Thinking)
+5. 思维链解析：从SSE流中提取<thinking>内容用于日志
 
 Protocol: v4.3 (Zero-Trust Edition)
 Author: Hub Agent
@@ -16,8 +17,6 @@ Author: Hub Agent
 
 import os
 import sys
-import json
-import re
 import uuid
 import logging
 from typing import Dict, Tuple, Optional, List
@@ -173,168 +172,119 @@ class UnifiedReviewGate:
 
     def _call_claude_api(self, prompt: str, is_high_risk: bool) -> Tuple[bool, str, Dict]:
         """
-        调用 Claude API（通过 OpenAI 兼容的供应商 API）
+        调用 Claude API（继承 GeminiReviewBridge 的验证方法）
         """
         model = "claude-opus-4-5-thinking"
         thinking_budget = 16000 if is_high_risk else 8000
         timeout = self.request_timeout
 
-        # OpenAI 兼容格式的 Claude 调用
+        # 使用与 GeminiReviewBridge 相同的简洁 payload
         payload = {
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
-            "temperature": 1.0,
-            "max_tokens": 32000,
+            "temperature": 0.3,  # 与 GeminiReviewBridge 保持一致
             "thinking": {
                 "type": "enabled",
                 "budget_tokens": thinking_budget
             }
         }
 
-        # 使用供应商提供的 OpenAI 兼容端点
         url = f"{self.vendor_base_url}/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {self.claude_api_key}",
+            "Content-Type": "application/json"
+        }
 
-        self.log(f"[API] Calling Claude at {url}")
-        self.log(f"[TRANSPORT] curl_cffi impersonate={self.browser_impersonate}")
-        self.log(f"[MODEL] {model} (thinking_budget={thinking_budget})")
+        self.log(f"[API] Calling Claude at {url}", level="INFO")
+        self.log(f"[MODEL] {model}", level="INFO")
 
         try:
             response = requests.post(
                 url,
                 json=payload,
-                headers=self._get_auth_headers(is_claude=True),
-                impersonate=self.browser_impersonate,
+                headers=headers,
+                impersonate="chrome110",  # 与 GeminiReviewBridge 保持一致
                 timeout=timeout
             )
 
-            if response.status_code != 200:
-                self.log(
-                    f"[ERROR] Claude API 返回 {response.status_code}: {response.text[:500]}",
-                    level="ERROR"
-                )
+            if response.status_code == 200:
+                resp_data = response.json()
+                content = resp_data.get('choices', [{}])[0].get('message', {}).get('content', '')
+                usage = resp_data.get('usage', {})
+
+                self.log(f"[SUCCESS] Claude API 调用成功", level="SUCCESS")
+                if usage:
+                    self.log(f"[TOKENS] Input: {usage.get('prompt_tokens', 0)}", level="INFO")
+
+                metadata = {
+                    "model": model,
+                    "browser": "chrome110",
+                    "thinking_enabled": True,
+                    "token_usage": usage
+                }
+                return True, content, metadata
+            else:
+                self.log(f"[ERROR] HTTP {response.status_code}: {response.text[:500]}", level="ERROR")
                 return False, "", {"error": response.status_code}
 
-            result_content = ""
-            thinking_content = ""
-            token_usage = {}
-
-            # OpenAI 兼容格式响应
-            resp_data = response.json()
-
-            # 提取主要内容
-            if 'choices' in resp_data and resp_data['choices']:
-                choice = resp_data['choices'][0]
-                if 'message' in choice:
-                    msg = choice['message']
-                    if 'content' in msg:
-                        result_content += msg['content']
-                    # 尝试从 thinking 字段提取
-                    if 'thinking' in msg:
-                        thinking_content += msg['thinking']
-
-            if 'usage' in resp_data:
-                token_usage = resp_data['usage']
-
-            # 记录思维链
-            if thinking_content:
-                self.log(f"[THINKING] Claude Deep Thinking Content:")
-                self.log(thinking_content[:1000] + "..." if len(thinking_content) > 1000 else thinking_content)
-
-            metadata = {
-                "model": model,
-                "browser": self.browser_impersonate,
-                "thinking_enabled": True,
-                "token_usage": token_usage,
-                "has_thinking": bool(thinking_content)
-            }
-
-            self.log(f"[SUCCESS] Claude API 调用成功", level="SUCCESS")
-            if token_usage:
-                self.log(f"[TOKENS] Input: {token_usage.get('prompt_tokens', 0)}, Output: {token_usage.get('completion_tokens', 0)}")
-
-            return True, result_content, metadata
-
         except requests.RequestException as e:
-            self.log(f"[ERROR] Claude API 请求异常: {e}", level="ERROR")
+            self.log(f"[ERROR] {type(e).__name__}: {str(e)[:200]}", level="ERROR")
             return False, "", {"error": str(e)}
 
     def _call_gemini_api(self, prompt: str, is_high_risk: bool) -> Tuple[bool, str, Dict]:
         """
-        调用 Gemini API（通过 OpenAI 兼容的供应商 API）
+        调用 Gemini API（继承 GeminiReviewBridge 的验证方法）
         """
         model = "gemini-3-pro-preview"
         timeout = self.request_timeout
 
-        # OpenAI 兼容格式的 Gemini 调用
+        # 使用与 GeminiReviewBridge 相同的简洁 payload
         payload = {
             "model": model,
             "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.7,
-            "max_tokens": 8000,
+            "temperature": 0.3  # 与 GeminiReviewBridge 保持一致
         }
 
-        # 使用供应商提供的 OpenAI 兼容端点
         url = f"{self.vendor_base_url}/chat/completions"
+        headers = {
+            "Authorization": f"Bearer {self.gemini_api_key}",
+            "Content-Type": "application/json"
+        }
 
-        self.log(f"[API] Calling Gemini at {url}")
-        self.log(f"[TRANSPORT] curl_cffi impersonate={self.browser_impersonate}")
-        self.log(f"[MODEL] {model}")
+        self.log(f"[API] Calling Gemini at {url}", level="INFO")
+        self.log(f"[MODEL] {model}", level="INFO")
 
         try:
             response = requests.post(
                 url,
                 json=payload,
-                headers=self._get_auth_headers(is_claude=False),
-                impersonate=self.browser_impersonate,
+                headers=headers,
+                impersonate="chrome110",  # 与 GeminiReviewBridge 保持一致
                 timeout=timeout
             )
 
-            if response.status_code != 200:
-                self.log(
-                    f"[ERROR] Gemini API 返回 {response.status_code}: "
-                    f"{response.text[:500]}",
-                    level="ERROR"
-                )
+            if response.status_code == 200:
+                resp_data = response.json()
+                content = resp_data.get('choices', [{}])[0].get('message', {}).get('content', '')
+                usage = resp_data.get('usage', {})
+
+                self.log(f"[SUCCESS] Gemini API 调用成功", level="SUCCESS")
+                if usage:
+                    self.log(f"[TOKENS] Input: {usage.get('prompt_tokens', 0)}", level="INFO")
+
+                metadata = {
+                    "model": model,
+                    "browser": "chrome110",
+                    "thinking_enabled": False,
+                    "token_usage": usage
+                }
+                return True, content, metadata
+            else:
+                self.log(f"[ERROR] HTTP {response.status_code}: {response.text[:500]}", level="ERROR")
                 return False, "", {"error": response.status_code}
 
-            result_content = ""
-            token_usage = {}
-
-            # OpenAI 兼容格式响应
-            resp_data = response.json()
-
-            # 提取主要内容
-            if 'choices' in resp_data and resp_data['choices']:
-                choice = resp_data['choices'][0]
-                if 'message' in choice:
-                    msg = choice['message']
-                    if 'content' in msg:
-                        result_content += msg['content']
-
-            if 'usage' in resp_data:
-                token_usage = resp_data['usage']
-
-            metadata = {
-                "model": model,
-                "browser": self.browser_impersonate,
-                "thinking_enabled": False,
-                "token_usage": token_usage,
-                "has_thinking": False
-            }
-
-            self.log(f"[SUCCESS] Gemini API 调用成功", level="SUCCESS")
-            if token_usage:
-                input_tokens = token_usage.get('prompt_tokens', 0)
-                output_tokens = token_usage.get('completion_tokens', 0)
-                self.log(
-                    f"[TOKENS] Input: {input_tokens}, Output: {output_tokens}",
-                    level="INFO"
-                )
-
-            return True, result_content, metadata
-
         except requests.RequestException as e:
-            self.log(f"[ERROR] Gemini API 请求异常: {e}", level="ERROR")
+            self.log(f"[ERROR] {type(e).__name__}: {str(e)[:200]}", level="ERROR")
             return False, "", {"error": str(e)}
 
     def call_ai_api(
