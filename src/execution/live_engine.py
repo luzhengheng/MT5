@@ -14,11 +14,19 @@ import time
 from datetime import datetime
 from typing import Dict, Any, Callable, Optional, AsyncIterator
 from pathlib import Path
+import importlib.util
 
 # Add parent paths for imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from src.risk.circuit_breaker import CircuitBreaker, CircuitBreakerMonitor
+# Load circuit_breaker directly to avoid __init__ import conflicts
+_cb_path = Path(__file__).parent.parent / "risk" / "circuit_breaker.py"
+_spec = importlib.util.spec_from_file_location("circuit_breaker_module", _cb_path)
+_cb_module = importlib.util.module_from_spec(_spec)
+_spec.loader.exec_module(_cb_module)
+
+CircuitBreaker = _cb_module.CircuitBreaker
+CircuitBreakerMonitor = _cb_module.CircuitBreakerMonitor
 
 
 class LiveEngine:
