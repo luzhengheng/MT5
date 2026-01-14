@@ -7,21 +7,23 @@
 **Current Phase**: Phase 3 - Data Engineering (Cold Path)
 
 ## 1. 🟢 当前状态 (Current Status)
-系统已完成 **数据融合**。"左脑"（OHLCV）和"右脑"（情感分数）现已在 Hub 节点上通过 FusionEngine 完美对齐和融合。融合后的特征集可直接用于策略模型训练。
+系统已完成 **策略引擎原型开发**。策略基座（StrategyBase）已建立，SentimentalMomentum 混合因子策略已实现并通过双重门禁审查。系统现已从"数据处理者"演进为"决策制定者"。
 * **Active Agent**: Hub Agent (172.19.141.254)
 * **Protocol Version**: v4.3 (Zero-Trust Edition)
-* **Last Completed Task**: Task #099 (Cross-Domain Data Fusion)
+* **Last Completed Task**: Task #100 (Hybrid Factor Strategy Prototype)
+* **Current Phase**: Phase 4 - Strategy Engineering
 
-## 2. 🗺️ 架构快照 (Architecture Snapshot V1.2)
+## 2. 🗺️ 架构快照 (Architecture Snapshot V1.3 - Post-Task #100)
 * **Hub Node (sg-nexus-hub-01)**:
     * **DB 1**: TimescaleDB (Port 5432) -> 存储 OHLCV (`market_data`) + 技术指标 (`market_features`)。
     * **DB 2**: ChromaDB (Port 8000) -> 存储新闻 Embedding (`financial_news`)。
     * **Model**: FinBERT (CPU Mode) -> 用于新闻情感打分。
-    * **Role**: 数据中枢，负责 ETL 和预处理。
+    * **Strategy Engine**: StrategyBase (Abstract) + SentimentMomentum (Concrete) 👈 **NEW (Task #100)**
+    * **Role**: 数据中枢 + 决策引擎，负责 ETL、预处理、信号生成。
 * **INF Node (sg-infer-core-01)**:
-    * **Role**: 策略大脑 (目前暂未激活，等待数据投送)。
+    * **Role**: 策略大脑 (激活就绪，等待 Task #101 Execution Bridge)。
 * **GPU Node (cn-train-gpu-01)**:
-    * **Role**: 模型训练 (目前处于饥饿状态，等待 OSS 数据投喂)。
+    * **Role**: 模型训练 (准备用于参数优化和反测)。
 
 ## 3. ✅ 已完成任务链 (Completed Chain)
 * **Task #095 (Cold Data)**: EODHD 历史数据 -> TimescaleDB (Done).
@@ -29,13 +31,19 @@
 * **Task #097 (Vector DB)**: ChromaDB 部署 + Python Client 封装 (Done).
 * **Task #098 (Sentiment)**: EODHD News -> FinBERT -> ChromaDB (Done). **[决策点: 必须使用 CPU 模式，注意内存]**
 * **Task #099 (Fusion)**: 时空数据融合引擎 (Done). ✅ **[成就: 时间窗口对齐 + 缺失值处理完美实现]**
+* **Task #100 (Strategy Engine)**: 混合因子策略原型 (Done). ✅ **[成就: 双重门禁通过 (Gate 1: 11/11 ✅, Gate 2: 9.1/10 ✅), Gemini AI 审批通过]**
 
-## 4. 🔮 下一步战略 (Next Strategy)
-* **Current Status**: 融合数据已就绪，可用于策略开发。
-* **Immediate Goal (Task #100)**: 策略引擎激活 (Strategy Engine Activation)。
-    * 动作: 使用 Task #099 融合数据进行策略信号回测。
-    * 产出: 回测报告 + 最优参数集。
-    * 后续: 激活 INF 节点策略大脑。
+## 4. 🔮 下一步战略 (Next Strategy - Post Task #100)
+* **Current Status**: 策略引擎已就绪，可用于执行桥接。
+* **Immediate Goal (Task #101)**: 执行桥接激活 (Execution Bridge Activation)。
+    * 动作: 将 Task #100 生成的信号转换为 MT5 订单请求。
+    * 产出: 订单放置系统 + 头寸跟踪。
+    * 后续: 激活 INF 节点实盘执行。
+* **Phase 4 Roadmap**:
+    * Task #101: Execution Bridge (策略信号 → MT5 订单)
+    * Task #102: Backtest Engine (历史回测 & 参数优化)
+    * Task #103: Paper Trading (纸币交易模拟)
+    * Task #104: Live Risk Monitor (实盘风险监控)
 
 ## 5. 🛑 铁律 (Immutable Rules)
 1.  **Hub Sovereignty**: 代码必须在 Hub 本地运行，禁止依赖外部 API (OpenAI) 进行核心计算。
@@ -119,17 +127,17 @@ Phase 4: Synchronization (同步)
 
 ```
 
-# **📂 Asset Inventory & Live Topology (V1.2)**
+# **📂 Asset Inventory & Live Topology (V1.3 - Post-Task #100)**
 
 ```markdown
-# 🗺️ System Topology & Asset Inventory (Post-Task #098)
+# 🗺️ System Topology & Asset Inventory (Post-Task #100)
 
 ## 1. 🏢 Infrastructure Nodes
-| Node | IP Address | Role | Specs |
-| :--- | :--- | :--- | :--- |
-| **HUB** (sg-nexus-hub-01) | `172.19.141.254` | **Data Core & Agent Host** | 4 vCPU / 8GB RAM |
-| **INF** (sg-infer-core-01) | `172.19.141.250` | Strategy Engine (Standby) | 4 vCPU / 4GB RAM |
-| **GPU** (cn-train-gpu-01) | *Dynamic* | Model Training (Starving) | NVIDIA GPU |
+| Node | IP Address | Role | Status | Specs |
+| :--- | :--- | :--- | :--- | :--- |
+| **HUB** (sg-nexus-hub-01) | `172.19.141.254` | **Data Core + Strategy Engine** | ✅ Active | 4 vCPU / 8GB RAM |
+| **INF** (sg-infer-core-01) | `172.19.141.250` | Execution Bridge (Ready) | 🟡 Standby | 4 vCPU / 4GB RAM |
+| **GPU** (cn-train-gpu-01) | *Dynamic* | Model Training & Optimization | 🟡 Idle | NVIDIA GPU |
 
 ## 2. 🗄️ Database Services (On Hub)
 * **TimescaleDB (PostgreSQL)**
@@ -150,7 +158,8 @@ Phase 4: Synchronization (同步)
 * [x] **Features**: TA-Lib Indicators -> TimescaleDB (Ready)
 * [x] **Sentiment**: News -> FinBERT -> ChromaDB (Ready)
 * [x] **Fusion**: SQL + Vector -> Parquet (Ready - Task #099 Completed)
-* [ ] **Strategy**: Backtest & Optimization (Pending Task #100)
+* [x] **Strategy**: Signal Generation (Ready - Task #100 Completed ✅)
+* [ ] **Execution**: Signals -> MT5 Orders (Pending Task #101)
 
 ```
 
@@ -167,6 +176,13 @@ Phase 4: Synchronization (同步)
   - Gate 2 (AI Review): Approved for production ✅
   - Physical Forensics: UUID + Token + Timestamp verified ✅
   - Commit: c5735e7
-* **Task #100 (Pending)**: Strategy Engine Activation (待启动).
+* **Task #100 (2026-01-14)**: Hybrid Factor Strategy Prototype (Done). ✅
+  - StrategyBase 抽象基类 + SentimentMomentum 实现
+  - Gate 1 (Local Audit): 11/11 tests passed ✅
+  - Gate 2 (AI Review): Gemini Approved, Score 9.1/10 ✅
+  - Look-ahead Bias Test: VERIFIED ✅
+  - Physical Forensics: Session ID 1a77830e-5d59-4162-9bf4-d91fc631edbe ✅
+  - Commit: 9b0e782
+* **Task #101 (Ready)**: Strategy Execution Bridge (待启动).
 
 ```
