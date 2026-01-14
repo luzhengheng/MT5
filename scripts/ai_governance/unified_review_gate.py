@@ -32,6 +32,15 @@ except ImportError:
     print("⚠️  [WARN] 缺少 curl_cffi，建议运行: pip install curl_cffi")
     sys.exit(1)
 
+# 导入成本优化器模块
+try:
+    from cost_optimizer import AIReviewCostOptimizer
+    from review_batcher import ReviewBatch
+    OPTIMIZER_AVAILABLE = True
+except ImportError:
+    OPTIMIZER_AVAILABLE = False
+    print("⚠️  [WARN] 成本优化器模块未可用，将使用传统逐文件审查模式")
+
 # 颜色定义
 GREEN = "\033[92m"
 RED = "\033[91m"
@@ -85,8 +94,12 @@ class UnifiedReviewGate:
     继承并扩展GeminiReviewBridge功能
     """
 
-    def __init__(self):
-        """初始化统一审查网关"""
+    def __init__(self, enable_optimizer: bool = True):
+        """初始化统一审查网关
+
+        Args:
+            enable_optimizer: 是否启用成本优化器 (默认启用)
+        """
         self.session_id = str(uuid.uuid4())
         self.log_file = "VERIFY_LOG.log"
 
@@ -97,10 +110,28 @@ class UnifiedReviewGate:
         self.browser_impersonate = os.getenv("BROWSER_IMPERSONATE", "chrome120")
         self.request_timeout = int(os.getenv("REQUEST_TIMEOUT", "180"))
 
+        # 初始化成本优化器
+        self.optimizer = None
+        self.use_optimizer = enable_optimizer and OPTIMIZER_AVAILABLE
+        if self.use_optimizer:
+            try:
+                self.optimizer = AIReviewCostOptimizer(
+                    enable_cache=True,
+                    enable_batch=True,
+                    enable_routing=True,
+                    cache_dir=".cache/unified_review_cache",
+                    log_file="unified_review_optimizer.log"
+                )
+                self.log("[INIT] Cost optimizer enabled")
+            except Exception as e:
+                self.log(f"[WARN] Failed to initialize optimizer: {e}")
+                self.use_optimizer = False
+
         self.log(f"[INIT] Unified Review Gate v1.0 started")
         self.log(f"[CONFIG] Vendor URL: {self.vendor_base_url}")
         self.log(f"[CONFIG] Browser Impersonate: {self.browser_impersonate}")
         self.log(f"[CONFIG] Request Timeout: {self.request_timeout}s")
+        self.log(f"[CONFIG] Cost Optimizer: {'ENABLED' if self.use_optimizer else 'DISABLED'}")
 
     def log(self, msg: str, level: str = "INFO"):
         """记录日志到文件和控制台"""
@@ -316,27 +347,38 @@ class UnifiedReviewGate:
     def execute_review(
         self,
         target_files: List[str],
-        risk_mode: Optional[str] = None
-    ) -> Tuple[bool, str]:
+        risk_mode: Optional[str] = None,
+        use_optimizer: Optional[bool] = None
+    ) -> Tuple[bool, str, Optional[Dict]]:
         """
         执行审查
 
         参数:
             target_files: 要审查的文件列表
             risk_mode: 强制风险模式 ("low" 或 "high")
+            use_optimizer: 是否使用成本优化器 (默认使用实例配置)
 
         返回:
-            (success: bool, report: str)
+            (success: bool, report: str, stats: Optional[Dict])
         """
+        # 决定是否使用优化器
+        enable_opt = use_optimizer if use_optimizer is not None else self.use_optimizer
 
         report_lines = []
         report_lines.append("# 统一审查网关报告\n")
         report_lines.append(f"**生成时间**: {datetime.now().isoformat()}\n")
         report_lines.append(f"**Session ID**: {self.session_id}\n")
-        report_lines.append(f"**Target Files**: {len(target_files)}\n\n")
+        report_lines.append(f"**Target Files**: {len(target_files)}\n")
+        report_lines.append(f"**Optimizer**: {'ENABLED' if enable_opt else 'DISABLED'}\n\n")
 
         all_passed = True
+        stats = None
 
+        # 使用优化器时采用批处理模式
+        if enable_opt and self.optimizer:
+            return self._execute_review_optimized(target_files, risk_mode)
+
+        # 传统逐文件审查模式
         for file_path in target_files:
             # 读取文件内容
             try:
@@ -404,7 +446,100 @@ class UnifiedReviewGate:
                 report_lines.append("\n\n")
 
         report = "".join(report_lines)
-        return all_passed, report
+        return all_passed, report, stats
+
+    def _execute_review_optimized(
+        self,
+        target_files: List[str],
+        risk_mode: Optional[str] = None
+    ) -> Tuple[bool, str, Dict]:
+        """
+        使用成本优化器执行批量审查
+
+        参数:
+            target_files: 要审查的文件列表
+            risk_mode: 强制风险模式
+
+        返回:
+            (success: bool, report: str, stats: Dict)
+        """
+        self.log("[OPTIMIZED] Starting batch review with cost optimizer")
+
+        report_lines = []
+        report_lines.append("# 统一审查网关报告 (优化模式)\n")
+        report_lines.append(f"**生成时间**: {datetime.now().isoformat()}\n")
+        report_lines.append(f"**Session ID**: {self.session_id}\n")
+        report_lines.append(f"**Target Files**: {len(target_files)}\n")
+        report_lines.append(f"**Mode**: Cost-Optimized Batch Processing\n\n")
+
+        # 定义API调用包装器
+        def api_caller(batch: ReviewBatch):
+            """调用AI API进行批量审查"""
+            use_claude = (batch.risk_level == "high")
+
+            # 生成批处理提示
+            prompt = self.optimizer.batcher.format_batch_prompt(batch, use_claude)
+
+            # 调用API
+            success, response, metadata = self.call_ai_api(
+                prompt,
+                is_high_risk=(batch.risk_level == "high"),
+                use_claude=use_claude
+            )
+
+            if success:
+                # 解析批处理结果
+                results = self.optimizer.batcher.parse_batch_result(batch, response)
+                return results
+            return {}
+
+        try:
+            # 使用优化器处理所有文件
+            results, stats = self.optimizer.process_files(
+                target_files,
+                api_caller=api_caller,
+                risk_detector=self.detect_risk_level,
+                force_refresh=False  # 使用缓存
+            )
+
+            # 生成报告
+            all_passed = True
+            for result_item in results:
+                filepath = result_item['filepath']
+                review_result = result_item.get('result', {})
+
+                report_lines.append(f"## {filepath}\n")
+                report_lines.append(f"**Source**: {result_item.get('source', 'api')}\n")
+
+                if isinstance(review_result, dict):
+                    report_lines.append(f"**Status**: {review_result.get('status', 'UNKNOWN')}\n")
+                    if 'content' in review_result:
+                        report_lines.append("### 审查意见\n")
+                        report_lines.append(review_result['content'])
+                else:
+                    report_lines.append("### 审查意见\n")
+                    report_lines.append(str(review_result))
+
+                report_lines.append("\n\n")
+
+            # 添加成本统计
+            report_lines.append("## 📊 成本优化统计\n")
+            report_lines.append(f"- 总文件数: {stats['total_files']}\n")
+            report_lines.append(f"- 缓存命中: {stats['cached_files']}\n")
+            report_lines.append(f"- 新增审查: {stats['uncached_files']}\n")
+            report_lines.append(f"- API调用次数: {stats['api_calls']}\n")
+            report_lines.append(f"- **成本节省: {stats['cost_reduction_rate']:.1%}**\n")
+
+            report = "".join(report_lines)
+            self.log(f"[OPTIMIZED] Batch review complete: {stats['cost_reduction_rate']:.1%} cost reduction")
+
+            return all_passed, report, stats
+
+        except Exception as e:
+            self.log(f"[ERROR] Optimized review failed: {e}", level="ERROR")
+            # 降级到传统模式
+            self.use_optimizer = False
+            return self.execute_review(target_files, risk_mode, use_optimizer=False)
 
     # ========================================================================
     # 工具方法
@@ -440,12 +575,21 @@ def main():
 
     if existing_files:
         gate.log(f"开始审查 {len(existing_files)} 个文件...")
-        success, report = gate.execute_review(existing_files)
+        success, report, stats = gate.execute_review(existing_files)
 
         print("\n" + "=" * 80)
         print("审查报告:")
         print("=" * 80)
         print(report)
+
+        # 显示优化统计 (如果使用了优化器)
+        if stats:
+            print("\n" + "=" * 80)
+            print("📊 成本优化统计:")
+            print("=" * 80)
+            print(f"API调用次数: {stats['api_calls']}")
+            print(f"成本节省率: {stats['cost_reduction_rate']:.1%}")
+            print("=" * 80)
 
         gate.log(f"审查完成: {'✅ 通过' if success else '❌ 失败'}")
     else:
