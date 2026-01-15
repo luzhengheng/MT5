@@ -1,6 +1,6 @@
 ==================================================
 📦 MT5-CRS 全域资产数据包 (Full Context Pack)
-Generated: 2026年 01月 15日 星期四 21:28:23 CST
+Generated: 2026年 01月 15日 星期四 22:14:45 CST
 ==================================================
 
 
@@ -125,9 +125,7 @@ Generated: 2026年 01月 15日 星期四 21:28:23 CST
 │   ├── ISSUE_010_GITHUB_PUSH_SUMMARY.txt
 │   ├── logs
 │   │   ├── cleanup_20251219_185118.log
-│   │   ├── iteration2_feature_quality_report.csv
 │   │   ├── iteration2_report.txt
-│   │   ├── iteration3_feature_quality_report.csv
 │   │   ├── iteration3_report.txt
 │   │   ├── iteration3_validation_report.txt
 │   │   └── test_implementation_report.txt
@@ -161,6 +159,7 @@ Generated: 2026年 01月 15日 星期四 21:28:23 CST
 │   ├── test_notion_sync.md
 │   ├── test_review_sample.py
 │   └── test_sync_workflow.py
+├── AUDIT_TASK_111.log
 ├── CENTRAL_COMMAND_REVIEW.log
 ├── CHAOS_TEST_RESULTS.json
 ├── config
@@ -181,8 +180,6 @@ Generated: 2026年 01月 15日 星期四 21:28:23 CST
 │   └── strategies.yaml
 ├── data
 │   ├── chroma
-│   │   ├── chroma-collections.parquet
-│   │   ├── chroma-embeddings.parquet
 │   │   └── index
 │   │       ├── id_to_uuid_4e7ce8a4-6a3d-49cb-8015-61491ff7213e.pkl
 │   │       ├── id_to_uuid_82eafc05-fd22-41f5-bc69-5d9b2821b22f.pkl
@@ -196,23 +193,38 @@ Generated: 2026年 01月 15日 星期四 21:28:23 CST
 │   │       ├── uuid_to_id_4e7ce8a4-6a3d-49cb-8015-61491ff7213e.pkl
 │   │       ├── uuid_to_id_82eafc05-fd22-41f5-bc69-5d9b2821b22f.pkl
 │   │       └── uuid_to_id_868f6050-02a4-4b3d-8cc2-9e830004a7b5.pkl
-│   ├── eurusd_m1_features_labels.parquet
-│   ├── fused_AAPL.parquet
 │   ├── meta
-│   │   └── trial_registry.json
 │   ├── models
 │   │   └── production_v1.pkl
 │   ├── processed
+│   │   └── eurusd_m1_training.parquet
+│   ├── quarantine
+│   │   ├── chroma
+│   │   │   ├── chroma-collections.parquet
+│   │   │   └── chroma-embeddings.parquet
 │   │   ├── eurusd_m1_features_labels.parquet
-│   │   ├── eurusd_m1_training.parquet
-│   │   └── forex_training_set_v1.parquet
+│   │   ├── fused_AAPL.parquet
+│   │   ├── logs
+│   │   │   ├── iteration2_feature_quality_report.csv
+│   │   │   └── iteration3_feature_quality_report.csv
+│   │   ├── meta
+│   │   │   └── trial_registry.json
+│   │   ├── processed
+│   │   │   ├── eurusd_m1_features_labels.parquet
+│   │   │   └── forex_training_set_v1.parquet
+│   │   ├── raw
+│   │   │   └── m1_fetch_manifest.json
+│   │   ├── sample_features.parquet
+│   │   └── samples
+│   │       ├── fundamental_sample.json
+│   │       ├── user_profile.json
+│   │       └── user_profile_mock.json
 │   ├── raw
 │   │   ├── AUDUSD_d.csv
 │   │   ├── DJI_d.csv
 │   │   ├── EURUSD_d.csv
 │   │   ├── GBPUSD_d.csv
 │   │   ├── GSPC_d.csv
-│   │   ├── m1_fetch_manifest.json
 │   │   ├── USDJPY_d.csv
 │   │   └── XAUUSD_d.csv
 │   ├── raw_market_data.parquet
@@ -224,7 +236,6 @@ Generated: 2026年 01月 15日 星期四 21:28:23 CST
 │   │   │   └── appendonly.aof.manifest
 │   │   └── dump.rdb
 │   ├── registry.db
-│   ├── sample_features.parquet
 │   ├── timescaledb
 │   │   ├── base
 │   │   │   ├── 1
@@ -25139,13 +25150,16 @@ Generated: 2026年 01月 15日 星期四 21:28:23 CST
 │   │   ├── GSPC.INDX.parquet
 │   │   ├── MSFT.US.parquet
 │   │   └── NVDA.US.parquet
-│   └── samples
-│       ├── eod_sample.csv
-│       ├── eod_sample_mock.csv
-│       ├── fundamental_sample.json
-│       ├── user_profile.json
-│       ├── user_profile_mock.json
-│       └── verification_report.txt
+│   ├── samples
+│   │   ├── eod_sample.csv
+│   │   ├── eod_sample_mock.csv
+│   │   └── verification_report.txt
+│   └── standardized
+│       ├── AUDUSD_D1.parquet
+│       ├── EURUSD_D1.parquet
+│       ├── EURUSD_EODHD_D1.parquet
+│       ├── GSPC_D1.parquet
+│       └── USDJPY_D1.parquet
 ├── deploy
 │   ├── launch_task_104_production.sh
 │   ├── logs
@@ -25941,6 +25955,11 @@ Generated: 2026年 01月 15日 星期四 21:28:23 CST
 │   │       ├── TASK_110_DATA_AUDIT
 │   │       │   ├── DATA_INVENTORY_REPORT.md
 │   │       │   └── DATA_MAP.json
+│   │       ├── TASK_111_DATA_ETL
+│   │       │   ├── COMPLETION_REPORT.md
+│   │       │   ├── GATE2_TASK_111_REVIEW.json
+│   │       │   ├── QUICK_START.md
+│   │       │   └── SYNC_GUIDE.md
 │   │       ├── WORK_ORDER_011_PROGRESS.md
 │   │       ├── WORK_ORDER_025_9_COMPLETION_REPORT.md
 │   │       ├── WORK_ORDER_026_9_COMPLETION_REPORT.md
@@ -26078,6 +26097,7 @@ Generated: 2026年 01月 15日 星期四 21:28:23 CST
 │   │           └── disk_alerts.yml
 │   └── redis
 │       └── redis.conf
+├── ETL_PIPELINE_REPORT.json
 ├── examples
 │   └── 01_basic_feature_engineering.py
 ├── exports
@@ -26115,6 +26135,7 @@ Generated: 2026年 01月 15日 星期四 21:28:23 CST
 ├── GATE2_REFACTORED.log
 ├── GATE2_RETRY_180s.log
 ├── GATE2_RETRY.log
+├── GATE2_TASK_111_REVIEW.json
 ├── gemini_review_optimizer.log
 ├── gemini_review_task_100.py
 ├── logs
@@ -26266,6 +26287,7 @@ Generated: 2026年 01月 15日 星期四 21:28:23 CST
 ├── PRODUCTION_DEPLOY_STATUS.md
 ├── pyproject.toml
 ├── pytest.ini
+├── QUARANTINE_REPORT.json
 ├── QUICK_REFERENCE.txt
 ├── QUICKSTART_ML.md
 ├── README.md
@@ -26321,16 +26343,20 @@ Generated: 2026年 01月 15日 星期四 21:28:23 CST
 │   ├── audit_task_108.py
 │   ├── audit_task_109.py
 │   ├── audit_task_110.py
+│   ├── audit_task_111.py
 │   ├── audit_trigger.txt
 │   ├── check_versions.sh
 │   ├── core
 │   ├── data
 │   │   ├── content_backfill_map.py
+│   │   ├── demo_etl_pipeline.py
 │   │   ├── eodhd_bulk_loader.py
 │   │   ├── feature_engine.py
 │   │   ├── fusion_engine.py
 │   │   ├── historical_map.py
 │   │   ├── news_sentiment_loader.py
+│   │   ├── quarantine_corrupted_files.py
+│   │   ├── run_etl_pipeline.py
 │   │   └── vector_client.py
 │   ├── debug_remote_training.sh
 │   ├── deploy
@@ -26349,6 +26375,7 @@ Generated: 2026年 01月 15日 星期四 21:28:23 CST
 │   │   └── risk.py
 │   ├── fix_remote_env.sh
 │   ├── gate2_core_review.py
+│   ├── gate2_task_111_review.py
 │   ├── gateway
 │   │   ├── IMPLEMENTATION_SUMMARY.md
 │   │   ├── mt5_zmq_server.log
@@ -26611,8 +26638,14 @@ Generated: 2026年 01月 15日 星期四 21:28:23 CST
 │   │   ├── __init__.py
 │   │   └── notifier.py
 │   ├── data
+│   │   ├── connectors
+│   │   │   ├── eodhd.py
+│   │   │   └── __init__.py
 │   │   ├── __init__.py
-│   │   └── multi_timeframe.py
+│   │   ├── multi_timeframe.py
+│   │   └── processors
+│   │       ├── __init__.py
+│   │       └── standardizer.py
 │   ├── database
 │   │   ├── __init__.py
 │   │   └── timescale_client.py
@@ -26882,6 +26915,9 @@ Generated: 2026年 01月 15日 星期四 21:28:23 CST
 ├── TASK_105_UNIFIED_REVIEW_OUTPUT.log
 ├── TASK_106_COMPLETION_CHECKLIST.txt
 ├── TASK_109_EXECUTIVE_SUMMARY.txt
+├── TASK_111_EXECUTION_SUMMARY.md
+├── TASK_111_FINAL_COMPLETION.md
+├── TASK_111_FINAL_REPORT_WITH_REAL_DATA.json
 ├── tests
 │   ├── conftest.py
 │   ├── __init__.py
@@ -26935,7 +26971,7 @@ Generated: 2026年 01月 15日 星期四 21:28:23 CST
 │       └── orders.json
 └── VERIFY_LOG.log
 
-321 directories, 26607 files
+332 directories, 26632 files
 
 
 >>> PART 2: 基础设施档案 (V1.2 Live)
