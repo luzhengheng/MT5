@@ -1,6 +1,6 @@
 ==================================================
 📦 MT5-CRS 全域资产数据包 (Full Context Pack)
-Generated: 2026年 01月 14日 星期三 22:49:05 CST
+Generated: 2026年 01月 15日 星期四 08:01:13 CST
 ==================================================
 
 
@@ -162,6 +162,7 @@ Generated: 2026年 01月 14日 星期三 22:49:05 CST
 │   ├── test_review_sample.py
 │   └── test_sync_workflow.py
 ├── CENTRAL_COMMAND_REVIEW.log
+├── CHAOS_TEST_RESULTS.json
 ├── config
 │   ├── assets.yaml
 │   ├── features.yaml
@@ -175,6 +176,7 @@ Generated: 2026年 01月 14日 星期三 22:49:05 CST
 │   │   ├── prometheus.yml
 │   │   └── README.md
 │   ├── news_historical.yaml
+│   ├── risk_limits.yaml
 │   ├── ssh_config_template
 │   └── strategies.yaml
 ├── data
@@ -25903,6 +25905,19 @@ Generated: 2026年 01月 14日 星期三 22:49:05 CST
 │   │       │   ├── TASK_104_COMPLETION_REPORT.md
 │   │       │   ├── test_live_loop_dry_run.py
 │   │       │   └── VERIFY_LOG.log
+│   │       ├── TASK_105
+│   │       │   ├── TASK_105_AI_REVIEW_CONSOLIDATED.json
+│   │       │   ├── TASK_105_AI_REVIEW_REPORT.md
+│   │       │   ├── TASK_105_COMPLETION_REPORT.md
+│   │       │   ├── TASK_105_FORENSICS_VERIFICATION.md
+│   │       │   └── TASK_105_QUICK_START_GUIDE.md
+│   │       ├── TASK_106_MT5_BRIDGE
+│   │       │   ├── ARCHITECTURE.md
+│   │       │   ├── COMPLETION_REPORT.md
+│   │       │   ├── QUICK_START.md
+│   │       │   ├── SYNC_GUIDE.md
+│   │       │   ├── TASK_EXECUTION_SUMMARY.md
+│   │       │   └── VERIFY_LOG.log
 │   │       ├── WORK_ORDER_011_PROGRESS.md
 │   │       ├── WORK_ORDER_025_9_COMPLETION_REPORT.md
 │   │       ├── WORK_ORDER_026_9_COMPLETION_REPORT.md
@@ -26275,6 +26290,7 @@ Generated: 2026年 01月 14日 星期三 22:49:05 CST
 │   ├── audit_task_101.py
 │   ├── audit_task_102.py
 │   ├── audit_task_103.py
+│   ├── audit_task_106.py
 │   ├── audit_trigger.txt
 │   ├── check_versions.sh
 │   ├── core
@@ -26303,8 +26319,17 @@ Generated: 2026年 01月 14日 星期三 22:49:05 CST
 │   │   └── risk.py
 │   ├── fix_remote_env.sh
 │   ├── gate2_core_review.py
+│   ├── gateway
+│   │   ├── IMPLEMENTATION_SUMMARY.md
+│   │   ├── mt5_zmq_server.log
+│   │   ├── mt5_zmq_server.py
+│   │   ├── QUICKSTART.md
+│   │   ├── README.md
+│   │   └── test_mt5_zmq_server.py
 │   ├── generate_context_snapshot.py
+│   ├── implement_ai_recommendations.py
 │   ├── install_service.sh
+│   ├── invoke_task105_ai_review.py
 │   ├── maintenance
 │   │   ├── archive_refactor.py
 │   │   ├── check_connectivity.py
@@ -26353,6 +26378,7 @@ Generated: 2026年 01月 14日 星期三 22:49:05 CST
 │   │   ├── gpu_probe.py
 │   │   └── setup_env.sh
 │   ├── restore_history.sh
+│   ├── review_task_105.py
 │   ├── run_live.sh
 │   ├── run_remote_training.sh
 │   ├── setup
@@ -26502,6 +26528,7 @@ Generated: 2026年 01月 14日 星期三 22:49:05 CST
 │   │   ├── verify_market_data.py
 │   │   ├── verify_model_loading.py
 │   │   ├── verify_mt5_connection.py
+│   │   ├── verify_mt5_live_connector.py
 │   │   ├── verify_schema.py
 │   │   ├── verify_serving_api.py
 │   │   ├── verify_signals.py
@@ -26514,6 +26541,7 @@ Generated: 2026年 01月 14日 星期三 22:49:05 CST
 │   │   ├── verify_trade.py
 │   │   └── verify_training.py
 │   ├── verify_network.sh
+│   ├── verify_risk_trigger.py
 │   ├── verify_task_085_hub.sh
 │   └── verify_task_085_inf.sh
 ├── src
@@ -26599,7 +26627,11 @@ Generated: 2026年 01月 14日 星期三 22:49:05 CST
 │   │   ├── test_producer.py
 │   │   └── test_simple.py
 │   ├── execution
-│   │   └── live_engine.py
+│   │   ├── heartbeat_monitor.py
+│   │   ├── live_engine.py
+│   │   ├── mt5_live_connector.py
+│   │   ├── risk_monitor.py
+│   │   └── secure_loader.py
 │   ├── feature_engineering
 │   │   ├── advanced_feature_builder.py
 │   │   ├── advanced_features.py
@@ -26787,6 +26819,26 @@ Generated: 2026年 01月 14日 星期三 22:49:05 CST
 ├── TASK_102_QUICK_GUIDE.md
 ├── TASK_102_SUMMARY.txt
 ├── TASK_104_AI_REVIEW.log
+├── TASK_105_AI_REVIEW_REPORT_EXTERNAL.md
+├── TASK_105_CHAOS_TEST_LOG.log
+├── TASK_105_COMPREHENSIVE_SUMMARY.md
+├── TASK_105_DEPLOYMENT_MANIFEST.md
+├── TASK_105_DEPLOYMENT_REPORT.md
+├── TASK_105_EXECUTION_SUMMARY.txt
+├── TASK_105_EXTERNAL_REVIEW.log
+├── TASK_105_EXTERNAL_REVIEW_SUMMARY.md
+├── TASK_105_FINAL_DELIVERY.txt
+├── TASK_105_FINAL_QA_REPORT.md
+├── TASK_105_FINAL_STATUS.txt
+├── TASK_105_FIX_COMPLETE_REPORT.md
+├── TASK_105_INDEX.md
+├── TASK_105_LOCAL_QA_REVIEW.sh
+├── TASK_105_QA_COMPLETE.txt
+├── TASK_105_QA_REVIEW.log
+├── TASK_105_RECHECK_REVIEW.log
+├── TASK_105_REVIEW_FINAL_REPORT.md
+├── TASK_105_UNIFIED_REVIEW_OUTPUT.log
+├── TASK_106_COMPLETION_CHECKLIST.txt
 ├── tests
 │   ├── conftest.py
 │   ├── __init__.py
@@ -26838,7 +26890,7 @@ Generated: 2026年 01月 14日 星期三 22:49:05 CST
 │       └── orders.json
 └── VERIFY_LOG.log
 
-312 directories, 26519 files
+315 directories, 26568 files
 
 
 >>> PART 2: 基础设施档案 (V1.2 Live)

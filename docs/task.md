@@ -35,10 +35,10 @@
 * [ ] 编写业务代码。  
 * [ ] 运行自测: `python3 [script] | tee VERIFY_LOG.log` (覆盖模式)。  
   
-### Step 3: 智能闭环审查 (The Audit Loop)  
-* **执行指令**: `python3 gemini_review_bridge.py | tee -a VERIFY_LOG.log`  
-* **Agent 自我修正协议**:  
-    > **当 Gate 1 报错**: 修正代码 -> 立即重跑。  
+### Step 3: 智能闭环审查 (The Audit Loop)
+* **执行指令**: `python3 scripts/ai_governance/unified_review_gate.py | tee -a VERIFY_LOG.log`
+* **Agent 自我修正协议**:
+    > **当 Gate 1 报错**: 修正代码 -> 立即重跑。
     > **当 Gate 2 拒绝**: 按 AI 建议修改 -> 立即重跑。  
   
 ### Step 4: 💀 物理验尸 (Forensic Verification) [MANDATORY]  

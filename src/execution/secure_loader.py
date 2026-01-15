@@ -13,7 +13,7 @@ import importlib.util
 import logging
 import os
 from pathlib import Path
-from typing import Optional, Any
+from typing import Optional, Any, Dict
 
 logger = logging.getLogger('SecureLoader')
 
@@ -35,7 +35,7 @@ class SecureModuleLoader:
     """
 
     # Cached hashes to avoid re-computing on every load
-    _hash_cache = {}
+    _hash_cache: Dict[Path, str] = {}
 
     def __init__(self, allowed_base_dir: Optional[Path] = None):
         """
@@ -132,7 +132,8 @@ class SecureModuleLoader:
             if file_path not in self._hash_cache:
                 computed = self.compute_file_hash(file_path)
                 self._hash_cache[file_path] = computed
-            return self._hash_cache[file_path]
+            cached_value: str = self._hash_cache[file_path]
+            return cached_value
 
         # Verify against expected hash
         computed = self.compute_file_hash(file_path)
