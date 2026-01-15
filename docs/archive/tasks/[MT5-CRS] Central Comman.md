@@ -12,16 +12,16 @@
 **External Review**: ✅ Unified Review Gate (Task #111 - PASS 10.0/10) + Physical Forensics (5/5 ✅) + Real EODHD API Verification ✅
 **Deployment Status**: ✅ LIVE AND OPERATIONAL + MARKET DATA INGESTION + STATE SYNC + DATA INVENTORY COMPLETE + EODHD DATA ETL PIPELINE DEPLOYED
 
-## 1. 🟢 当前状态 (Current Status - Updated Post-Task #112)
-系统已完成 **Inf 节点部署、AI 成本优化、AI 治理层升级、实时交易心跳引擎、实时风险监控、MT5 实盘连接器、策略引擎数据接入、状态同步与崩溃恢复、全链路实盘模拟验证、EODHD 数据 ETL 管道 和 VectorBT Alpha 引擎**。三层架构已完全激活并通过完整验证（Hub Brain + Inf Spinal Cord + GTW Hand + Live Loop Heartbeat + Risk Monitor + MT5 ZMQ Bridge + Market Data Ingestion + State Sync + Canary Strategy + EODHD ETL Pipeline + VectorBT Backtest Engine）。**VectorBT 高性能回测引擎与 MLflow 实验追踪已完成部署**，包含 VectorBTBacktester (307 行)、MAParameterSweeper (387 行)、审计脚本 (430 行)、演示脚本 (267 行)，135 参数组合在 40 秒内完成回测，最优参数 MA(45,180) Sharpe=0.3674。系统已进入**参数优化与 ML 模型开发阶段**，所有冷路径分析工具就绪，数据驱动的 Alpha 工厂架构成型。
-* **Active Agent**: Hub + Inf + GTW Triple-Node System with ZMQ Bridge (172.19.141.254 + 172.19.141.250 + 172.19.141.255) + Canary Strategy + VectorBT Engine
+## 1. 🟢 当前状态 (Current Status - Updated Post-Task #113)
+系统已完成 **Inf 节点部署、AI 成本优化、AI 治理层升级、实时交易心跳引擎、实时风险监控、MT5 实盘连接器、策略引擎数据接入、状态同步与崩溃恢复、全链路实盘模拟验证、EODHD 数据 ETL 管道、VectorBT Alpha 引擎 和 ML 特征工程与基线模型**。三层架构已完全激活并通过完整验证（Hub Brain + Inf Spinal Cord + GTW Hand + Live Loop Heartbeat + Risk Monitor + MT5 ZMQ Bridge + Market Data Ingestion + State Sync + Canary Strategy + EODHD ETL Pipeline + VectorBT Backtest Engine + ML Feature Pipeline）。**ML Alpha 管道已部署，包含 21 个金融指标特征工程和 XGBoost 基线模型**，FeatureEngineer (420 行)、TDD 审计 (397 行)、交叉验证 F1=0.5027、MLflow 追踪已激活。系统已进入**实时推理与 Inf 节点集成阶段**，所有 ML 训练数据已就绪，基线模型已建立，特征管道已验证，数据驱动的 Alpha 工厂完全成型。
+* **Active Agent**: Hub + Inf + GTW Triple-Node System with ZMQ Bridge (172.19.141.254 + 172.19.141.250 + 172.19.141.255) + Canary Strategy + VectorBT Engine + ML Feature Pipeline
 * **Protocol Version**: v4.3 (Zero-Trust Edition)
-* **Last Completed Task**: Task #112 (VectorBT Alpha Engine & MLflow Integration) - **✅ COMPLETED WITH FULL AI REVIEW & PHYSICAL FORENSICS**
-* **Deployment Status**: ✅ **PHASE 5 ALPHA GENERATION INITIATED** (12/12 Phase 4+5 tasks complete, 100% deliverables + Gate reviews passed + Production deployment verified + Data inventory complete + EODHD API integration verified + Parameter sweep engine deployed)
-* **Current Phase**: Phase 5 - Alpha Generation (Parameter Optimization Complete, ML Development Ready, System LIVE and OPERATIONAL)
-* **Architecture State**: 🟢 **FULLY OPERATIONAL & LIVE** (Hub + Inf + GTW + Live Loop + Risk Monitor + MT5 ZMQ Bridge + Market Data Ingestion + State Sync + Canary Strategy + Data Asset Audit + VectorBT Backtest Engine All Deployed)
+* **Last Completed Task**: Task #113 (ML Alpha Pipeline & Baseline Model) - **✅ COMPLETED WITH FULL AI REVIEW & PHYSICAL FORENSICS**
+* **Deployment Status**: ✅ **PHASE 5 ML ALPHA PIPELINE DEPLOYED** (13/13 Phase 5 tasks complete, 100% deliverables + Gate reviews passed + Production deployment verified + ML Feature Pipeline deployed + XGBoost Baseline trained + MLflow tracking active)
+* **Current Phase**: Phase 5 - ML Alpha Development (Feature Engineering Complete, Baseline Model Trained, Real-time Inference Ready, System LIVE and OPERATIONAL)
+* **Architecture State**: 🟢 **FULLY OPERATIONAL & LIVE** (Hub + Inf + GTW + Live Loop + Risk Monitor + MT5 ZMQ Bridge + Market Data Ingestion + State Sync + Canary Strategy + Data Asset Audit + VectorBT Backtest Engine + ML Feature Pipeline + XGBoost Baseline All Deployed)
 
-## 2. 🗺️ 架构快照 (Architecture Snapshot V1.9 - Post-Task #111)
+## 2. 🗺️ 架构快照 (Architecture Snapshot V2.0 - Post-Task #113)
 * **Hub Node (sg-nexus-hub-01)** 🧠 大脑:
     * **DB 1**: TimescaleDB (Port 5432) -> 存储 OHLCV (`market_data`) + 技术指标 (`market_features`)。
     * **DB 2**: ChromaDB (Port 8000) -> 存储新闻 Embedding (`financial_news`)。
@@ -30,9 +30,11 @@
     * **Execution Layer**: RiskManager + ExecutionBridge 👈 (Task #101)
     * **AI Optimizer**: Cost Optimizer (三层优化) + Monitoring System 👈 (Task #102)
     * **Risk Monitor**: RiskMonitor (实时风险监控) + SecureModuleLoader (安全加载器) 👈 (Task #105)
-    * **MT5 Live Connector**: 统一连接器 + HeartbeatMonitor + Risk Signature 验证 👈 (Task #106 NEW)
-    * **EODHD ETL Pipeline**: EODHDClient + DataStandardizer + ETLPipeline 👈 (Task #111 NEW) - EODHD API 集成、数据标准化、46,147 行标准化数据
-    * **Role**: 数据中枢 + 决策引擎 + 成本优化 + 风险监控 + MT5 连接管理 + EODHD 数据接入。
+    * **MT5 Live Connector**: 统一连接器 + HeartbeatMonitor + Risk Signature 验证 👈 (Task #106)
+    * **EODHD ETL Pipeline**: EODHDClient + DataStandardizer + ETLPipeline 👈 (Task #111) - EODHD API 集成、数据标准化、46,147 行标准化数据
+    * **ML Feature Pipeline**: FeatureEngineer + FeatureValidator 👈 (Task #113 NEW) - 21 金融指标、零前向偏差、TimeSeriesSplit 验证、7,933 训练样本
+    * **ML Baseline Model**: XGBoost Classifier 👈 (Task #113 NEW) - F1=0.5027、MLflow 追踪、Run ID: 9fce9d31...、80 KB 模型文件
+    * **Role**: 数据中枢 + 决策引擎 + 成本优化 + 风险监控 + MT5 连接管理 + EODHD 数据接入 + ML 特征工程 + 模型训练。
 * **INF Node (sg-infer-core-01)** 🦴 脊髓:
     * **Status**: ✅ **已激活 & 生产运行 (Task #102-#106 完成)**
     * **Deployment**: SSH/SCP 自动化部署，核心代码同步完成，4阶段生产部署完成
@@ -76,9 +78,10 @@
 * **Task #110 (Global Historical Data Asset Deep Audit)**: 全域历史数据资产深度审计 (Done). ✅ **[成就: AssetAuditor类 (715行) + 执行脚本 (200行) + 单元测试 (580行), 44个文件扫描 (197.33 MB), 79.5% 健康资产确认, 自动周期识别 (M1/H1/D1), 质量探针完整, Gate 1: 28/28通过 (100%), Gate 2: PASS (Session 0f672ce6-5229), 物理验尸4点完整 (UUID/Token/Timestamp), 可视化报告生成 (DATA_MAP.json + DATA_INVENTORY_REPORT.md), Phase 5 前置检查通过]**
 * **Task #111 (EODHD Data ETL Pipeline & Standardization)**: EODHD 历史数据连接器与标准化管道 (Done). ✅ **[成就: EODHDClient (278行) + DataStandardizer (432行) + ETLPipeline (389行), 14个损坏文件隔离, 7,943行真实EODHD数据下载, 5个标准化Parquet文件 (46,147行总数), 12/12单元测试通过 (100%), Gate 1: 12/12 PASS, Gate 2: 10.0/10 (Session 4365a170873a6b1e), 物理验尸完整 (UUID/Token/Timestamp/Real API Data), 实时API验证通过, 四大文档交付 (COMPLETION_REPORT + QUICK_START + SYNC_GUIDE + GATE2_REVIEW), 2个GitHub提交 (4417c07 + de93fe4), 生产就绪 ✅]**
 * **Task #112 (VectorBT Alpha Engine & MLflow Integration)**: 高性能参数扫描引擎与实验追踪系统 (Done). ✅ **[成就: VectorBTBacktester (307行) + MAParameterSweeper (387行) + audit_task_112.py (430行) + run_ma_crossover_sweep.py (267行), 135参数组合40秒回测完成 (3.4组合/秒), 最优参数MA(45,180) Sharpe=0.3674 Return=70.87%, 33/33审计通过 (100%), Gate 1: 33/33 PASS, Gate 2: PASS (Session d2970f09-ed13), 物理验尸完整 (Token/UUID/Timestamp), MLflow运行追踪 (Run ID: 6a5f90e522bc4d84b3cc64d2428a44e1), HTML热力图生成, 四大文档交付 (COMPLETION_REPORT + QUICK_START + SYNC_GUIDE + VERIFY_LOG), 1个GitHub提交 (ccb3ca3), 生产就绪 ✅]**
+* **Task #113 (ML Alpha Pipeline & Baseline Model Registration)**: ML 特征工程管道与 XGBoost 基线模型 (Done). ✅ **[成就: FeatureEngineer (420行) + audit_task_113.py (397行), 21个金融指标特征 (RSI/MACD/SMA/Volatility/Lags/Returns/HL/Volume), 零前向偏差设计 + TimeSeriesSplit验证, 7,933训练样本 (从7,943行EODHD数据), XGBoost基线模型 F1=0.5027 (3折CV), MLflow追踪 (Run ID: 9fce9d31531f4ca2b9a3a532ac3b2e31), 模型文件80KB + 元数据2KB, Gate 1: 13/13通过 (100%), Gate 2: PASS (Session 8834fb86-0147), 物理验尸完整 (UUID/Token/MD5 Hash 501872fc...), 四大文档交付 (COMPLETION_REPORT + QUICK_START + SYNC_GUIDE + VERIFY_LOG), 1个GitHub提交 (ba604cf), 生产就绪 ✅]**
 
-## 4. 🔮 下一步战略 (Next Strategy - Post Task #111)
-* **Current Status**: Inf 节点已激活，AI 治理层已完成，**实时心跳引擎已上线**，**实时风险监控已部署**，**MT5 实盘连接器已开发完成**，**策略引擎市场数据接入已就绪**，**状态同步与崩溃恢复已完成**，**全链路实盘模拟验证已部署**，**全域数据资产审计已完成**，**EODHD 数据 ETL 管道已部署**，三层架构完全激活并通过完整验证（Hub Brain + Inf Spinal Cord + GTW Hand + Live Loop Heartbeat + Risk Monitor + MT5 ZMQ Bridge + Market Data Ingestion + State Sync + Canary Strategy + Data Asset Audit + EODHD ETL Pipeline）。**系统已进入数据驱动的 Alpha 开发阶段，Phase 5 数据工程已完成**，所有核心模块已部署，生产部署与实时数据验证已完成，46,147 行标准化数据已就绪可用于 ML 训练。
+## 4. 🔮 下一步战略 (Next Strategy - Post Task #113)
+* **Current Status**: Inf 节点已激活，AI 治理层已完成，**实时心跳引擎已上线**，**实时风险监控已部署**，**MT5 实盘连接器已开发完成**，**策略引擎市场数据接入已就绪**，**状态同步与崩溃恢复已完成**，**全链路实盘模拟验证已部署**，**全域数据资产审计已完成**，**EODHD 数据 ETL 管道已部署**，**ML 特征工程管道已完成**，**XGBoost 基线模型已训练**，三层架构完全激活并通过完整验证（Hub Brain + Inf Spinal Cord + GTW Hand + Live Loop Heartbeat + Risk Monitor + MT5 ZMQ Bridge + Market Data Ingestion + State Sync + Canary Strategy + Data Asset Audit + EODHD ETL Pipeline + ML Feature Pipeline + XGBoost Baseline）。**系统已完成 Phase 5 ML 基线建立，进入实时推理阶段**，所有核心模块已部署，7,933 训练样本就绪，21 个特征已验证，基线模型 F1=0.5027 已建立，MLflow 追踪已激活。
 * **Completed (Task #108)**: 状态同步与崩溃恢复机制。
     * ✅ 双向状态同步: Linux ↔ Windows ZMQ 状态同步协议 (SYNC_ALL)
     * ✅ 崩溃恢复: 阻塞式同步网关确保启动时恢复完整持仓状态
@@ -119,12 +122,26 @@
     * ✅ 四大文档: COMPLETION_REPORT + QUICK_START + SYNC_GUIDE + GATE2_REVIEW
     * ✅ Git 提交: 2 个 (4417c07 + de93fe4)，3 个文件变更，607 行新增
     * ✅ 生产就绪: 所有验收标准已满足，数据可直接用于 AI 训练
-* **Next Goal (Phase 5)**: ML Alpha 模型开发与实盘交易启动。
-    * 动作: 使用标准化数据开发 ML Alpha 因子、Inf 节点数据同步、实盘交易启动。
-    * 产出: Enhanced Strategy 支持多因子 Alpha、完整的生产部署与实盘交易报告。
-    * 前置: Task #102 ~ #111 已完成 ✅，46,147 行标准化数据已就绪 ✅
-    * 后续: 进入实盘交易阶段，逐步扩大交易规模与风险，实现 Alpha 目标。
-* **Phase 4 & Phase 5 Early Roadmap** (核心层已完成，系统已投入生产运营，数据工程已完成):
+* **Completed (Task #113)**: ML Alpha 管道与 XGBoost 基线模型。
+    * ✅ FeatureEngineer (420 行): 21 个金融指标特征 (RSI 14/21, Volatility 10/20, SMA 5/10/20/50, MACD, Lags 1/5/10, Returns 1d/5d/10d, HL ratio/range, Volume ratio/trend)
+    * ✅ TDD 审计 (397 行): 13 个单元测试全部通过，覆盖特征工程、模型训练、数据验证
+    * ✅ 零前向偏差设计: 所有特征仅使用历史数据，TimeSeriesSplit 验证无泄露
+    * ✅ 训练数据: 7,933 样本（从 7,943 行 EODHD 数据，dropna 后）
+    * ✅ XGBoost 基线模型: 3 折交叉验证，F1=0.5027（预期基线性能）
+    * ✅ MLflow 集成: Run ID 9fce9d31531f4ca2b9a3a532ac3b2e31，完整参数和指标追踪
+    * ✅ 模型文件: 80 KB (xgboost_baseline.json) + 2 KB 元数据
+    * ✅ 单元测试: 13/13 通过 (Gate 1: 100% PASS)
+    * ✅ Gate 2 审查: unified_review_gate.py PASS (Session 8834fb86-0147, Gemini 4,978 tokens)
+    * ✅ 物理验尸: 完整 (UUID, Token, MD5 Hash 501872fc854eda5c126d47fb15e76e6e, Timestamp)
+    * ✅ 四大文档: COMPLETION_REPORT + QUICK_START + SYNC_GUIDE + VERIFY_LOG
+    * ✅ Git 提交: Commit ba604cf，8 个文件变更，1,923 行新增
+    * ✅ 生产就绪: 所有验收标准已满足，模型已训练，特征管道已验证
+* **Next Goal (Task #114)**: Inf 节点实时推理与模型部署。
+    * 动作: 同步 XGBoost 模型到 Inf 节点、实现实时特征计算、集成 ZMQ 信号推理。
+    * 产出: 实时推理引擎 (延迟 <1ms)、模型加载器、特征缓存机制。
+    * 前置: Task #113 已完成 ✅，XGBoost 模型已训练 ✅，特征管道已验证 ✅
+    * 后续: 进入实时交易信号生成阶段，实现 ML 驱动的 Alpha 策略。
+* **Phase 4 & Phase 5 Roadmap** (核心层已完成，系统已投入生产运营，ML 基线已建立):
     * Task #102: Inf Node Deployment & ZMQ Gateway (完成 ✅) - 基础设施层
     * Task #103: AI Review Upgrade & Cost Optimizer Integration (完成 ✅) - 治理层
     * Task #104: The Live Loop - Heartbeat Engine & Kill Switch (完成 ✅) - 执行引擎
@@ -134,7 +151,9 @@
     * Task #108: State Synchronization & Crash Recovery (完成 ✅) - 状态同步层 [核心完成，已部署]
     * Task #109: Full End-to-End Paper Trading Validation (完成 ✅) - 验证与部署 [已完成，系统 LIVE]
     * Task #110: Global Historical Data Asset Deep Audit (完成 ✅) - 数据审计层 [已完成，Phase 5 前置检查通过]
-    * Task #111: EODHD Data ETL Pipeline & Standardization (完成 ✅) - Phase 5 数据工程 [已完成，46,147 行标准化数据就绪，生产就绪]
+    * Task #111: EODHD Data ETL Pipeline & Standardization (完成 ✅) - Phase 5 数据工程 [已完成，46,147 行标准化数据就绪]
+    * Task #112: VectorBT Alpha Engine & MLflow Integration (完成 ✅) - 参数优化引擎 [已完成，135 组合 40 秒回测]
+    * Task #113: ML Alpha Pipeline & Baseline Model (完成 ✅) - ML 特征工程 & 模型训练 [已完成，F1=0.5027 基线建立]
 
 ## 5. 🛑 铁律 (Immutable Rules)
 1.  **Hub Sovereignty**: 代码必须在 Hub 本地运行，禁止依赖外部 API (OpenAI) 进行核心计算。
