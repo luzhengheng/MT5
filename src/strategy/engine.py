@@ -32,6 +32,9 @@ from dotenv import load_dotenv
 from src.features.engineering import compute_features, FeatureConfig, get_feature_names
 from src.model.predict import PricePredictor
 
+# Task #108: State Synchronization & Crash Recovery
+from src.live_loop.reconciler import StateReconciler, SystemHaltException
+
 # Load environment
 load_dotenv()
 
@@ -70,7 +73,7 @@ class StrategyEngine:
     ):
         """
         Initialize the strategy engine
-        
+
         Args:
             symbol: Trading symbol (e.g., "EURUSD", "AUDCAD.FOREX")
             model_path: Path to trained XGBoost model (default: models/xgboost_price_predictor.json)
@@ -82,35 +85,52 @@ class StrategyEngine:
         self.symbol = symbol
         self.buffer_size = buffer_size
         self.min_buffer_size = min_buffer_size
-        
+
         # ZMQ endpoints
         self.zmq_market_data_url = zmq_market_data_url
         self.zmq_execution_url = zmq_execution_url
-        
+
         # State: Rolling window buffer for feature computation
         self.tick_buffer: Deque[Dict] = deque(maxlen=buffer_size)
-        
+
         # Feature configuration (must match training)
         self.feature_config = FeatureConfig()
         self.feature_names = get_feature_names(self.feature_config)
-        
+
         # Model loading
         self.predictor = PricePredictor(model_path=model_path)
-        
+
         # ZMQ sockets (initialized in start())
         self.zmq_context = None
         self.market_data_socket = None
         self.execution_socket = None
-        
+
+        # Task #108: State Synchronization & Crash Recovery
+        # Initialize reconciler for startup state synchronization (blocking gate)
+        self.reconciler = StateReconciler()
+        self.recovered_state = None
+
         # Metrics
         self.ticks_processed = 0
         self.signals_generated = 0
         self.orders_sent = 0
-        
+
         logger.info(f"[INIT] Strategy Engine initialized for {symbol}")
         logger.info(f"[INIT] Model: {self.predictor.model_path}")
         logger.info(f"[INIT] Buffer: max={buffer_size}, min={min_buffer_size}")
         logger.info(f"[INIT] Features: {len(self.feature_names)} dimensions")
+
+        # Task #108: Perform startup state synchronization
+        logger.info("[INIT] Performing startup state synchronization...")
+        try:
+            self.recovered_state = self.reconciler.perform_startup_sync()
+            logger.info(
+                f"[INIT] ✅ State synchronized: "
+                f"{len(self.recovered_state.positions)} positions recovered"
+            )
+        except SystemHaltException as e:
+            logger.error(f"[INIT] ❌ State synchronization failed: {e}")
+            raise
     
     def start(self):
         """

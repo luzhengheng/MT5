@@ -341,6 +341,8 @@ class MT5ZmqServer:
             return self._handle_get_account(request, request_time)
         elif action == "GET_POSITIONS":
             return self._handle_get_positions(request, request_time)
+        elif action == "SYNC_ALL":
+            return self._handle_sync_all(request, request_time)
         else:
             return self._error_response("UNKNOWN_ACTION", f"Unknown action: {action}", uuid)
 
@@ -745,6 +747,131 @@ class MT5ZmqServer:
             self.errors_encountered += 1
             logger.error(f"{RED}❌ [POSITIONS_ERROR] {e}{RESET}")
             return self._error_response("POSITIONS_EXCEPTION", str(e), uuid)
+
+    def _handle_sync_all(
+        self,
+        request: Dict[str, Any],
+        request_time: datetime
+    ) -> Dict[str, Any]:
+        """
+        Handle SYNC_ALL command (Task #108 - State Synchronization)
+
+        This command is used for startup state synchronization.
+        Linux Inf sends this request on startup to recover positions and account info.
+
+        Request:
+            {
+                "action": "SYNC_ALL",
+                "magic_number": 202401,
+                "timestamp": "..."
+            }
+
+        Response:
+            {
+                "status": "OK",
+                "account": {
+                    "balance": 10000.0,
+                    "equity": 10000.0,
+                    "margin_free": 9000.0,
+                    "margin_used": 1000.0,
+                    "margin_level": 1000.0,
+                    "leverage": 100
+                },
+                "positions": [
+                    {
+                        "symbol": "EURUSD",
+                        "ticket": 123,
+                        "volume": 0.1,
+                        "profit": 5.0,
+                        "price_current": 1.0850,
+                        "price_open": 1.0800,
+                        "type": "BUY",
+                        "time_open": 1642000000
+                    }
+                ],
+                "message": "Sync successful"
+            }
+        """
+        uuid = request.get('uuid', 'unknown')
+        magic_number = request.get('magic_number', 0)
+
+        logger.info(f"{CYAN}[SYNC_ALL] Startup synchronization request from magic={magic_number}{RESET}")
+
+        # Ensure MT5 is connected
+        if not self.ensure_mt5_connected():
+            return {
+                "status": "ERROR",
+                "message": "MT5 is not connected",
+                "account": {},
+                "positions": []
+            }
+
+        try:
+            # Get account info
+            account_info = self.mt5_service.get_account_info()
+            if 'error' in account_info:
+                logger.error(f"{RED}❌ [SYNC_ALL] Account query failed: {account_info['error']}{RESET}")
+                return {
+                    "status": "ERROR",
+                    "message": f"Account query failed: {account_info['error']}",
+                    "account": {},
+                    "positions": []
+                }
+
+            # Get positions
+            positions = self.mt5_service.get_positions()
+
+            # Filter positions by magic number (optional - for future multi-strategy support)
+            # For now, return all positions
+            # TODO: In future, implement magic_number filtering
+            # filtered_positions = [p for p in positions if p.get('magic') == magic_number]
+
+            logger.info(
+                f"{GREEN}✅ [SYNC_ALL] Sync complete: "
+                f"account=${account_info.get('balance', 0):,.2f}, "
+                f"positions={len(positions)}{RESET}"
+            )
+
+            # Format response
+            account_response = {
+                "balance": account_info.get('balance', 0.0),
+                "equity": account_info.get('equity', 0.0),
+                "margin_free": account_info.get('free_margin', 0.0),
+                "margin_used": account_info.get('used_margin', 0.0),
+                "margin_level": account_info.get('margin_level', 0.0),
+                "leverage": account_info.get('leverage', 1)
+            }
+
+            # Format positions with required fields
+            positions_response = []
+            for pos in positions:
+                positions_response.append({
+                    "symbol": pos.get('symbol', ''),
+                    "ticket": pos.get('ticket', 0),
+                    "volume": pos.get('volume', 0.0),
+                    "profit": pos.get('profit', 0.0),
+                    "price_current": pos.get('current_price', 0.0),
+                    "price_open": pos.get('open_price', 0.0),
+                    "type": pos.get('type', 'BUY'),
+                    "time_open": pos.get('time_open', 0)
+                })
+
+            return {
+                "status": "OK",
+                "account": account_response,
+                "positions": positions_response,
+                "message": "Sync successful"
+            }
+
+        except Exception as e:
+            self.errors_encountered += 1
+            logger.error(f"{RED}❌ [SYNC_ALL] Exception: {e}{RESET}")
+            return {
+                "status": "ERROR",
+                "message": f"Sync failed: {str(e)}",
+                "account": {},
+                "positions": []
+            }
 
     def _validate_risk_signature(
         self,
