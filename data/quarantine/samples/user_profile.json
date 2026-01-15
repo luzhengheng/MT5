@@ -1,0 +1,14 @@
+{
+  "name": "zhengheng Lu",
+  "email": "luzhengheng@gmail.com",
+  "subscriptionType": "monthly",
+  "paymentMethod": "Stripe",
+  "apiRequests": 32,
+  "apiRequestsDate": "2025-12-28",
+  "dailyRateLimit": 100000,
+  "extraLimit": 500,
+  "inviteToken": null,
+  "inviteTokenClicked": 0,
+  "subscriptionMode": "paid",
+  "canManageOrganizations": false
+}
