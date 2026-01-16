@@ -144,12 +144,24 @@ class OptunaOptimizer:
         """
         Optuna 目标函数: 最大化 F1 分数
 
+        ✅ P0 Issue #4 Fix: 在目标函数中添加数据验证
+
         参数:
             trial: Optuna Trial 对象
 
         返回:
             F1 分数 (0-1)
         """
+        # ✅ P0 Issue #4 Fix: 验证输入数据
+        try:
+            from scripts.ai_governance.data_validator import DataValidator
+            validator = DataValidator(strict_mode=False)
+            validator.validate_features(self.X_train, "Training Features")
+            validator.validate_features(self.X_test, "Test Features")
+        except Exception as e:
+            logger.warning(f"⚠️  Data validation warning: {e}")
+            # 继续执行，非严格模式
+
         # 采样超参数空间
         params = {
             'max_depth': trial.suggest_int('max_depth', 3, 10),
