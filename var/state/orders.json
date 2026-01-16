@@ -1,12 +1,121 @@
 {
-  "orders": {
-    "AAPL_BUY": {
-      "symbol": "AAPL",
-      "action": "BUY",
-      "volume": 0.5,
-      "price": 150.0,
-      "registered_at": "2026-01-14T15:49:37.513917"
+  "data": {
+    "orders": {
+      "EUR_USD_BUY_BUY": {
+        "symbol": "EUR_USD_BUY",
+        "action": "BUY",
+        "volume": 1.5,
+        "price": 1.105,
+        "registered_at": "2026-01-16T23:56:19.458100"
+      },
+      "order_0_BUY": {
+        "symbol": "order_0",
+        "action": "BUY",
+        "volume": 1.0,
+        "price": 1.1,
+        "registered_at": "2026-01-16T23:56:24.333025"
+      },
+      "order_1_BUY": {
+        "symbol": "order_1",
+        "action": "BUY",
+        "volume": 1.0,
+        "price": 1.1001,
+        "registered_at": "2026-01-16T23:56:24.369586"
+      },
+      "order_2_BUY": {
+        "symbol": "order_2",
+        "action": "BUY",
+        "volume": 1.0,
+        "price": 1.1002,
+        "registered_at": "2026-01-16T23:56:24.397963"
+      },
+      "order_3_BUY": {
+        "symbol": "order_3",
+        "action": "BUY",
+        "volume": 1.0,
+        "price": 1.1003,
+        "registered_at": "2026-01-16T23:56:24.434869"
+      },
+      "order_4_BUY": {
+        "symbol": "order_4",
+        "action": "BUY",
+        "volume": 1.0,
+        "price": 1.1004,
+        "registered_at": "2026-01-16T23:56:24.435813"
+      },
+      "order_5_BUY": {
+        "symbol": "order_5",
+        "action": "BUY",
+        "volume": 1.0,
+        "price": 1.1005,
+        "registered_at": "2026-01-16T23:56:24.436666"
+      },
+      "order_6_BUY": {
+        "symbol": "order_6",
+        "action": "BUY",
+        "volume": 1.0,
+        "price": 1.1006,
+        "registered_at": "2026-01-16T23:56:24.477015"
+      },
+      "order_7_BUY": {
+        "symbol": "order_7",
+        "action": "BUY",
+        "volume": 1.0,
+        "price": 1.1007,
+        "registered_at": "2026-01-16T23:56:24.500486"
+      },
+      "order_8_BUY": {
+        "symbol": "order_8",
+        "action": "BUY",
+        "volume": 1.0,
+        "price": 1.1008,
+        "registered_at": "2026-01-16T23:56:24.529960"
+      },
+      "order_9_BUY": {
+        "symbol": "order_9",
+        "action": "BUY",
+        "volume": 1.0,
+        "price": 1.1009,
+        "registered_at": "2026-01-16T23:56:24.568387"
+      },
+      "order_10_BUY": {
+        "symbol": "order_10",
+        "action": "BUY",
+        "volume": 1.0,
+        "price": 1.101,
+        "registered_at": "2026-01-16T23:56:24.617501"
+      },
+      "order_11_BUY": {
+        "symbol": "order_11",
+        "action": "BUY",
+        "volume": 1.0,
+        "price": 1.1011000000000002,
+        "registered_at": "2026-01-16T23:56:24.683037"
+      },
+      "order_12_BUY": {
+        "symbol": "order_12",
+        "action": "BUY",
+        "volume": 1.0,
+        "price": 1.1012000000000002,
+        "registered_at": "2026-01-16T23:56:24.688872"
+      },
+      "order_13_BUY": {
+        "symbol": "order_13",
+        "action": "BUY",
+        "volume": 1.0,
+        "price": 1.1013000000000002,
+        "registered_at": "2026-01-16T23:56:24.707064"
+      },
+      "order_14_BUY": {
+        "symbol": "order_14",
+        "action": "BUY",
+        "volume": 1.0,
+        "price": 1.1014000000000002,
+        "registered_at": "2026-01-16T23:56:24.738334"
+      }
     }
   },
-  "timestamp": "2026-01-14T15:49:37.513938"
+  "checksum": "da5ef836c835922479591299cfc6d3eb123a9c1588aa64197041bcbbf3e78ac8",
+  "timestamp": "2026-01-16T23:56:24.738496",
+  "version": "1.0"
 }
