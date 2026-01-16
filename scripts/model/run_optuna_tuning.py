@@ -73,10 +73,20 @@ def load_standardized_data() -> Tuple[np.ndarray, np.ndarray]:
     """
     加载 Task #111 产出的标准化 Parquet 数据
 
+    ✅ P0 Issue #3 Fix: 使用 SafeDataLoader 防止不安全反序列化
+
     返回:
         (features, labels) 元组
     """
     logger.info(f"{CYAN}📥 加载标准化数据...{RESET}")
+
+    # 导入 SafeDataLoader
+    try:
+        from scripts.ai_governance.safe_data_loader import SafeDataLoader
+        use_safe_loader = True
+    except ImportError:
+        logger.warning(f"{YELLOW}⚠️  SafeDataLoader 不可用，使用标准加载{RESET}")
+        use_safe_loader = False
 
     data_dir = PROJECT_ROOT / "docs/archive/outputs/features"
 
@@ -107,7 +117,21 @@ def load_standardized_data() -> Tuple[np.ndarray, np.ndarray]:
         features_path = data_dir / "features.parquet"
         if features_path.exists():
             logger.info(f"   加载特征: {features_path}")
-            features_df = pd.read_parquet(features_path)
+
+            if use_safe_loader:
+                # ✅ 安全加载 (P0 Issue #3)
+                loader = SafeDataLoader(strict_mode=False)
+                try:
+                    features_df = loader.load_parquet_safe(features_path)
+                    if features_df is None:
+                        raise Exception("SafeDataLoader 加载失败")
+                except Exception as e:
+                    logger.warning(f"{YELLOW}⚠️  安全加载失败，使用标准加载: {e}{RESET}")
+                    features_df = pd.read_parquet(features_path)
+            else:
+                # 备用：标准加载
+                features_df = pd.read_parquet(features_path)
+
             features = features_df.values
             logger.info(f"   特征形状: {features.shape}")
         else:
@@ -118,7 +142,21 @@ def load_standardized_data() -> Tuple[np.ndarray, np.ndarray]:
         labels_path = data_dir / "labels.parquet"
         if labels_path.exists():
             logger.info(f"   加载标签: {labels_path}")
-            labels_df = pd.read_parquet(labels_path)
+
+            if use_safe_loader:
+                # ✅ 安全加载 (P0 Issue #3)
+                loader = SafeDataLoader(strict_mode=False)
+                try:
+                    labels_df = loader.load_parquet_safe(labels_path)
+                    if labels_df is None:
+                        raise Exception("SafeDataLoader 加载失败")
+                except Exception as e:
+                    logger.warning(f"{YELLOW}⚠️  安全加载失败，使用标准加载: {e}{RESET}")
+                    labels_df = pd.read_parquet(labels_path)
+            else:
+                # 备用：标准加载
+                labels_df = pd.read_parquet(labels_path)
+
             labels = labels_df.values.ravel()
             logger.info(f"   标签形状: {labels.shape}")
         else:
@@ -129,6 +167,12 @@ def load_standardized_data() -> Tuple[np.ndarray, np.ndarray]:
 
         return features, labels
 
+    except FileNotFoundError as e:
+        logger.error(f"{RED}❌ 文件未找到: {e}{RESET}")
+        return None, None
+    except ValueError as e:
+        logger.error(f"{RED}❌ 数据格式错误: {e}{RESET}")
+        return None, None
     except Exception as e:
         logger.error(f"{RED}❌ 加载数据失败: {e}{RESET}")
         return None, None
