@@ -33,6 +33,19 @@ from sklearn.metrics import (
     roc_auc_score
 )
 
+# ✅ P0 Issue #5 Fix: Import specific exception handlers
+try:
+    from scripts.ai_governance.exception_handler import (
+        ExceptionHandler,
+        TrialError,
+        ModelFittingError,
+        EvaluationError,
+        DataIntegrityError,
+    )
+    EXCEPTION_HANDLER_AVAILABLE = True
+except ImportError:
+    EXCEPTION_HANDLER_AVAILABLE = False
+
 try:
     import optuna
     from optuna.samplers import TPESampler
@@ -158,9 +171,15 @@ class OptunaOptimizer:
             validator = DataValidator(strict_mode=False)
             validator.validate_features(self.X_train, "Training Features")
             validator.validate_features(self.X_test, "Test Features")
-        except Exception as e:
+        except (ImportError, ModuleNotFoundError) as e:
+            logger.warning(f"⚠️  DataValidator 不可用: {e}")
+        except (ValueError, DataIntegrityError) as e:
             logger.warning(f"⚠️  Data validation warning: {e}")
-            # 继续执行，非严格模式
+        except Exception as e:
+            # ✅ P0 Issue #5: Specific exception handling
+            if EXCEPTION_HANDLER_AVAILABLE:
+                ExceptionHandler.handle_data_error(e, "objective function")
+            logger.warning(f"⚠️  未预期的验证错误: {type(e).__name__}")
 
         # 采样超参数空间
         params = {
@@ -227,8 +246,30 @@ class OptunaOptimizer:
 
             return avg_f1
 
+        except (ValueError, TypeError, KeyError, IndexError) as e:
+            # ✅ P0 Issue #5: Specific exception handling for data/param errors
+            logger.warning(
+                f"{YELLOW}⚠️  Trial {trial.number} 数据错误 "
+                f"({type(e).__name__}): {e}{RESET}"
+            )
+            return 0.0
+        except (ModelFittingError, TrialError) as e:
+            # Model-specific errors
+            logger.warning(
+                f"{YELLOW}⚠️  Trial {trial.number} 模型错误: {e}{RESET}"
+            )
+            return 0.0
         except Exception as e:
-            logger.warning(f"{YELLOW}⚠️  Trial {trial.number} 失败: {e}{RESET}")
+            # Catch-all but with proper logging
+            if EXCEPTION_HANDLER_AVAILABLE:
+                ExceptionHandler.handle_model_error(
+                    e, f"Trial {trial.number}"
+                )
+            else:
+                logger.warning(
+                    f"{YELLOW}⚠️  Trial {trial.number} 失败 "
+                    f"({type(e).__name__}){RESET}"
+                )
             return 0.0
 
     def optimize(self) -> Dict:
