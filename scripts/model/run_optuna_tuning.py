@@ -128,25 +128,28 @@ def prepare_data(features: np.ndarray, labels: np.ndarray) -> Tuple[np.ndarray, 
     """
     logger.info(f"{CYAN}🔧 准备数据...{RESET}")
 
-    # 标准化特征
-    scaler = StandardScaler()
-    features_scaled = scaler.fit_transform(features)
+    # ⚠️ CRITICAL FIX: TimeSeriesSplit FIRST, then StandardScaler
+    # This prevents data leakage where scaler sees test set statistics
+    logger.info(f"   使用 TimeSeriesSplit 分割数据 (防止未来数据泄露)...")
 
-    logger.info(f"   特征已标准化 (StandardScaler)")
-
-    # 使用 TimeSeriesSplit 分割数据
+    # 使用 TimeSeriesSplit 分割数据 (BEFORE scaling)
     tscv = TimeSeriesSplit(n_splits=3)
-    train_idx, test_idx = list(tscv.split(features_scaled))[-1]  # 使用最后一个分割
+    train_idx, test_idx = list(tscv.split(features))[-1]  # 使用最后一个分割
 
-    X_train = features_scaled[train_idx]
-    X_test = features_scaled[test_idx]
+    # ✅ CORRECT: Fit scaler ONLY on training data
+    scaler = StandardScaler()
+    X_train = scaler.fit_transform(features[train_idx])
+    X_test = scaler.transform(features[test_idx])
+
     y_train = labels[train_idx]
     y_test = labels[test_idx]
 
+    logger.info(f"   特征已标准化 (StandardScaler fit on training data only)")
     logger.info(f"   TimeSeriesSplit 分割完成:")
     logger.info(f"   训练集: {X_train.shape[0]} 样本")
     logger.info(f"   测试集: {X_test.shape[0]} 样本")
     logger.info(f"   特征维度: {X_train.shape[1]}")
+    logger.info(f"   ✅ 防止数据泄露: 标准化器仅在训练集上拟合")
     logger.info(f"{GREEN}✅ 数据准备完成{RESET}\n")
 
     return X_train, X_test, y_train, y_test
