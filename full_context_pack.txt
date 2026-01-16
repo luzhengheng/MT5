@@ -1,6 +1,6 @@
 ==================================================
 📦 MT5-CRS 全域资产数据包 (Full Context Pack)
-Generated: 2026年 01月 17日 星期六 01:12:40 CST
+Generated: 2026年 01月 17日 星期六 02:00:30 CST
 ==================================================
 
 
@@ -25993,6 +25993,13 @@ Generated: 2026年 01月 17日 星期六 01:12:40 CST
 │   │       │   ├── GATE2_REVIEW_REPORT.md
 │   │       │   ├── QUICK_START.md
 │   │       │   └── SYNC_GUIDE.md
+│   │       ├── TASK_117
+│   │       │   ├── AUDIT_RESULTS.json
+│   │       │   ├── COMPLETION_REPORT.md
+│   │       │   ├── MODEL_COMPARISON_REPORT.json
+│   │       │   ├── QUICK_START.md
+│   │       │   ├── SYNC_GUIDE.md
+│   │       │   └── VERIFY_LOG.log
 │   │       ├── WORK_ORDER_011_PROGRESS.md
 │   │       ├── WORK_ORDER_025_9_COMPLETION_REPORT.md
 │   │       ├── WORK_ORDER_026_9_COMPLETION_REPORT.md
@@ -26174,8 +26181,10 @@ Generated: 2026年 01月 17日 星期六 01:12:40 CST
 ├── GATE2_TASK_111_REVIEW.json
 ├── gemini_review_optimizer.log
 ├── gemini_review_task_100.py
+├── launch_shadow_mode.py
 ├── logs
-│   └── sentinel_daemon.log
+│   ├── sentinel_daemon.log
+│   └── shadow_trading.log
 ├── MISSION_LOG.md
 ├── mlruns
 │   ├── 0
@@ -26284,6 +26293,7 @@ Generated: 2026年 01月 17日 星期六 01:12:40 CST
 │   ├── model_metadata.json
 │   ├── xgboost_baseline.json
 │   ├── xgboost_baseline_metadata.json
+│   ├── xgboost_challenger.json
 │   └── xgboost_price_predictor.json
 ├── monitoring_alerts.log
 ├── MQL5
@@ -26339,6 +26349,8 @@ Generated: 2026年 01月 17日 星期六 01:12:40 CST
 │   │   ├── test_cost_optimizer.py
 │   │   └── unified_review_gate.py
 │   ├── align_xgboost.sh
+│   ├── analysis
+│   │   └── compare_models.py
 │   ├── archive
 │   ├── audit
 │   │   ├── audit_current_task.py
@@ -26382,6 +26394,7 @@ Generated: 2026年 01月 17日 星期六 01:12:40 CST
 │   ├── audit_task_114.py
 │   ├── audit_task_115.py
 │   ├── audit_task_116.py
+│   ├── audit_task_117.py
 │   ├── audit_trigger.txt
 │   ├── check_versions.sh
 │   ├── core
@@ -26840,6 +26853,7 @@ Generated: 2026年 01月 17日 星期六 01:12:40 CST
 │   │   │   └── predictors.py
 │   │   ├── optimization.py
 │   │   ├── predict.py
+│   │   ├── shadow_mode.py
 │   │   └── train.py
 │   ├── model_factory
 │   │   ├── baseline_trainer.py
@@ -27039,7 +27053,7 @@ Generated: 2026年 01月 17日 星期六 01:12:40 CST
 │       └── orders.json.lock
 └── VERIFY_LOG.log
 
-337 directories, 26695 files
+339 directories, 26707 files
 
 
 >>> PART 2: 基础设施档案 (V1.2 Live)

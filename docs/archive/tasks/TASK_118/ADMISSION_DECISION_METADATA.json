@@ -1,0 +1,13 @@
+{
+  "timestamp": "2026-01-16T18:17:13.285050Z",
+  "decision": "GO",
+  "approval_confidence": 0.8662,
+  "critical_errors": 0,
+  "p95_latency_ms": 0,
+  "p99_latency_ms": 0,
+  "drift_events_24h": 0,
+  "pnl_net_return": -0.0,
+  "diversity_index": 0.593,
+  "rejection_reasons": [],
+  "decision_hash": "1ac7db5b277d4dd1"
+}
