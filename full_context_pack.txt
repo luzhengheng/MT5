@@ -1,6 +1,6 @@
 ==================================================
 📦 MT5-CRS 全域资产数据包 (Full Context Pack)
-Generated: 2026年 01月 16日 星期五 07:30:20 CST
+Generated: 2026年 01月 16日 星期五 13:02:16 CST
 ==================================================
 
 
@@ -198,6 +198,10 @@ Generated: 2026年 01月 16日 星期五 07:30:20 CST
 │   ├── models
 │   │   ├── production_v1.pkl
 │   │   └── xgboost_task_114.pkl
+│   ├── outputs
+│   │   └── audit
+│   │       ├── ML_SHADOW_PERFORMANCE.json
+│   │       └── shadow_records.json
 │   ├── processed
 │   │   └── eurusd_m1_training.parquet
 │   ├── quarantine
@@ -25977,6 +25981,9 @@ Generated: 2026年 01月 16日 星期五 07:30:20 CST
 │   │       │   ├── COMPLETION_REPORT.md
 │   │       │   ├── QUICK_START.md
 │   │       │   └── SYNC_GUIDE.md
+│   │       ├── TASK_115
+│   │       │   ├── COMPLETION_REPORT.md
+│   │       │   └── QUICK_START.md
 │   │       ├── WORK_ORDER_011_PROGRESS.md
 │   │       ├── WORK_ORDER_025_9_COMPLETION_REPORT.md
 │   │       ├── WORK_ORDER_026_9_COMPLETION_REPORT.md
@@ -26347,6 +26354,7 @@ Generated: 2026年 01月 16日 星期五 07:30:20 CST
 │   ├── audit_task_112.py
 │   ├── audit_task_113.py
 │   ├── audit_task_114.py
+│   ├── audit_task_115.py
 │   ├── audit_trigger.txt
 │   ├── check_versions.sh
 │   ├── core
@@ -26468,6 +26476,7 @@ Generated: 2026年 01月 16日 星期五 07:30:20 CST
 │   ├── task_093_3_generate_training_set.py
 │   ├── test_live_loop_dry_run.py
 │   ├── test_orchestrator_local.py
+│   ├── test_task_115_integration.py
 │   ├── tools
 │   │   └── listen_zmq_pub.py
 │   ├── train_task_114_model.py
@@ -26815,8 +26824,10 @@ Generated: 2026年 01月 16日 星期五 07:30:20 CST
 │   │   └── validation.py
 │   ├── monitoring
 │   │   ├── dq_score.py
+│   │   ├── drift_detector.py
 │   │   ├── __init__.py
-│   │   └── prometheus_exporter.py
+│   │   ├── prometheus_exporter.py
+│   │   └── shadow_recorder.py
 │   ├── mt5_bridge
 │   │   ├── config.py
 │   │   ├── connection.py
@@ -26986,7 +26997,7 @@ Generated: 2026年 01月 16日 星期五 07:30:20 CST
 │       └── orders.json
 └── VERIFY_LOG.log
 
-331 directories, 26648 files
+334 directories, 26656 files
 
 
 >>> PART 2: 基础设施档案 (V1.2 Live)
