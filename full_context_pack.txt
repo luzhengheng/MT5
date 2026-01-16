@@ -1,6 +1,6 @@
 ==================================================
 📦 MT5-CRS 全域资产数据包 (Full Context Pack)
-Generated: 2026年 01月 17日 星期六 02:00:30 CST
+Generated: 2026年 01月 17日 星期六 02:40:17 CST
 ==================================================
 
 
@@ -26000,6 +26000,12 @@ Generated: 2026年 01月 17日 星期六 02:00:30 CST
 │   │       │   ├── QUICK_START.md
 │   │       │   ├── SYNC_GUIDE.md
 │   │       │   └── VERIFY_LOG.log
+│   │       ├── TASK_118
+│   │       │   ├── ADMISSION_DECISION_METADATA.json
+│   │       │   ├── COMPLETION_REPORT.md
+│   │       │   ├── LIVE_TRADING_ADMISSION_REPORT.md
+│   │       │   ├── QUICK_START.md
+│   │       │   └── SYNC_GUIDE.md
 │   │       ├── WORK_ORDER_011_PROGRESS.md
 │   │       ├── WORK_ORDER_025_9_COMPLETION_REPORT.md
 │   │       ├── WORK_ORDER_026_9_COMPLETION_REPORT.md
@@ -26437,6 +26443,8 @@ Generated: 2026年 01月 17日 星期六 02:00:30 CST
 │   │   ├── README.md
 │   │   └── test_mt5_zmq_server.py
 │   ├── generate_context_snapshot.py
+│   ├── governance
+│   │   └── generate_admission_report.py
 │   ├── implement_ai_recommendations.py
 │   ├── install_service.sh
 │   ├── invoke_task105_ai_review.py
@@ -26669,6 +26677,8 @@ Generated: 2026年 01月 17日 星期六 02:00:30 CST
 │   └── verify_task_085_inf.sh
 ├── src
 │   ├── ai_probe_test.py
+│   ├── analytics
+│   │   └── shadow_autopsy.py
 │   ├── audit
 │   │   ├── asset_auditor.py
 │   │   ├── leakage_detector.py
@@ -27027,6 +27037,7 @@ Generated: 2026年 01月 17日 星期六 02:00:30 CST
 │   ├── test_safe_deserialization_fix.py
 │   ├── test_session_risk_integration.py
 │   ├── test_session_risk_manager.py
+│   ├── test_shadow_autopsy.py
 │   ├── test_state_reconciler.py
 │   ├── test_trial_recorder.py
 │   └── unit
@@ -27053,7 +27064,7 @@ Generated: 2026年 01月 17日 星期六 02:00:30 CST
 │       └── orders.json.lock
 └── VERIFY_LOG.log
 
-339 directories, 26707 files
+342 directories, 26715 files
 
 
 >>> PART 2: 基础设施档案 (V1.2 Live)
