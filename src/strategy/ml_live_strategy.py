@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """
-Task #114: ML Live Strategy
+Task #114 + #115: ML Live Strategy with Shadow Mode
 
 Real-time ML-driven trading strategy that integrates:
 - OnlineFeatureCalculator (streaming features)
 - MLPredictor (XGBoost inference)
 - Risk management and position sizing
+- Shadow Mode (Task #115): Log signals without executing orders
+- Drift Detection (Task #115): Monitor feature distribution shifts
 
 Protocol: v4.3 (Zero-Trust Edition)
 """
@@ -19,30 +21,47 @@ import numpy as np
 from src.inference.online_features import OnlineFeatureCalculator
 from src.inference.ml_predictor import MLPredictor
 
+# Optional drift detection (Task #115)
+try:
+    from src.monitoring.drift_detector import DriftDetector
+    from src.monitoring.shadow_recorder import ShadowRecorder
+    HAS_DRIFT_MONITORING = True
+except ImportError:
+    HAS_DRIFT_MONITORING = False
+
 logger = logging.getLogger(__name__)
 
 
 class MLLiveStrategy:
     """
-    ML-powered live trading strategy
+    ML-powered live trading strategy with optional shadow mode and drift detection.
 
     This strategy receives real-time tick data, calculates features online,
     runs ML inference, and generates trading signals.
+
+    In shadow mode (Task #115), signals are recorded but NOT executed,
+    allowing production monitoring before risking capital.
     """
 
     def __init__(self,
                  model_path: str = "/opt/mt5-crs/data/models/xgboost_task_114.pkl",
                  confidence_threshold: float = 0.55,
                  lookback_period: int = 50,
-                 throttle_seconds: int = 60):
+                 throttle_seconds: int = 60,
+                 shadow_mode: bool = False,
+                 enable_drift_detection: bool = False,
+                 reference_features: Optional[np.ndarray] = None):
         """
-        Initialize ML live strategy
+        Initialize ML live strategy.
 
         Args:
             model_path: Path to trained XGBoost model
             confidence_threshold: Minimum confidence for signals
             lookback_period: Historical periods to retain
             throttle_seconds: Minimum seconds between signals
+            shadow_mode: If True, log signals without executing (Task #115)
+            enable_drift_detection: If True, monitor feature distribution drift (Task #115)
+            reference_features: Training features for drift detection baseline
         """
         # Initialize components
         self.feature_calculator = OnlineFeatureCalculator(
@@ -58,12 +77,33 @@ class MLLiveStrategy:
         self.tick_count = 0
         self.signal_count = 0
 
+        # Shadow mode (Task #115)
+        self.shadow_mode = shadow_mode
+        self.shadow_recorder = None
+        if shadow_mode and HAS_DRIFT_MONITORING:
+            self.shadow_recorder = ShadowRecorder()
+            logger.info("[SHADOW_MODE] ShadowRecorder initialized")
+
+        # Drift detection (Task #115)
+        self.enable_drift_detection = enable_drift_detection
+        self.drift_detector = None
+        if enable_drift_detection and HAS_DRIFT_MONITORING and reference_features is not None:
+            self.drift_detector = DriftDetector(
+                reference_features=reference_features,
+                drift_threshold=0.25,
+                alert_threshold=0.20
+            )
+            logger.info("[DRIFT_DETECTION] DriftDetector initialized")
+
+        self.is_inference_blocked = False  # Set to True when drift detected
+
         # Performance tracking
         self.latency_samples = []
 
         logger.info(
             f"MLLiveStrategy initialized "
-            f"(confidence={confidence_threshold}, throttle={throttle_seconds}s)"
+            f"(confidence={confidence_threshold}, throttle={throttle_seconds}s, "
+            f"shadow_mode={shadow_mode}, drift_detection={enable_drift_detection})"
         )
 
     def on_tick(self,
@@ -110,6 +150,30 @@ class MLLiveStrategy:
             feature_vector.tobytes()
         ).hexdigest()[:8]
 
+        # Check drift detection (Task #115)
+        drift_alert = None
+        if self.drift_detector is not None:
+            drift_alert = self.drift_detector.check_alert_conditions(feature_vector)
+
+            if drift_alert['drift_detected']:
+                self.is_inference_blocked = True
+                logger.error(
+                    f"[DRIFT_GUARD] INFERENCE BLOCKED - PSI={drift_alert['psi']:.4f}"
+                )
+
+                # In shadow mode, still record for analysis
+                if not self.shadow_mode:
+                    return 0, {
+                        'reason': 'drift_detected',
+                        'drift_alert': drift_alert,
+                        'ticks': self.tick_count
+                    }
+
+        # Check if inference should be blocked
+        if self.is_inference_blocked and not self.shadow_mode:
+            logger.warning("[CIRCUIT_BREAKER] Inference blocked due to drift")
+            return 0, {'reason': 'inference_blocked', 'ticks': self.tick_count}
+
         # Run inference
         signal, confidence, inference_latency_ms = self.predictor.predict(
             feature_vector
@@ -135,13 +199,30 @@ class MLLiveStrategy:
             )
             signal = 0  # Override to HOLD
 
+        # Shadow Mode: Record signal without executing (Task #115)
+        if self.shadow_mode and signal != 0 and self.shadow_recorder is not None:
+            shadow_record = {
+                'timestamp': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
+                'signal': signal,
+                'price': close,
+                'confidence': confidence,
+                'features_hash': feature_hash
+            }
+            self.shadow_recorder.record_signal(shadow_record)
+
+            logger.info(
+                f"[SHADOW_MODE_RECORD] Tick {self.tick_count}: "
+                f"Signal={signal} recorded (NOT executed)"
+            )
+
         # Log inference result
         if signal != 0:
             self.signal_count += 1
             self.last_signal_time = current_time
 
+            mode_indicator = "[SHADOW_MODE] " if self.shadow_mode else "[INFERENCE] "
             logger.info(
-                f"[INFERENCE] Tick {self.tick_count}: "
+                f"{mode_indicator}Tick {self.tick_count}: "
                 f"Price={close:.5f} | "
                 f"Features_Hash={feature_hash} | "
                 f"Pred={signal} ({confidence:.4f}) | "
@@ -157,7 +238,9 @@ class MLLiveStrategy:
             'feature_hash': feature_hash,
             'latency_ms': total_latency_ms,
             'inference_latency_ms': inference_latency_ms,
-            'throttled': time_since_last_signal < self.throttle_seconds if signal != 0 else False
+            'throttled': time_since_last_signal < self.throttle_seconds if signal != 0 else False,
+            'shadow_mode': self.shadow_mode,
+            'drift_alert': drift_alert
         }
 
         return signal, metadata
