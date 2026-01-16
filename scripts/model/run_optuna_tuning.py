@@ -29,9 +29,28 @@ import pandas as pd
 from sklearn.model_selection import TimeSeriesSplit
 from sklearn.preprocessing import StandardScaler
 
-# 项目根目录
+# ✅ P0 Issue #2 Fix: Safe path validation before adding to sys.path
 PROJECT_ROOT = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(PROJECT_ROOT))
+
+# Try to import path validator (with fallback for bootstrapping)
+try:
+    sys.path.insert(0, str(PROJECT_ROOT))
+    from scripts.ai_governance.path_validator import PathValidator
+
+    # Validate and setup project root securely
+    validator = PathValidator(strict_mode=False)  # Non-strict for compatibility
+    validator.validate_project_root(PROJECT_ROOT)
+
+    # Remove and re-add safely
+    sys.path.remove(str(PROJECT_ROOT))
+    validator.safe_add_to_syspath(PROJECT_ROOT)
+
+except ImportError:
+    # Fallback: path_validator not available yet (bootstrapping)
+    # Basic validation only
+    if not PROJECT_ROOT.exists() or not PROJECT_ROOT.is_dir():
+        raise ValueError(f"Invalid project root: {PROJECT_ROOT}")
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 # 配置日志
 logging.basicConfig(

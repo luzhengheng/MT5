@@ -61,8 +61,18 @@ BLUE = "\033[94m"
 MAGENTA = "\033[95m"
 RESET = "\033[0m"
 
-# 项目根目录
+# ✅ P0 Issue #2 Fix: Validate project root path safely
 PROJECT_ROOT = Path(__file__).parent.parent.parent
+
+# Validate project root without circular imports
+try:
+    if not PROJECT_ROOT.exists() or not PROJECT_ROOT.is_dir():
+        raise ValueError(f"Invalid project root: {PROJECT_ROOT}")
+    if PROJECT_ROOT.is_symlink():
+        logger.warning(f"⚠️  Project root is a symlink: {PROJECT_ROOT}")
+except Exception as e:
+    logger.error(f"Project root validation failed: {e}")
+    raise
 
 
 class OptunaOptimizer:
