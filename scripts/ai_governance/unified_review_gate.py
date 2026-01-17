@@ -14,15 +14,20 @@ import os
 import sys
 import argparse
 import logging
-import json
 import uuid
-from typing import List, Optional, Dict, Tuple
+from typing import List
 from datetime import datetime
-from pathlib import Path
 
 # ============================================================================
 # 依赖导入与初始化
 # ============================================================================
+
+# 加载 .env 文件中的环境变量
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    print("⚠️ [WARN] 缺少 python-dotenv，建议安装: pip install python-dotenv")
 
 # 尝试导入 curl_cffi 保持网络穿透力
 try:
@@ -47,6 +52,7 @@ logging.basicConfig(
 )
 logger = logging.getLogger("URG_v2")
 
+
 # ============================================================================
 # 核心类定义
 # ============================================================================
@@ -59,14 +65,22 @@ class ArchitectAdvisor:
         self.session_id = str(uuid.uuid4())
         self.project_root = self._find_project_root()
         self.context_cache = self._load_project_context()
-        self.model = "claude-3-5-sonnet-20240620"
+        self.model = os.getenv("GEMINI_MODEL", "gemini-3-pro-preview")
         self.log_file = "VERIFY_URG_V2.log"
-        self.api_key = os.getenv("AI_API_KEY")
-        self.api_url = os.getenv("API_URL", "https://api.yyds168.net/v1/chat/completions")
+        self.api_key = os.getenv("AI_API_KEY") or os.getenv(
+            "CLAUDE_API_KEY"
+        ) or os.getenv("GEMINI_API_KEY")
+        self.api_url = os.getenv(
+            "API_URL",
+            os.getenv("VENDOR_BASE_URL",
+                      "https://api.yyds168.net/v1/chat/completions")
+        )
 
         # 初始化日志
         self._clear_log()
-        self._log(f"✅ ArchitectAdvisor v2.0 已初始化 (Session: {self.session_id})")
+        msg = (f"✅ ArchitectAdvisor v2.0 已初始化 "
+               f"(Session: {self.session_id})")
+        self._log(msg)
 
     def _find_project_root(self) -> str:
         """向上查找项目根目录"""
@@ -97,7 +111,7 @@ class ArchitectAdvisor:
             try:
                 with open(central_doc_path, 'r', encoding='utf-8') as f:
                     content = f.read()
-                    # 提取关键信息：架构（第2章）和术语表（§术语表）
+                    # 提取关键信息
                     lines = content.split('\n')
                     in_arch = False
                     in_terms = False
@@ -123,7 +137,7 @@ class ArchitectAdvisor:
                     if term_lines:
                         context_parts.append("\n".join(term_lines[:1000]))
 
-            except Exception as e:
+            except OSError as e:
                 logger.warning(f"无法读取中央文档: {e}")
 
         # 2. 读取任务模板
@@ -132,7 +146,7 @@ class ArchitectAdvisor:
             try:
                 with open(task_template_path, 'r', encoding='utf-8') as f:
                     self.task_template_content = f.read()
-            except:
+            except OSError:
                 self.task_template_content = ""
         else:
             self.task_template_content = ""
@@ -159,7 +173,7 @@ class ArchitectAdvisor:
     def _send_request(self, system_prompt: str, user_content: str) -> str:
         """使用 curl_cffi 发送请求到 API"""
         if not self.api_key:
-            self._log("⚠️ 环境变量 AI_API_KEY 未设置，使用演示模式生成模板内容")
+            self._log("⚠️ 环境变量 AI_API_KEY 未设置，使用演示模式")
             return self._generate_demo_response(user_content)
 
         headers = {
@@ -196,15 +210,18 @@ class ArchitectAdvisor:
                 output_tokens = usage.get('completion_tokens', 0)
                 total_tokens = input_tokens + output_tokens
 
-                self._log(f"✅ API 调用成功")
-                self._log(f"📊 Token Usage: input={input_tokens}, output={output_tokens}, total={total_tokens}")
+                self._log("✅ API 调用成功")
+                msg = (f"📊 Token Usage: input={input_tokens}, "
+                       f"output={output_tokens}, total={total_tokens}")
+                self._log(msg)
 
                 return result_text
             else:
-                error_msg = f"❌ API Error {response.status_code}: {response.text[:200]}"
+                error_msg = (f"❌ API Error {response.status_code}: "
+                             f"{response.text[:200]}")
                 self._log(error_msg)
                 return error_msg
-        except Exception as e:
+        except requests.RequestException as e:
             error_msg = f"❌ Connection Error: {str(e)[:200]}"
             self._log(error_msg)
             return error_msg
@@ -237,28 +254,28 @@ class ArchitectAdvisor:
 
 | 类型 | 文件路径 | Gate 1 刚性验收标准 |
 |------|---------|------------------|
-| 代码 | `src/data_loaders/eodhd_loader.py` | 无 Pylint 错误; 环境变量检查; 异常处理完整 |
-| 脚本 | `scripts/ops/fetch_eodhd_data.py` | 执行无错误; 输出 CSV 文件有验证日志 |
-| 测试 | `tests/test_eodhd_loader.py` | 覆盖率 > 80%; 包含 Mock API 测试 |
-| 日志 | `VERIFY_LOG.log` | 包含 API 调用时间戳、Token 消耗、行数统计 |
+| 代码 | `src/data_loaders/eodhd_loader.py` | 无 Pylint 错误; 环境变量检查 |
+| 脚本 | `scripts/ops/fetch_eodhd_data.py` | 执行无错误; 输出 CSV 文件 |
+| 测试 | `tests/test_eodhd_loader.py` | 覆盖率 > 80%; Mock API 测试 |
+| 日志 | `VERIFY_LOG.log` | API 调用时间戳、Token 消耗 |
 
 ## 3. 执行计划 (Zero-Trust Execution Plan)
 
 ### Step 1: 基础设施铺设 & 清理
-- [ ] 删除旧证: `rm -f VERIFY_LOG.log docs/archive/tasks/TASK_125/AI_REVIEW.md`
+- [ ] 删除旧证: `rm -f VERIFY_LOG.log`
 - [ ] 创建目录: `mkdir -p src/data_loaders tests`
 
 ### Step 2: 核心开发
 - [ ] 实现 `EODHDLoader` 类，继承 `DataLoaderBase`
-- [ ] 支持的参数: `symbol`, `date_from`, `date_to`, `interval` (daily/intraday)
-- [ ] 环境变量检查: `assert os.getenv('EODHD_API_KEY'), "❌ 缺少 EODHD_API_KEY"`
+- [ ] 支持参数: `symbol`, `date_from`, `date_to`, `interval`
+- [ ] 环境变量检查: `assert os.getenv('EODHD_API_KEY')`
 
 ### Step 3: 编写测试与自测
 - [ ] 编写单元测试，Mock API 响应
-- [ ] 运行: `python3 scripts/ops/fetch_eodhd_data.py --symbol AAPL --output data.csv | tee VERIFY_LOG.log`
+- [ ] 运行脚本进行本地测试
 
 ### Step 4: 智能闭环审查
-- [ ] 执行: `python3 scripts/ai_governance/unified_review_gate.py review src/data_loaders/eodhd_loader.py`
+- [ ] 执行代码审查流程
 
 ### Step 5: 物理验尸 (Forensic Verification)
 - [ ] `date` (证明当前系统时间)
@@ -316,9 +333,10 @@ grep "EODHD" VERIFY_LOG.log | tail -10
 ---
 *这是演示模式的示例输出。正式审查请配置 AI_API_KEY 环境变量。*"""
 
-    def execute_plan(self, requirement: str, output_file: str = "NEW_TASK.md"):
+    def execute_plan(self, requirement: str,
+                     output_file: str = "NEW_TASK.md"):
         """工单生成模式：将需求转换为标准工单"""
-        self._log(f"📋 启动工单生成模式...")
+        self._log("📋 启动工单生成模式...")
         self._log(f"📌 需求: {requirement[:100]}...")
 
         system_prompt = f"""
@@ -341,13 +359,14 @@ grep "EODHD" VERIFY_LOG.log | tail -10
 
 2. 核心原则 (Zero-Trust):
    - 任何代码交付必须包含 Assert 断言。
-   - 任何执行必须包含 "物理验尸" 步骤（检查日志、文件指纹、Token消耗）。
+   - 任何执行必须包含 "物理验尸" 步骤。
    - 严禁静默失败。
 
 3. 输出内容仅包含 Markdown 源码，不要包含寒暄或额外解释。
 """
 
-        result = self._send_request(system_prompt, f"任务需求: {requirement}")
+        result = self._send_request(system_prompt,
+                                    f"任务需求: {requirement}")
 
         # 写入文件
         output_path = os.path.join(self.project_root, output_file)
@@ -374,7 +393,7 @@ grep "EODHD" VERIFY_LOG.log | tail -10
             try:
                 with open(file_path, 'r', encoding='utf-8') as f:
                     content = f.read()
-            except Exception as e:
+            except OSError as e:
                 self._log(f"❌ 无法读取文件: {e}")
                 continue
 
@@ -391,7 +410,7 @@ grep "EODHD" VERIFY_LOG.log | tail -10
 
 【审查任务】
 请审查用户上传的 Markdown 文档。关注：
-1. **一致性**: 是否与中央命令文档 (Central Command) 的术语或架构冲突？
+1. **一致性**: 是否与中央命令文档的术语或架构冲突？
 2. **清晰度**: 是否存在歧义或不明确的部分？
 3. **准确性**: 是否存在技术幻觉或错误的声称？
 4. **结构**: 标题、表格、代码块的格式是否规范？
@@ -455,10 +474,11 @@ def main():
         epilog="""
 示例:
   # 生成工单 (Plan Mode)
-  python3 unified_review_gate.py plan -r "实现 Task #125" -o docs/archive/tasks/TASK_125.md
+  python3 unified_review_gate.py plan -r "实现 Task #125" \\
+    -o docs/archive/tasks/TASK_125.md
 
   # 审查文件 (Review Mode)
-  python3 unified_review_gate.py review src/bot/trading_bot.py docs/task.md
+  python3 unified_review_gate.py review src/bot/trading_bot.py
 """
     )
 
@@ -467,12 +487,15 @@ def main():
 
     # Plan Mode
     plan_parser = subparsers.add_parser('plan', help='生成开发工单')
-    plan_parser.add_argument('-r', '--req', required=True, help='需求描述（必填）')
-    plan_parser.add_argument('-o', '--out', default='NEW_TASK.md', help='输出文件路径 (默认: NEW_TASK.md)')
+    plan_parser.add_argument('-r', '--req', required=True,
+                             help='需求描述（必填）')
+    plan_parser.add_argument('-o', '--out', default='NEW_TASK.md',
+                             help='输出文件路径 (默认: NEW_TASK.md)')
 
     # Review Mode
     review_parser = subparsers.add_parser('review', help='审查代码或文档')
-    review_parser.add_argument('files', nargs='+', help='要审查的文件列表')
+    review_parser.add_argument('files', nargs='+',
+                               help='要审查的文件列表')
 
     args = parser.parse_args()
 
