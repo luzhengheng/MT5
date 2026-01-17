@@ -65,16 +65,24 @@ class ArchitectAdvisor:
         self.session_id = str(uuid.uuid4())
         self.project_root = self._find_project_root()
         self.context_cache = self._load_project_context()
-        self.model = os.getenv("GEMINI_MODEL", "gemini-3-pro-preview")
-        self.log_file = "VERIFY_URG_V2.log"
-        self.api_key = os.getenv("AI_API_KEY") or os.getenv(
-            "CLAUDE_API_KEY"
-        ) or os.getenv("GEMINI_API_KEY")
-        self.api_url = os.getenv(
-            "API_URL",
-            os.getenv("VENDOR_BASE_URL",
-                      "https://api.yyds168.net/v1/chat/completions")
+        # 模型配置：优先级 GEMINI_MODEL > VENDOR_MODEL > 默认值
+        self.model = os.getenv("GEMINI_MODEL") or os.getenv(
+            "VENDOR_MODEL", "gemini-3-pro-preview"
         )
+        self.log_file = "VERIFY_URG_V2.log"
+        # API 密钥配置：优先级 VENDOR_API_KEY > GEMINI_API_KEY > CLAUDE_API_KEY
+        self.api_key = os.getenv("VENDOR_API_KEY") or os.getenv(
+            "GEMINI_API_KEY"
+        ) or os.getenv("CLAUDE_API_KEY")
+        # API URL 配置：优先级 完整路径 > GEMINI_BASE_URL > VENDOR_BASE_URL
+        base_url = os.getenv("GEMINI_BASE_URL") or os.getenv(
+            "VENDOR_BASE_URL", "https://api.yyds168.net/v1"
+        )
+        # 确保 API URL 包含完整路径
+        if base_url.endswith("/v1"):
+            self.api_url = f"{base_url}/chat/completions"
+        else:
+            self.api_url = base_url
 
         # 初始化日志
         self._clear_log()
@@ -221,7 +229,7 @@ class ArchitectAdvisor:
                              f"{response.text[:200]}")
                 self._log(error_msg)
                 return error_msg
-        except requests.RequestException as e:
+        except Exception as e:
             error_msg = f"❌ Connection Error: {str(e)[:200]}"
             self._log(error_msg)
             return error_msg
