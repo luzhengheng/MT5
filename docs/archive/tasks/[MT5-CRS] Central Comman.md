@@ -1,9 +1,9 @@
-# MT5-CRS 中央命令系统文档 v5.7
+# MT5-CRS 中央命令系统文档 v5.8
 
-**文档版本**: 5.7 (文档优化迭代 + Task #122占位符 + 配置中心详解)
-**最后更新**: 2026-01-18 04:38:00 CST
+**文档版本**: 5.8 (Task #123 多品种并发引擎集成 + 性能指标更新)
+**最后更新**: 2026-01-18 05:48:24 CST
 **协议标准**: Protocol v4.3 (Zero-Trust Edition)
-**项目状态**: Phase 6 - 实盘交易 (Live Trading) + 配置中心化 + 干跑验证就绪
+**项目状态**: Phase 6 - 实盘交易 (Live Trading) + 配置中心化 + 多品种并发就绪
 
 ---
 
@@ -29,7 +29,7 @@
 ### 🎯 当前关键指标
 
 **系统进度** 🎯
-Phase 5: 15/15 ✅ | Phase 6: 8/8 ✅ (含 #119.8 + #120 + #121 配置中心化完成)
+Phase 5: 15/15 ✅ | Phase 6: 9/9 ✅ (含 #119.8 + #120 + #121 + #123 多品种并发)
 
 **部署状态** 🟢
 三层架构运行中 | 实盘交易激活 | 配置中心化就绪
@@ -56,10 +56,12 @@ Ticket #1100000002 (EURUSD) | 成交完成 | BTCUSD.s 符号修正完成
 
 **核心就绪项**:
 
-- ✅ Phase 5: 15/15 完成 | Phase 6: 8/8 完成 (含 #119.8 + #120 + #121)
+- ✅ Phase 5: 15/15 完成 | Phase 6: 9/9 完成 (含 #119.8 + #120 + #121 + #123)
 - ✅ Golden Loop 验证完成 (5/5 测试通过)
 - ✅ **PnL对账系统完成** (5/5交易100%匹配) ✨ Task #120
-- ✅ **配置中心化完成** (BTCUSD.s符号修正 + 探针验证) ✨ NEW Task #121
+- ✅ **配置中心化完成** (BTCUSD.s符号修正 + 探针验证) ✨ Task #121
+- ✅ **多品种并发引擎完成** (BTCUSD.s, ETHUSD.s, XAUUSD.s) ✨ Task #123 NEW
+- ✅ 异步并发架构就绪 (asyncio.gather + ZMQ Lock)
 - ✅ 远程ZMQ链路验证正常 (172.19.141.255:5555)
 - ✅ Guardian护栏系统健康 (三重传感器激活)
 - ✅ 安全审计通过 (5/5 P0 CWE漏洞已修复)
@@ -70,9 +72,10 @@ Ticket #1100000002 (EURUSD) | 成交完成 | BTCUSD.s 符号修正完成
 | 阶段 | 名称 | 进度 | 状态 | 说明 |
 |------|------|------|------|------|
 | **Phase 5** | ML Alpha开发 | 15/15 | ✅ 完成 | 特征工程、模型训练、影子验证 |
-| **Phase 6** | 实盘交易 | 8/8 | ✅ 完成 | 影子模式→准入熔断→金丝雀→验证→Golden Loop→PnL对账→配置中心化 |
+| **Phase 6** | 实盘交易 | 9/9 | ✅ 完成 | 影子模式→准入熔断→金丝雀→验证→Golden Loop→PnL对账→配置中心化→多品种并发 |
 | **Task #120** | 性能评估 | 100% | ✅ 完成 | PnL对账引擎(450行) + 实盘评估框架(380行) + 演示模拟器(320行) |
 | **Task #121** | 配置中心化 | 100% | ✅ 完成 | BTCUSD.s符号修正 + 配置文件(139行) + 探针脚本(235行) + 代码重构(+33行) |
+| **Task #123** | 多品种并发 | 100% | ✅ 完成 | ConfigManager(231行) + MetricsAgg(312行) + Engine(395行) + Scripts(624行) |
 
 ### 1.3 核心数据指标
 ```
@@ -160,7 +163,7 @@ PnL对账系统 (#120):
 | **风险签名验证** | 订单合法性 | ✅ 运行 | 防篡改, 强制验证 |
 | **命令支持** | - | - | PING/OPEN/CLOSE/GET_ACCOUNT/GET_POSITIONS |
 
-### 2.3 配置中心架构 (Task #121)
+### 2.3 配置中心架构 (Task #121 + Task #123 多品种扩展)
 
 #### 2.3.1 配置分层模型
 
@@ -173,15 +176,23 @@ PnL对账系统 (#120):
 3. YAML配置文件     (config/trading_config.yaml) ← 主配置
 4. 硬编码默认值     (备用方案)
 
-配置文件结构:
+配置文件结构 (Task #123 多品种支持):
 config/trading_config.yaml
 ├── common:         全局设置 (环境、日志)
-├── trading:        交易对参数
-│   ├── symbol:     "BTCUSD.s" (核心修正点)
-│   ├── lot_size:   0.001
+├── symbols:        ⭐ NEW - 多品种列表 (Task #123)
+│   ├── - symbol: "BTCUSD.s"    (Magic: 202601, Lot: 0.01)
+│   ├── - symbol: "ETHUSD.s"    (Magic: 202602, Lot: 0.01)
+│   └── - symbol: "XAUUSD.s"    (Magic: 202603, Lot: 0.01)
+├── trading:        交易对参数 (向后兼容)
+│   ├── symbol:     "BTCUSD.s"
+│   ├── lot_size:   0.01
 │   └── magic_number: 202601
-├── risk:           风险管理 (止损、获利、杠杆)
-├── gateway:        ZMQ网络配置
+├── risk:           风险管理 (含多品种隔离)
+│   ├── max_total_exposure: 2.0%  (全局限额)
+│   └── max_per_symbol: 1.0%      (品种限额)
+├── gateway:        ZMQ网络配置 (含并发)
+│   ├── concurrent_symbols: true
+│   └── zmq_lock_enabled: true
 ├── market_data:    时间框架和数据源
 ├── trading_hours:  交易时间规则
 ├── model:          ML模型配置
@@ -285,7 +296,7 @@ git checkout HEAD~1 -- config/trading_config.yaml
 | #115 | 影子模式 | DriftDetector+ShadowRecorder | ✅ |
 | #116 | 安全修复 | 5个P0漏洞消除 | ✅ |
 
-### 3.2 Phase 6 任务状态 (8/8 完成 ✅)
+### 3.2 Phase 6 任务状态 (9/9 完成 ✅)
 
 | 任务 | 名称 | 进度 | 关键指标 | 状态 |
 |------|------|------|---------|------|
@@ -296,7 +307,43 @@ git checkout HEAD~1 -- config/trading_config.yaml
 | #119.6 | 验证重执行 | 100% | Ticket #1100000002成交 | ✅ |
 | #119.8 | Golden Loop验证 | 100% | 5/5测试通过 | ✅ |
 | #120 | 性能评估 | 100% | PnL对账系统完成, 5/5交易匹配100% | ✅ |
-| #121 | 配置中心化 | 100% | BTCUSD.s符号修正, 12,775 tokens审查通过 | ✅ NEW |
+| #121 | 配置中心化 | 100% | BTCUSD.s符号修正, 12,775 tokens审查通过 | ✅ |
+| #123 | 多品种并发 | 100% | 3品种 (BTC/ETH/XAU), 1,562行代码, 11,862 tokens | ✅ NEW |
+
+### 3.3 Task #123 多品种并发引擎详解 ⭐ NEW
+
+#### 核心架构
+
+```text
+ConcurrentTradingEngine
+├── ConfigManager (src/config/config_loader.py - 231行)
+│   └── 加载 symbols 列表 → BTCUSD.s, ETHUSD.s, XAUUSD.s
+├── MetricsAggregator (src/execution/metrics_aggregator.py - 312行)
+│   └── 跨品种指标聚合 (trades, PnL, exposure)
+├── ConcurrentEngine (src/execution/concurrent_trading_engine.py - 395行)
+│   ├── asyncio.gather() → 并发编排
+│   ├── run_symbol_loop() × 3 → 独立品种循环
+│   └── asyncio.Lock → ZMQ 线程安全
+└── 启动脚本 (scripts/ops/run_multi_symbol_trading.py - 344行)
+    └── CLI 入口 + 信号处理
+```
+
+#### 关键特性
+
+| 特性 | 实现 | 效果 |
+|------|------|------|
+| **并发编排** | asyncio.gather | 无 GIL 竞态 |
+| **ZMQ 安全** | asyncio.Lock | 多品种无缓冲混乱 |
+| **风险隔离** | Per-symbol context | 品种独立风险限额 |
+| **配置驱动** | YAML symbols 列表 | 无硬编码，易扩展 |
+| **全局监控** | MetricsAggregator | 实时暴露聚合 |
+
+#### 验收结果
+
+- ✅ Gate 1 审查: PASS
+- ✅ Gate 2 AI审查: PASS (11,862 tokens)
+- ✅ 物理验尸: 时间戳 + Token证明 + 符号验证 ✓
+- ✅ 符号兼容性: .s 后缀正确处理
 
 ---
 
@@ -619,9 +666,10 @@ python3 -c "import yaml; cfg=yaml.safe_load(open('config/trading_config.yaml'));
 - [x] BTC/USD交易品种切换方案完成 (配置+文档+脚本)
 - [x] **Task #119.8 Golden Loop 验证** (5/5 测试通过 ✅)
 - [x] **Task #120 PnL对账系统** (5/5 交易100%匹配 ✅)
-- [x] **Task #121 配置中心化** (BTCUSD.s符号修正 + 探针验证 ✅) ✨ NEW
+- [x] **Task #121 配置中心化** (BTCUSD.s符号修正 + 探针验证 ✅)
+- [x] **Task #123 多品种并发引擎** (3品种 + 1,562行代码 + 11,862 tokens ✅) ✨ NEW
 - [x] 启动72小时基线监控 (Task #120) - EURUSD (Day 1/72 运行中)
-- [x] 标准存档协议执行 (6 个文档生成 ✅)
+- [x] 标准存档协议执行 (9 个任务文档生成 ✅)
 
 ### 7.2 24小时内
 - [ ] **运行探针验证BTCUSD.s可用性** (python3 scripts/ops/verify_symbol_access.py)
@@ -647,6 +695,7 @@ python3 -c "import yaml; cfg=yaml.safe_load(open('config/trading_config.yaml'));
 
 | 版本 | 日期 | 更新内容 | 审查状态 |
 | --- | --- | --- | --- |
+| v5.8 | 2026-01-18 | **Task #123集成**: Phase 6更新(8/9→9/9) + 新增§3.3多品种并发引擎详解 + 核心就绪项补充 + 配置架构多品种扩展示例 + 文档格式优化 | ✅ 生产级 |
 | v5.7 | 2026-01-18 | **优化迭代**: 简化§6.4(160→15行,-94%) + 新增§2.3配置中心详解 + 新增§6.5-6.6版本管理 + 新增§8多品种框架占位符 | ✅ 生产级 |
 | v5.5 | 2026-01-18 | **新增** Task #121 配置中心化完成，BTCUSD.s符号修正 + 12,775 tokens审查通过 | ✅ 生产级 |
 | v5.4 | 2026-01-18 | **新增** Task #120 PnL对账系统完成，5/5交易100%匹配 | ✅ 生产级 |
@@ -791,16 +840,17 @@ symbols:
 
 **任务档案**:
 - Phase 5 完成: `/docs/archive/tasks/TASK_095/` ~ `/TASK_116/`
-- Phase 6 完成: `/docs/archive/tasks/TASK_117/` ~ `/TASK_121/`
+- Phase 6 完成: `/docs/archive/tasks/TASK_117/` ~ `/TASK_123/`
   - Task #120: PnL对账系统完成报告
   - Task #121: 配置中心化完成报告 + 代码变更清单
+  - Task #123: 多品种并发引擎完成报告 + 新增文件清单
 
 ---
 
 **Co-Authored-By**: Claude Sonnet 4.5 <noreply@anthropic.com>
 **Protocol Version**: v4.3 (Zero-Trust Edition)
-**Updated**: 2026-01-18 04:38:00 CST (v5.7 - 文档优化迭代完成)
+**Updated**: 2026-01-18 05:48:24 CST (v5.8 - Task #123多品种并发引擎集成)
 **Generated**: 2026-01-18 04:08:02 CST (初版)
-**Document Status**: ✅ v5.7 PRODUCTION READY
+**Document Status**: ✅ v5.8 PRODUCTION READY
 **Task #121 Status**: ✅ COMPLETE - 配置中心化迁移成功，BTCUSD.s符号修正完成
-**Task #122 Status**: ✅ COMPLETE - 干跑验证通过，系统就绪！
+**Task #123 Status**: ✅ COMPLETE - 多品种并发引擎就绪，3品种并发架构激活！
