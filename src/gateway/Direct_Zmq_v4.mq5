@@ -1,10 +1,10 @@
 ﻿//+------------------------------------------------------------------+
-//|                                               Direct_Zmq_v4.mq5 |
+//|                                               Direct_Zmq_v5.mq5 |
 //|                           Copyright 2026, MT5-CRS Architecture  |
-//|                    Status: v4.0 SMART GATEWAY (Supports CloseBy)|
+//|                    Status: v5.0 FULL STACK (Ticket+Price Support)|
 //+------------------------------------------------------------------+
 #property copyright "MT5-CRS"
-#property version   "4.00"
+#property version   "5.00"
 
 #import "libzmq.dll"
    long zmq_ctx_new();
@@ -46,7 +46,7 @@ string GetJsonValue(string json, string key) {
 
 int OnInit() {
    EventSetTimer(1); 
-   Print(">>> INIT: v4.0 Smart Gateway (CloseBy/Hedge Support)...");
+   Print(">>> INIT: v5.0 Full Stack Gateway (Ticket Return + Price Query)...");
    ptr_context = zmq_ctx_new();
    if(ptr_context == 0) return(INIT_FAILED);
    ptr_socket_trade = zmq_socket(ptr_context, ZMQ_REP);
@@ -81,10 +81,23 @@ void ProcessTrade() {
    int len = zmq_recv(ptr_socket_trade, rx_buffer, 4096, ZMQ_NOBLOCK);
    if(len > 0) {
       string msg = CharArrayToString(rx_buffer, 0, len);
-      Print("📩 IN: ", msg);
       string reply_msg = "{\"status\":\"ERROR\",\"msg\":\"Unknown\"}";
       
-      if(StringFind(msg, "magic") >= 0 || StringFind(msg, "action") >= 0) {
+      // --- v5 新增: 处理查价请求 (GET_SYMBOL_INFO) ---
+      string action = GetJsonValue(msg, "action");
+      if(StringFind(msg, "GET_SYMBOL_INFO") >= 0) {
+         MqlTick t;
+         string s_sym = GetJsonValue(msg, "symbol");
+         if(s_sym == "") s_sym = _Symbol;
+         
+         if(SymbolInfoTick(s_sym, t)) {
+            reply_msg = StringFormat("{\"status\":\"OK\",\"data\":{\"bid\":%.5f,\"ask\":%.5f}}", t.bid, t.ask);
+         } else {
+            reply_msg = "{\"status\":\"ERROR\",\"msg\":\"Symbol Not Found\"}";
+         }
+      }
+      // --- 交易逻辑 ---
+      else if(StringFind(msg, "magic") >= 0 || StringFind(msg, "action") >= 0) {
          MqlTradeRequest req = {};
          MqlTradeResult  res = {};
          
@@ -100,16 +113,13 @@ void ProcessTrade() {
          
          req.action = TRADE_ACTION_DEAL;
          
-         // --- Close By 逻辑 ---
          if(StringFind(s_action_type, "close_by") >= 0 || StringFind(s_type, "CLOSE_BY") >= 0) {
-            Print("⚙️ MODE: CLOSE BY");
             req.action = TRADE_ACTION_CLOSE_BY;
             string s_pos = GetJsonValue(msg, "position");
             if(s_pos != "") req.position = (ulong)StringToInteger(s_pos);
             string s_pos_by = GetJsonValue(msg, "position_by");
             if(s_pos_by != "") req.position_by = (ulong)StringToInteger(s_pos_by);
          } else {
-            // --- 普通交易逻辑 ---
             if(StringFind(s_type, "SELL") >= 0 || StringFind(s_type, "1") >= 0) req.type = ORDER_TYPE_SELL;
             else req.type = ORDER_TYPE_BUY;
             
@@ -126,8 +136,9 @@ void ProcessTrade() {
          req.deviation = 50;
          
          if(OrderSend(req, res)) {
-            reply_msg = "{\"status\":\"FILLED\", \"retcode\":" + IntegerToString(res.retcode) + "}";
-            Print("✅ SUCCESS: ", res.retcode);
+            // v5 关键修复: 在回包里明确写入 ticket 和 deal
+            reply_msg = StringFormat("{\"status\":\"FILLED\",\"retcode\":%d,\"ticket\":%I64d,\"deal\":%I64d}", res.retcode, res.order, res.deal);
+            Print("✅ SUCCESS: ", res.retcode, " Ticket: ", res.order);
          } else {
             reply_msg = "{\"status\":\"ERROR\", \"retcode\":" + IntegerToString(res.retcode) + "}";
             Print("❌ FAIL: ", res.retcode);
