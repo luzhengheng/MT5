@@ -1,0 +1,93 @@
+# BTC/USD 交易策略配置 (24/7 周末测试)
+# Task: 交易品种切换 EURUSD → BTC/USD
+# 生成时间: 2026-01-17
+# 目的: 利用周末进行持续测试
+
+---
+
+strategies:
+  - name: "BTC_USD_Sentinel"
+    enabled: true
+    symbol: "BTCUSD.s"  # ✅ 切换到 BTC/USD (含后缀 .s)
+    model_path: "models/xgboost_baseline.json"
+
+    # 阈值配置
+    threshold: 0.55  # 信号触发阈值
+
+    # 风险管理 - 适配 BTC 的高波动性
+    risk_config:
+      max_position_size: 0.001  # 保持相同手数 (0.001 lot)
+      risk_percentage: 0.5      # 账户风险比 0.5%
+
+      # 止损 / 获利 - BTC 点差较大
+      stop_loss_pips: 500        # ✅ 从 100 pips 调整到 500 pips
+      take_profit_pips: 1000     # ✅ 从 200 pips 调整到 1000 pips
+
+      # BTC 风险控制
+      max_drawdown: 0.10         # 最大回撤 10%
+      max_slippage: 50           # 最大滑点 50 USD
+      daily_loss_limit: 50       # 日亏损上限 $50
+
+    # 市场数据配置
+    market_data:
+      timeframes:
+        - "1H"    # 1 小时线
+        - "4H"    # 4 小时线
+        - "1D"    # 日线
+
+      # BTC 周末数据源配置
+      data_sources:
+        - type: "mt5_realtime"
+          enabled: true
+          description: "MT5 实时数据 (24/7)"
+
+        - type: "backup_crypto_api"
+          enabled: true
+          description: "加密 API 备份源"
+          endpoint: "https://api.crypto-exchange.com/v1/ticker"
+
+    # 交易时间配置
+    trading_hours:
+      mode: "24/7"  # ✅ BTC 全天交易
+      timezone: "UTC"
+      exceptions: []  # 无休市
+
+      weekend_trading:
+        enabled: true  # ✅ 周末交易启用
+        saturday: true
+        sunday: true
+        description: "BTC/USD 支持 24/7 交易，包括周末"
+
+    # 性能监控
+    performance_targets:
+      expected_win_rate: 0.55    # 预期胜率 55%
+      max_consecutive_losses: 3  # 最多连续亏损 3 次
+      min_signal_confidence: 0.60 # 最低信号置信度
+
+    # 日志配置
+    logging:
+      level: "INFO"
+      log_file: "logs/btcusd_trading.log"
+      rotation: "daily"
+      retention_days: 30
+
+    # 备注
+    notes: |
+      BTC/USD 交易配置特点:
+
+      优势:
+        ✅ 24/7 交易 - 周末不中断
+        ✅ 更大波动 - 更好的测试机会
+        ✅ 高流动性 - 快速成交
+        ✅ 更多数据 - 模型训练更充分
+
+      调整项:
+        📊 止损: 100 → 500 pips (适配 BTC 波动性)
+        📊 获利: 200 → 1000 pips (获利目标更大)
+        📊 流动性: 周末可能下降，需监控滑点
+
+      测试计划:
+        Week 1: 纸面交易验证 (7 天)
+        Week 2: 小额实盘 (0.001 lot)
+        Week 3: 数据分析和优化
+        Week 4: 评估结果，决定是否继续
