@@ -1,6 +1,6 @@
 ==================================================
 📦 MT5-CRS 全域资产数据包 (Full Context Pack)
-Generated: 2026年 01月 17日 星期六 17:14:24 CST
+Generated: 2026年 01月 17日 星期六 18:37:25 CST
 ==================================================
 
 
@@ -179,7 +179,8 @@ Generated: 2026年 01月 17日 星期六 17:14:24 CST
 │   ├── news_historical.yaml
 │   ├── risk_limits.yaml
 │   ├── ssh_config_template
-│   └── strategies.yaml
+│   ├── strategies.yaml
+│   └── strategy_btcusd.yaml
 ├── data
 │   ├── chroma
 │   │   └── index
@@ -26015,6 +26016,8 @@ Generated: 2026年 01月 17日 星期六 17:14:24 CST
 │   │       │   ├── PHYSICAL_EVIDENCE.log
 │   │       │   ├── QUICK_START.md
 │   │       │   ├── SYNC_GUIDE.md
+│   │       │   ├── TASK_119_7_DELIVERY_SUMMARY.txt
+│   │       │   ├── TASK_119_7_REALITY_FIX_COMPLETION.md
 │   │       │   └── TASK_119_COMPLETION_SUMMARY.md
 │   │       ├── TASK_119_5
 │   │       │   ├── COMPLETION_REPORT.md
@@ -26035,6 +26038,8 @@ Generated: 2026年 01月 17日 星期六 17:14:24 CST
 │   ├── blueprints
 │   │   ├── 2025_dev_blueprint.md
 │   │   └── eodhd_data_strategy.md
+│   ├── BTCUSD_MIGRATION_SUMMARY.txt
+│   ├── BTCUSD_TRADING_MIGRATION_GUIDE.md
 │   ├── CALIBRATION_ANALYSIS.log
 │   ├── check_sync_status.py
 │   ├── context
@@ -26498,6 +26503,7 @@ Generated: 2026年 01月 17日 星期六 17:14:24 CST
 │   ├── ops
 │   │   ├── check_options.py
 │   │   ├── check_schema.py
+│   │   ├── implement_119_7_fix.py
 │   │   ├── launch_live_sync.py
 │   │   ├── launch_paper_trading.py
 │   │   ├── manage_features.py
@@ -26516,7 +26522,10 @@ Generated: 2026年 01月 17日 星期六 17:14:24 CST
 │   │   ├── ops_verify_mesh.py
 │   │   ├── probe_real_gateway.py
 │   │   ├── run_audit.sh
-│   │   └── test_remote_link.py
+│   │   ├── switch_to_btcusd.py
+│   │   ├── test_119_7_fix.py
+│   │   ├── test_remote_link.py
+│   │   └── verify_119_7.py
 │   ├── ops_force_switch.sh
 │   ├── ops_forensic_analysis.sh
 │   ├── phoenix_test_task_108.py
@@ -26843,10 +26852,12 @@ Generated: 2026年 01月 17日 星期六 17:14:24 CST
 │   │   ├── ingest_stream.py
 │   │   ├── __init__.py
 │   │   ├── json_gateway.py
+│   │   ├── json_gateway.py.bak.119_7
 │   │   ├── market_data_feed.py
 │   │   ├── market_data.py
 │   │   ├── mt5_client.py
 │   │   ├── mt5_service.py
+│   │   ├── mt5_service.py.bak.119_7
 │   │   ├── trade_service.py
 │   │   └── zmq_service.py
 │   ├── inference
@@ -27091,7 +27102,7 @@ Generated: 2026年 01月 17日 星期六 17:14:24 CST
 │       └── orders.json.lock
 └── VERIFY_LOG.log
 
-345 directories, 26739 files
+345 directories, 26750 files
 
 
 >>> PART 2: 基础设施档案 (V1.2 Live)
