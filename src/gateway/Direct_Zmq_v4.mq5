@@ -23,20 +23,16 @@
 long ptr_context = 0;
 long ptr_socket_trade = 0;
 long ptr_socket_quote = 0;
-uchar rx_buffer[4096]; // 扩大缓冲区
+uchar rx_buffer[4096];
 
-// JSON 解析辅助函数
 string GetJsonValue(string json, string key) {
    string search = "\"" + key + "\":";
    int start = StringFind(json, search);
    if(start == -1) return "";
    start += StringLen(search);
-   
    while(StringSubstr(json, start, 1) == " " || StringSubstr(json, start, 1) == ":") start++;
-   
    bool is_string = (StringSubstr(json, start, 1) == "\"");
    if(is_string) start++;
-   
    int end;
    if(is_string) end = StringFind(json, "\"", start);
    else {
@@ -51,10 +47,8 @@ string GetJsonValue(string json, string key) {
 int OnInit() {
    EventSetTimer(1); 
    Print(">>> INIT: v4.0 Smart Gateway (CloseBy/Hedge Support)...");
-   
    ptr_context = zmq_ctx_new();
    if(ptr_context == 0) return(INIT_FAILED);
-   
    ptr_socket_trade = zmq_socket(ptr_context, ZMQ_REP);
    if(ptr_socket_trade != 0) {
       uchar end_trade[];
@@ -62,7 +56,6 @@ int OnInit() {
       zmq_bind(ptr_socket_trade, end_trade);
       Print("✅ TRADE Server: Port 5555");
    }
-   
    ptr_socket_quote = zmq_socket(ptr_context, ZMQ_PUB);
    if(ptr_socket_quote != 0) {
       uchar end_quote[];
@@ -86,7 +79,6 @@ void OnTimer() { ProcessTrade(); }
 void ProcessTrade() {
    ArrayInitialize(rx_buffer, 0);
    int len = zmq_recv(ptr_socket_trade, rx_buffer, 4096, ZMQ_NOBLOCK);
-   
    if(len > 0) {
       string msg = CharArrayToString(rx_buffer, 0, len);
       Print("📩 IN: ", msg);
@@ -97,65 +89,50 @@ void ProcessTrade() {
          MqlTradeResult  res = {};
          
          string s_symbol = GetJsonValue(msg, "symbol");
-         if(s_symbol != "") req.symbol = s_symbol; 
-         else req.symbol = _Symbol; 
-         
+         if(s_symbol != "") req.symbol = s_symbol; else req.symbol = _Symbol;
          string s_vol = GetJsonValue(msg, "volume");
          if(s_vol != "") req.volume = StringToDouble(s_vol);
-         
          string s_magic = GetJsonValue(msg, "magic");
-         if(s_magic != "") req.magic = StringToInteger(s_magic);
-         else req.magic = 999000;
+         if(s_magic != "") req.magic = StringToInteger(s_magic); else req.magic = 999000;
 
          string s_action_type = GetJsonValue(msg, "action_type");
          string s_type = GetJsonValue(msg, "type");
          
          req.action = TRADE_ACTION_DEAL;
          
-         // --- Branch A: Close By (Hedge Merge) ---
+         // --- Close By 逻辑 ---
          if(StringFind(s_action_type, "close_by") >= 0 || StringFind(s_type, "CLOSE_BY") >= 0) {
-            Print("⚙️ MODE: CLOSE BY (Merging Positions)");
+            Print("⚙️ MODE: CLOSE BY");
             req.action = TRADE_ACTION_CLOSE_BY;
-            
             string s_pos = GetJsonValue(msg, "position");
             if(s_pos != "") req.position = (ulong)StringToInteger(s_pos);
-            
             string s_pos_by = GetJsonValue(msg, "position_by");
             if(s_pos_by != "") req.position_by = (ulong)StringToInteger(s_pos_by);
-         } 
-         // --- Branch B: Normal Deal ---
-         else {
+         } else {
+            // --- 普通交易逻辑 ---
             if(StringFind(s_type, "SELL") >= 0 || StringFind(s_type, "1") >= 0) req.type = ORDER_TYPE_SELL;
             else req.type = ORDER_TYPE_BUY;
             
             string s_pos = GetJsonValue(msg, "position");
-            if(s_pos != "") {
-               req.position = (ulong)StringToInteger(s_pos);
-               Print("🔗 Linking to Position: ", req.position);
-            }
+            if(s_pos != "") req.position = (ulong)StringToInteger(s_pos);
             
             string s_price = GetJsonValue(msg, "price");
-            if(s_price != "") {
-               req.price = StringToDouble(s_price);
-            } else {
+            if(s_price != "") req.price = StringToDouble(s_price);
+            else {
                if(req.type == ORDER_TYPE_BUY) req.price = SymbolInfoDouble(req.symbol, SYMBOL_ASK);
                else req.price = SymbolInfoDouble(req.symbol, SYMBOL_BID);
             }
          }
-         
          req.deviation = 50;
          
          if(OrderSend(req, res)) {
-            reply_msg = "{\"status\":\"FILLED\", \"retcode\":" + IntegerToString(res.retcode) + 
-                        ", \"ticket\":" + IntegerToString(res.order) + 
-                        ", \"deal\":" + IntegerToString(res.deal) + "}";
+            reply_msg = "{\"status\":\"FILLED\", \"retcode\":" + IntegerToString(res.retcode) + "}";
             Print("✅ SUCCESS: ", res.retcode);
          } else {
             reply_msg = "{\"status\":\"ERROR\", \"retcode\":" + IntegerToString(res.retcode) + "}";
             Print("❌ FAIL: ", res.retcode);
          }
       }
-      
       uchar reply_bytes[];
       StringToCharArray(reply_msg, reply_bytes);
       zmq_send(ptr_socket_trade, reply_bytes, StringLen(reply_msg), 0);
@@ -166,10 +143,7 @@ void PublishQuote() {
    if(ptr_socket_quote == 0) return;
    MqlTick last_tick;
    if(SymbolInfoTick(_Symbol, last_tick)) {
-      string json_quote = StringFormat(
-         "{\"type\":\"TICK\",\"symbol\":\"%s\",\"bid\":%.5f,\"ask\":%.5f,\"time\":%I64d}",
-         _Symbol, last_tick.bid, last_tick.ask, last_tick.time_msc
-      );
+      string json_quote = StringFormat("{\"type\":\"TICK\",\"symbol\":\"%s\",\"bid\":%.5f,\"ask\":%.5f}", _Symbol, last_tick.bid, last_tick.ask);
       uchar quote_bytes[];
       StringToCharArray(json_quote, quote_bytes);
       zmq_send(ptr_socket_quote, quote_bytes, StringLen(json_quote), 0);
