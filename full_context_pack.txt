@@ -1,6 +1,6 @@
 ==================================================
 📦 MT5-CRS 全域资产数据包 (Full Context Pack)
-Generated: 2026年 01月 17日 星期六 18:37:25 CST
+Generated: 2026年 01月 18日 星期日 05:04:01 CST
 ==================================================
 
 
@@ -180,7 +180,8 @@ Generated: 2026年 01月 17日 星期六 18:37:25 CST
 │   ├── risk_limits.yaml
 │   ├── ssh_config_template
 │   ├── strategies.yaml
-│   └── strategy_btcusd.yaml
+│   ├── strategy_btcusd.yaml
+│   └── trading_config.yaml
 ├── data
 │   ├── chroma
 │   │   └── index
@@ -26030,6 +26031,21 @@ Generated: 2026年 01月 17日 星期六 18:37:25 CST
 │   │       │   ├── SUMMARY.md
 │   │       │   ├── TASK_119_6_FINAL_VERIFICATION.md
 │   │       │   └── VERIFY_LOG.log
+│   │       ├── TASK_119_8
+│   │       │   ├── TASK_119_8_COMPLETION_SUMMARY.md
+│   │       │   ├── TASK_119_8_DELIVERY_SUMMARY.md
+│   │       │   ├── TASK_119_8_EXECUTION_LOG.md
+│   │       │   └── TASK_119_8_VERIFICATION_REPORT.md
+│   │       ├── TASK_120
+│   │       │   ├── AI_REVIEW.md
+│   │       │   └── COMPLETION_REPORT.md
+│   │       ├── TASK_121_CODE_CHANGES.md
+│   │       ├── TASK_121_COMPLETION_REPORT.md
+│   │       ├── TASK_122
+│   │       │   ├── COMPLETION_TIMESTAMP.txt
+│   │       │   ├── TASK_122_COMPLETION_REPORT.md
+│   │       │   └── VERIFY_LOG.log
+│   │       ├── TASK_122_COMPLETION_REPORT.md
 │   │       ├── WORK_ORDER_011_PROGRESS.md
 │   │       ├── WORK_ORDER_025_9_COMPLETION_REPORT.md
 │   │       ├── WORK_ORDER_026_9_COMPLETION_REPORT.md
@@ -26214,9 +26230,11 @@ Generated: 2026年 01月 17日 星期六 18:37:25 CST
 ├── gemini_review_optimizer.log
 ├── gemini_review_task_100.py
 ├── launch_shadow_mode.py
+├── LIVE_RECONCILIATION.log
 ├── logs
 │   ├── sentinel_daemon.log
-│   └── shadow_trading.log
+│   ├── shadow_trading.log
+│   └── trading.log
 ├── MISSION_LOG.md
 ├── mlruns
 │   ├── 0
@@ -26382,7 +26400,8 @@ Generated: 2026年 01月 17日 星期六 18:37:25 CST
 │   │   └── unified_review_gate.py
 │   ├── align_xgboost.sh
 │   ├── analysis
-│   │   └── compare_models.py
+│   │   ├── compare_models.py
+│   │   └── verify_live_pnl.py
 │   ├── archive
 │   ├── audit
 │   │   ├── audit_current_task.py
@@ -26522,10 +26541,13 @@ Generated: 2026年 01月 17日 星期六 18:37:25 CST
 │   │   ├── ops_verify_mesh.py
 │   │   ├── probe_real_gateway.py
 │   │   ├── run_audit.sh
+│   │   ├── run_live_assessment.py
+│   │   ├── simulate_task_120_demo.py
 │   │   ├── switch_to_btcusd.py
 │   │   ├── test_119_7_fix.py
 │   │   ├── test_remote_link.py
-│   │   └── verify_119_7.py
+│   │   ├── verify_119_7.py
+│   │   └── verify_symbol_access.py
 │   ├── ops_force_switch.sh
 │   ├── ops_forensic_analysis.sh
 │   ├── phoenix_test_task_108.py
@@ -26849,6 +26871,7 @@ Generated: 2026年 01月 17日 星期六 18:37:25 CST
 │   │   ├── README.md
 │   │   └── registry.db
 │   ├── gateway
+│   │   ├── Direct_Zmq_v4.mq5
 │   │   ├── ingest_stream.py
 │   │   ├── __init__.py
 │   │   ├── json_gateway.py
@@ -27049,6 +27072,8 @@ Generated: 2026年 01月 17日 星期六 18:37:25 CST
 │   │   └── test_pipeline_integration.py
 │   ├── models
 │   │   └── test_models.py
+│   ├── regression
+│   │   └── test_live_order_cycle.py
 │   ├── test_012_1_conn.py
 │   ├── test_012_2_executor.py
 │   ├── test_async_nexus_basic.py
@@ -27102,7 +27127,7 @@ Generated: 2026年 01月 17日 星期六 18:37:25 CST
 │       └── orders.json.lock
 └── VERIFY_LOG.log
 
-345 directories, 26750 files
+349 directories, 26771 files
 
 
 >>> PART 2: 基础设施档案 (V1.2 Live)

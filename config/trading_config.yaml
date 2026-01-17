@@ -1,0 +1,168 @@
+# ==============================================================================
+# 🎯 MT5-CRS 生产交易配置中心 (Trading Configuration Center)
+# ==============================================================================
+# 任务: Task #121 - Configuration Center Migration & Production Symbol Fix
+# 协议: v4.3 (Zero-Trust Edition)
+# 日期: 2026-01-18
+# 说明: 此文件为唯一事实来源 (Single Source of Truth)，所有交易参数必须调用此配置
+# ==============================================================================
+
+# 通用配置 (Common Settings)
+common:
+  env_name: "production_v1"
+  log_level: "INFO"
+  session_id: "MT5-CRS-TASK121"
+
+# 交易配置 (Trading Configuration)
+# 支持多品种并发交易 (Multi-Symbol Concurrent Trading)
+symbols:
+  - symbol: "BTCUSD.s"
+    magic_number: 202601
+    lot_size: 0.01
+    slippage_tolerance: 10
+    risk_profile:
+      stop_loss_pips: 5000
+      take_profit_pips: 10000
+
+  - symbol: "ETHUSD.s"
+    magic_number: 202602
+    lot_size: 0.01
+    slippage_tolerance: 10
+    risk_profile:
+      stop_loss_pips: 3000
+      take_profit_pips: 6000
+
+  - symbol: "XAUUSD.s"
+    magic_number: 202603
+    lot_size: 0.01
+    slippage_tolerance: 10
+    risk_profile:
+      stop_loss_pips: 500
+      take_profit_pips: 1000
+
+# 默认交易对 (仅用于向后兼容)
+trading:
+  symbol: "BTCUSD.s"
+  magic_number: 202601
+  lot_size: 0.01
+  slippage_tolerance: 10
+
+# 风险管理 (Risk Management)
+risk:
+  # 全局账户风险 (USD)
+  max_drawdown_daily: 50.0
+
+  # 最大回撤百分比 (%)
+  max_drawdown_percent: 10.0
+
+  # 账户风险比 (%) - 针对单个品种
+  risk_percentage: 0.5
+
+  # 最大单品种风险 (USD) - 多品种情况下的独立限制
+  max_per_symbol_risk: 20.0
+
+  # 最大滑点 (USD)
+  max_slippage_usd: 50
+
+  # 最大杠杆
+  max_leverage: 3000
+
+  # 多品种并发风险限额 (%)
+  max_total_exposure: 2.0
+  max_per_symbol: 1.0
+
+# 网关配置 (Gateway Configuration)
+gateway:
+  # ZMQ 请求端口 (REQ-REP 模式)
+  zmq_req_host: "tcp://172.19.141.255"
+  zmq_req_port: 5555
+
+  # ZMQ 发布端口 (PUB-SUB 模式)
+  zmq_pub_host: "tcp://172.19.141.255"
+  zmq_pub_port: 5556
+
+  # 连接超时 (毫秒)
+  timeout_ms: 5000
+
+  # 重试次数
+  retry_attempts: 3
+
+  # 心跳间隔 (秒)
+  heartbeat_interval: 5
+
+  # 多品种并发配置
+  concurrent_symbols: true
+  zmq_lock_enabled: true
+  concurrent_request_delay_ms: 100
+
+# 市场数据配置 (Market Data)
+market_data:
+  # 时间框架
+  timeframes:
+    - "1H"
+    - "4H"
+    - "1D"
+
+  # 数据源
+  data_sources:
+    - type: "mt5_realtime"
+      enabled: true
+      description: "MT5 实时行情 (24/7)"
+
+  # 数据缓冲 (秒)
+  buffer_interval: 60
+
+# 交易时间 (Trading Hours)
+trading_hours:
+  # 模式: 24/7 (BTC/USD 全天可交易)
+  mode: "24/7"
+
+  # 时区
+  timezone: "UTC"
+
+  # 周末交易
+  weekend_trading:
+    enabled: true
+    saturday: true
+    sunday: true
+
+# 模型配置 (ML Model)
+model:
+  # 模型路径
+  path: "models/xgboost_baseline.json"
+
+  # 信号阈值
+  signal_threshold: 0.55
+
+  # 最低置信度
+  min_confidence: 0.60
+
+# 日志配置 (Logging)
+logging:
+  level: "INFO"
+  log_file: "logs/trading_live.log"
+  rotation: "daily"
+  retention_days: 30
+
+# 监控配置 (Monitoring)
+monitoring:
+  # 监控间隔 (秒)
+  interval: 60
+
+  # 关键指标
+  metrics:
+    - "p99_latency"
+    - "order_execution_rate"
+    - "balance_change"
+    - "drawdown_percent"
+
+# 元数据 (Metadata)
+metadata:
+  version: "2.0.0"
+  created_date: "2026-01-18"
+  task_id: "TASK#121-123"
+  description: "配置中心统一管理所有交易参数 + 多品种并发支持 (Task #123)"
+  last_updated: "2026-01-18"
+  symbols_count: 3
+  concurrent_trading_enabled: true
+  symbol_list: ["BTCUSD.s", "ETHUSD.s", "XAUUSD.s"]

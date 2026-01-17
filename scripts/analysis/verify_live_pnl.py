@@ -22,6 +22,7 @@ import json
 import logging
 import argparse
 import sqlite3
+import yaml
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime, timedelta
 from pathlib import Path
@@ -40,6 +41,14 @@ from src.gateway.mt5_client import MT5Client
 
 RECONCILIATION_LOG = Path(__file__).parent.parent.parent / "LIVE_RECONCILIATION.log"
 VERIFY_LOG = Path(__file__).parent.parent.parent / "VERIFY_LOG.log"
+CONFIG_FILE = Path(__file__).parent.parent.parent / "config" / "trading_config.yaml"
+
+def load_trading_config() -> Dict[str, Any]:
+    """加载交易配置中心"""
+    if CONFIG_FILE.exists():
+        with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+            return yaml.safe_load(f)
+    return {}
 
 # Color codes
 GREEN = "\033[92m"
@@ -397,19 +406,29 @@ class ReconciliationEngine:
 # ============================================================================
 
 def main():
+    # 加载配置以获取默认参数
+    config = load_trading_config()
+    default_zmq_host = config.get('gateway', {}).get('zmq_req_host', "tcp://127.0.0.1").replace("tcp://", "")
+    default_zmq_port = config.get('gateway', {}).get('zmq_req_port', 5555)
+
     parser = argparse.ArgumentParser(description="Live PnL Reconciliation")
     parser.add_argument("--logfile", type=str, default="logs/trading.log",
                        help="Local trading log file")
     parser.add_argument("--output", type=str, default="LIVE_RECONCILIATION.log",
                        help="Output reconciliation report")
-    parser.add_argument("--zmq-host", type=str, default="172.19.141.255",
+    parser.add_argument("--zmq-host", type=str, default=default_zmq_host,
                        help="MT5 Gateway ZMQ host")
-    parser.add_argument("--zmq-port", type=int, default=5555,
+    parser.add_argument("--zmq-port", type=int, default=default_zmq_port,
                        help="MT5 Gateway ZMQ port")
     parser.add_argument("--hours", type=int, default=1,
                        help="Query last N hours of history")
 
     args = parser.parse_args()
+
+    # 日志中记录配置信息
+    logger.info(f"{CYAN}[CONFIG] Symbol: {config.get('trading', {}).get('symbol', 'N/A')}{RESET}")
+    logger.info(f"{CYAN}[CONFIG] ZMQ Host: {args.zmq_host}{RESET}")
+    logger.info(f"{CYAN}[CONFIG] ZMQ Port: {args.zmq_port}{RESET}")
 
     logger.info(f"{BLUE}{'=' * 80}{RESET}")
     logger.info(f"{BLUE}Live PnL Verification & Reconciliation Engine{RESET}")

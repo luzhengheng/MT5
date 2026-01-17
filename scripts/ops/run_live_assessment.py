@@ -23,9 +23,10 @@ import argparse
 import subprocess
 import signal
 import sys
+import yaml
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Dict, Any
 
 # Add project root to path
 PROJECT_ROOT = Path(__file__).parent.parent.parent
@@ -38,6 +39,16 @@ from src.bot.trading_bot import TradingBot
 # ============================================================================
 
 VERIFY_LOG = Path(__file__).parent.parent.parent / "VERIFY_LOG.log"
+CONFIG_FILE = Path(__file__).parent.parent.parent / "config" / "trading_config.yaml"
+
+def load_trading_config() -> Dict[str, Any]:
+    """加载交易配置中心"""
+    if not CONFIG_FILE.exists():
+        raise FileNotFoundError(f"配置文件不存在: {CONFIG_FILE}")
+
+    with open(CONFIG_FILE, 'r', encoding='utf-8') as f:
+        config = yaml.safe_load(f)
+    return config
 
 # Color codes
 GREEN = "\033[92m"
@@ -74,10 +85,11 @@ class LiveAssessmentController:
       4. 完成后调用对账引擎
     """
 
-    def __init__(self, duration_seconds: int, volume: float, test_network_fault: bool = True):
+    def __init__(self, duration_seconds: int, volume: float, test_network_fault: bool = True, config: Optional[Dict[str, Any]] = None):
         self.duration_seconds = duration_seconds
         self.volume = volume
         self.test_network_fault = test_network_fault
+        self.config = config or load_trading_config()
         self.start_time = None
         self.end_time = None
         self.bot = None
@@ -98,16 +110,27 @@ class LiveAssessmentController:
         logger.info(f"  Duration: {self.duration_seconds} seconds")
         logger.info(f"  Volume: {self.volume} lots")
         logger.info(f"  Network Fault Test: {self.test_network_fault}")
+        logger.info(f"  Trading Symbol: {self.config['trading']['symbol']}")
 
         try:
+            # 获取配置参数
+            symbol = self.config['trading']['symbol']
+            zmq_req_host = self.config['gateway']['zmq_req_host']
+            zmq_req_port = self.config['gateway']['zmq_req_port']
+            zmq_pub_host = self.config['gateway']['zmq_pub_host']
+            zmq_pub_port = self.config['gateway']['zmq_pub_port']
+
+            # 构建ZMQ URLs
+            zmq_market_url = f"{zmq_pub_host}:{zmq_pub_port}"
+
             # 初始化交易机器人
             self.bot = TradingBot(
-                symbols=["EURUSD"],
+                symbols=[symbol],
                 model_path=str(PROJECT_ROOT / "models" / "xgboost_baseline.json"),
                 api_url="http://localhost:8000",
-                zmq_market_url="tcp://localhost:5556",
-                zmq_execution_host="172.19.141.255",
-                zmq_execution_port=5555,
+                zmq_market_url=zmq_market_url,
+                zmq_execution_host=zmq_req_host.replace("tcp://", ""),
+                zmq_execution_port=zmq_req_port,
                 volume=self.volume
             )
 
@@ -236,13 +259,17 @@ class LiveAssessmentController:
         logger.info("")
 
         try:
+            # 从配置中获取ZMQ参数
+            zmq_host = self.config['gateway']['zmq_req_host'].replace("tcp://", "")
+            zmq_port = str(self.config['gateway']['zmq_req_port'])
+
             cmd = [
                 "python3",
                 str(PROJECT_ROOT / "scripts" / "analysis" / "verify_live_pnl.py"),
                 "--logfile", log_file,
                 "--output", output_file,
-                "--zmq-host", "172.19.141.255",
-                "--zmq-port", "5555",
+                "--zmq-host", zmq_host,
+                "--zmq-port", zmq_port,
                 "--hours", "2"
             ]
 
