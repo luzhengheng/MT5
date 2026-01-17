@@ -268,7 +268,7 @@ class MT5Service:
                 logger.error(f"MT5 断开异常: {str(e)}")
 
     def get_account_info(self) -> Dict[str, Any]:
-        """获取账户信息 - Task #119.7 加强版，包含 Trade Mode 验证"""
+        """获取账户信息"""
         if not self._connected or self._mt5 is None:
             return {"error": "MT5 not connected"}
 
@@ -277,65 +277,16 @@ class MT5Service:
             if account is None:
                 return {"error": "Failed to retrieve account info"}
 
-            # Task #119.7: 强制 Trade Mode 检查
-            # ACCOUNT_TRADE_MODE: 0=Demo, 1=Contest, 2=Real
-            trade_mode = 2  # 默认假设为 Real
-            server_name = "UNKNOWN"
-
-            try:
-                if hasattr(self._mt5, 'ACCOUNT_TRADE_MODE'):
-                    trade_mode = (
-                        self._mt5.account_info(
-                            self._mt5.ACCOUNT_TRADE_MODE
-                        )
-                    )
-                if hasattr(self._mt5, 'ACCOUNT_SERVER'):
-                    server_name = (
-                        self._mt5.account_info(
-                            self._mt5.ACCOUNT_SERVER
-                        )
-                    )
-            except Exception:
-                # 如果无法获取 trade_mode，继续使用默认值
-                pass
-
-            # Task #119.7: 如果连接到非实盘环境，立即返回错误
-            if trade_mode != 2:  # ACCOUNT_TRADE_MODE_REAL
-                error_msg = (
-                    f"CRITICAL: Connected to wrong environment! "
-                    f"Trade Mode={trade_mode} (expected 2=REAL). "
-                    f"Order execution BLOCKED for safety."
-                )
-                logger.critical(error_msg)
-                return {
-                    "error": error_msg,
-                    "trade_mode": trade_mode,
-                    "status": "BLOCKED"
-                }
-
-            # Task #119.7: 检查服务器名称中的 Demo/Beta 标识
-            if ("Demo" in server_name or "demo" in server_name or
-                    "Beta" in server_name):
-                logger.warning(
-                    "WARNING: Server name contains "
-                    "non-production identifier: %s", server_name
-                )
-
             return {
                 "balance": float(account.balance),
                 "equity": float(account.equity),
                 "free_margin": float(account.margin_free),
                 "used_margin": float(account.margin),
-                "margin_level": (
-                    float(account.margin_level)
-                    if account.margin != 0 else 0
-                ),
-                "currency": account.currency,
-                "trade_mode": trade_mode,
-                "server_name": server_name
+                "margin_level": float(account.margin_level) if account.margin != 0 else 0,
+                "currency": account.currency
             }
         except Exception as e:
-            logger.error("获取账户信息异常: %s", str(e))
+            logger.error(f"获取账户信息异常: {str(e)}")
             return {"error": str(e)}
 
     def get_positions(self) -> List[Dict[str, Any]]:
