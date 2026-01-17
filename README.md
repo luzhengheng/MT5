@@ -20,7 +20,7 @@
 |------|------|---------|
 | 🚀 **快速开始** | 首次部署和运行 | [docs/guides/](docs/guides/) |
 | 📚 **参考文档** | 系统指令、协议、架构 | [docs/references/](docs/references/) |
-| 🏗️ **基础设施** | 服务器、网络、配置 | [MT5-CRS 基础设施档案](docs/references/📄%20MT5-CRS%20基础设施资产全景档案.md.md) |
+| 🏗️ **基础设施** | 服务器、网络、配置 | [MT5-CRS 基础设施档案](docs/references/📄%20MT5-CRS%20基础设施资产全景档案.md) |
 | 📦 **任务存档** | 已完成的任务报告 | [docs/archive/tasks/](docs/archive/tasks/) |
 | 📊 **执行日志** | 验证和审计日志 | [docs/archive/logs/](docs/archive/logs/) |
 | 🔍 **工作流** | 开发协议（Protocol v4.3） | [开发协议 v4.3](docs/references/SYSTEM_INSTRUCTION_MT5_CRS_DEVELOPMENT_PROTOCOL_V2.md) |
@@ -179,16 +179,24 @@ lot_size = (账户 * 1%风险)
 
 ### 环境要求
 
+**软件环境**:
+
 - Python 3.6+
 - Redis 6.0+
 - 8GB+ 内存（FinBERT 模型需要 ~1GB）
+- *(可选)* GPU (CUDA) - 用于加速 FinBERT 情感分析推理
+
+**API 和客户端**:
+
+- [EODHD API Key](https://eodhd.com/) - 新闻数据源（免费额度：20 请求/天）
+- *(未来需要)* MetaTrader 5 客户端 - 用于执行层交易
 
 ### 安装依赖
 
 ```bash
-git clone https://github.com/your-org/M-t-5-CRS.git
-cd M-t-5-CRS
-pip3 install -r src/requirements.txt
+git clone https://github.com/your-org/MT5-CRS.git
+cd MT5-CRS
+pip3 install -r requirements.txt
 ```
 
 ### 配置环境变量
@@ -213,8 +221,10 @@ redis-server configs/redis/redis.conf
 ### 启动服务
 
 ```bash
+# 设置 Python 路径
+export PYTHONPATH=$PYTHONPATH:$(pwd)/src
+
 # 终端1：新闻过滤消费者
-cd python
 python3 -m sentiment_service.news_filter_consumer
 
 # 终端2：信号生成消费者

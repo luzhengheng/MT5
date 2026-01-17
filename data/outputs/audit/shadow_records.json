@@ -1,0 +1,38 @@
+{
+  "metadata": {
+    "timestamp": "2026-01-16T08:13:37.750503Z",
+    "mode": "SHADOW_MODE",
+    "total_records": 1,
+    "max_records": 10000
+  },
+  "statistics": {
+    "total_signals": 1,
+    "buy_signals": 0,
+    "sell_signals": 1,
+    "hold_signals": 0,
+    "accuracy_15min": 0.0,
+    "accuracy_1h": 0.0,
+    "accuracy_4h": 0.0,
+    "average_confidence": 0.4269,
+    "win_rate_buy": 0.0,
+    "win_rate_sell": 0.0,
+    "test_period_start": "2026-01-16T00:12:59Z",
+    "test_period_end": "2026-01-16T00:12:59Z"
+  },
+  "records": [
+    {
+      "id": "signal_0_1768522379.402864",
+      "timestamp": "2026-01-16T00:12:59Z",
+      "signal": -1,
+      "price": 1.0840489344892548,
+      "confidence": 0.4269483983516693,
+      "features_hash": "61426403",
+      "feature_values": {},
+      "model_info": {},
+      "mode": "SHADOW_MODE",
+      "accuracy_15min": null,
+      "accuracy_1h": null,
+      "accuracy_4h": null
+    }
+  ]
+}

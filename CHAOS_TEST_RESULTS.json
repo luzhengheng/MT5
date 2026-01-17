@@ -1,0 +1,49 @@
+{
+  "session_id": "2026-01-14T15:28:26.130481-chaos-session",
+  "timestamp": "2026-01-14T15:28:26.290955",
+  "total_scenarios": 5,
+  "passed": 5,
+  "failed": 0,
+  "elapsed_time": 0.16029596328735352,
+  "results": {
+    "scenario_1": {
+      "scenario": "Normal Operation",
+      "test_passed": true,
+      "ticks_processed": 10,
+      "kills_triggered": 0,
+      "alerts_triggered": 0,
+      "current_balance": 100055.0,
+      "max_drawdown": -9.99550202408916e-05,
+      "circuit_breaker_state": "SAFE"
+    },
+    "scenario_2": {
+      "scenario": "Flash Crash",
+      "test_passed": true,
+      "kills_triggered": 8,
+      "max_drawdown": 0.21699349019529418,
+      "cb_state": "ENGAGED"
+    },
+    "scenario_3": {
+      "scenario": "Fat Finger",
+      "test_passed": true,
+      "kills_triggered": 6,
+      "cb_state": "ENGAGED"
+    },
+    "scenario_4": {
+      "scenario": "Extreme Volatility",
+      "test_passed": true,
+      "warnings_triggered": 2,
+      "kills_triggered": 4,
+      "final_alert": "CRITICAL",
+      "max_drawdown": 0.027125000000000437
+    },
+    "scenario_5": {
+      "scenario": "Recovery Mechanism",
+      "test_passed": true,
+      "phase_1_ticks": 5,
+      "phase_2_ticks": 5,
+      "phase_3_ticks": 5,
+      "final_cb_state": "SAFE"
+    }
+  }
+}

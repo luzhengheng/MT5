@@ -26,6 +26,7 @@ LOG_FILE = "VERIFY_LOG.log"
 # --- 核心配置 ---
 AUDIT_SCRIPT = "scripts/audit_current_task.py"
 ENABLE_AI_REVIEW = True # 开启云端大脑
+GEMINI_API_TIMEOUT = 180  # 外部 API 请求超时（秒）
 
 # --- 尝试导入核武器 (curl_cffi) ---
 try:
@@ -34,6 +35,14 @@ try:
 except ImportError:
     CURL_AVAILABLE = False
     print("⚠️  [WARN] 缺少 curl_cffi，建议运行: pip install curl_cffi")
+
+# --- 导入成本优化器模块 ---
+try:
+    from cost_optimizer import AIReviewCostOptimizer
+    OPTIMIZER_AVAILABLE = True
+except ImportError:
+    OPTIMIZER_AVAILABLE = False
+    print("⚠️  [WARN] 成本优化器模块未可用，将使用传统单次审查模式")
 
 # --- UI 颜色配置 (必须在使用前定义) ---
 GREEN = "\033[92m"
@@ -200,11 +209,12 @@ def phase_local_audit():
 # ==============================================================================
 # 🧠 Phase 2: 外部 AI 深度审查 (核心逻辑 + v3.6 Hybrid Mode)
 # ==============================================================================
-def external_ai_review(diff_content, session_id, audit_mode="INCREMENTAL"):
+def external_ai_review(diff_content, session_id, audit_mode="INCREMENTAL", optimizer=None):
     """
-    🆕 v3.6: 支持 Hybrid Force Audit
+    🆕 v3.6: 支持 Hybrid Force Audit + 成本优化
     - audit_mode="INCREMENTAL": Git 变更审计 (增量模式)
     - audit_mode="FORCE_FULL": 全量文件扫描 (强制模式)
+    - optimizer: 可选的 AIReviewCostOptimizer 实例，用于缓存
     """
     if not CURL_AVAILABLE or not GEMINI_API_KEY:
         log("跳过 AI 审查 (缺少配置或依赖)", "WARN")
@@ -260,7 +270,19 @@ def external_ai_review(diff_content, session_id, audit_mode="INCREMENTAL"):
         "session_id": "{session_id}"
     }}
     """
-    
+
+    # 🆕 检查缓存
+    cache_key = f"gemini_review_{audit_mode}"
+    cached_result = None
+    if optimizer:
+        try:
+            cached_result = optimizer.cache.get(cache_key)
+            if cached_result:
+                log(f"[CACHE] 命中缓存: {cache_key}", "SUCCESS")
+                return cached_result.get("commit_message"), cached_result.get("session_id", session_id)
+        except Exception as e:
+            log(f"[WARN] 缓存检查失败: {e}", "WARN")
+
     try:
         resp = requests.post(
             f"{GEMINI_BASE_URL}/chat/completions",
@@ -268,10 +290,10 @@ def external_ai_review(diff_content, session_id, audit_mode="INCREMENTAL"):
             json={
                 "model": GEMINI_MODEL,
                 "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.3 
+                "temperature": 0.3
             },
-            timeout=60,
-            impersonate="chrome110" 
+            timeout=GEMINI_API_TIMEOUT,
+            impersonate="chrome110"
         )
         
         if resp.status_code == 200:
@@ -295,6 +317,7 @@ def external_ai_review(diff_content, session_id, audit_mode="INCREMENTAL"):
             if result:
                 status = result.get("status", "FAIL")
                 returned_session_id = result.get("session_id", session_id)
+                commit_msg = result.get("commit_message_suggestion", "FAIL")
 
                 # --- 🔥 关键：展示 AI 的"话痨"部分给 Claude 看 ---
                 if comments:
@@ -305,9 +328,22 @@ def external_ai_review(diff_content, session_id, audit_mode="INCREMENTAL"):
                     print(f"\n{BLUE}ℹ️  架构师没有提供额外评论。{RESET}\n")
                 # ----------------------------------------------------
 
+                # 🆕 缓存结果
+                if optimizer:
+                    try:
+                        cache_entry = {
+                            "commit_message": commit_msg,
+                            "session_id": returned_session_id,
+                            "status": status,
+                            "reason": result.get('reason', '')
+                        }
+                        optimizer.cache.save(cache_key, cache_entry)
+                    except Exception as e:
+                        log(f"[WARN] 缓存保存失败: {e}", "WARN")
+
                 if status == "PASS":
                     log(f"AI 审查通过: {result.get('reason')}", "SUCCESS")
-                    return result.get("commit_message_suggestion"), returned_session_id
+                    return commit_msg, returned_session_id
                 else:
                     log(f"AI 拒绝提交: {result.get('reason')}", "ERROR")
                     return "FAIL", returned_session_id
@@ -321,13 +357,13 @@ def external_ai_review(diff_content, session_id, audit_mode="INCREMENTAL"):
             return "FATAL_ERROR", session_id
 
     except requests.ConnectTimeout:
-        log(f"[FATAL] 连接超时: 无法连接API服务器 (timeout=60s)", "ERROR")
+        log(f"[FATAL] 连接超时: 无法连接API服务器 (timeout={GEMINI_API_TIMEOUT}s)", "ERROR")
         log(f"检查项: 1) 网络连接  2) VPN 状态  3) API 地址正确性", "ERROR")
         log(f"API 地址: {GEMINI_BASE_URL}", "ERROR")
         return "FATAL_ERROR", session_id
 
     except requests.ReadTimeout:
-        log(f"[FATAL] 读取超时: API服务器响应过慢 (timeout=60s)", "ERROR")
+        log(f"[FATAL] 读取超时: API服务器响应过慢 (timeout={GEMINI_API_TIMEOUT}s)", "ERROR")
         log(f"API 地址: {GEMINI_BASE_URL}", "ERROR")
         return "FATAL_ERROR", session_id
 
@@ -357,6 +393,23 @@ def main():
 
     # 🆕 v3.4: 启动时验证关键配置
     _verify_config()
+
+    # 🆕 集成成本优化器
+    optimizer = None
+    use_optimizer = OPTIMIZER_AVAILABLE
+    if use_optimizer:
+        try:
+            optimizer = AIReviewCostOptimizer(
+                enable_cache=True,
+                enable_batch=False,  # Gemini 单次审查，不使用批处理
+                enable_routing=False,  # 直接使用 Gemini，无路由
+                cache_dir=".cache/gemini_review_cache",
+                log_file="gemini_review_optimizer.log"
+            )
+            log("[INIT] Cost optimizer enabled for Gemini reviews", "INFO")
+        except Exception as e:
+            log(f"[WARN] Failed to initialize optimizer: {e}", "WARN")
+            use_optimizer = False
 
     # 🆕 v3.6: Hybrid Mode - 智能决策审计策略
     print(f"{BLUE}🐛 [DEBUG] 开始检查 Git 状态...{RESET}")
@@ -439,10 +492,12 @@ def main():
     if ENABLE_AI_REVIEW:
         log("=" * 80, "INFO")
         log(f"启动外部AI审查... (模式: {audit_mode})", "PHASE")
+        if use_optimizer:
+            log(f"成本优化器: ENABLED (缓存命中可节省API调用)", "INFO")
         log("=" * 80, "INFO")
         print()
 
-        review_result, session_id = external_ai_review(diff_content, session_id, audit_mode)
+        review_result, session_id = external_ai_review(diff_content, session_id, audit_mode, optimizer=optimizer)
 
         if review_result == "FAIL":
             print()

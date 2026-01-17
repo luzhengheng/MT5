@@ -1,0 +1,32 @@
+{
+  "test_metadata": {
+    "test_type": "ML_SHADOW_MODE",
+    "timestamp": "2026-01-16T08:13:37.750811Z",
+    "protocol_version": "v4.3"
+  },
+  "performance_metrics": {
+    "total_signals": 1,
+    "buy_signals": 0,
+    "sell_signals": 1,
+    "hold_signals": 0,
+    "signal_distribution": {
+      "buy_pct": 0.0,
+      "sell_pct": 100.0,
+      "hold_pct": 0.0
+    }
+  },
+  "accuracy_metrics": {
+    "accuracy_15min": 0.0,
+    "accuracy_1h": 0.0,
+    "accuracy_4h": 0.0,
+    "average_confidence": 0.4269,
+    "win_rate_buy": 0.0,
+    "win_rate_sell": 0.0
+  },
+  "test_period": {
+    "start": "2026-01-16T00:12:59Z",
+    "end": "2026-01-16T00:12:59Z"
+  },
+  "drift_events": 0,
+  "max_psi": 0.0
+}

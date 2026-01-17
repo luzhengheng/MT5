@@ -1,0 +1,40 @@
+{
+  "model_name": "xgboost_baseline",
+  "version": "1.0",
+  "created_at": "2026-01-15T23:52:43.131017",
+  "framework": "xgboost",
+  "framework_version": "2.1.4",
+  "features": [
+    "rsi_14",
+    "rsi_21",
+    "volatility_10",
+    "volatility_20",
+    "sma_5",
+    "sma_10",
+    "sma_20",
+    "sma_50",
+    "macd",
+    "macd_signal",
+    "macd_hist",
+    "price_lag_1",
+    "price_lag_5",
+    "price_lag_10",
+    "return_1d",
+    "return_5d",
+    "return_10d",
+    "hl_ratio",
+    "hl_range",
+    "volume_ratio",
+    "volume_price_trend"
+  ],
+  "n_features": 21,
+  "cv_metrics": {
+    "accuracy": 0.5434526811228778,
+    "precision": 0.5059413059097726,
+    "recall": 0.49959332990152144,
+    "f1": 0.502698056063173
+  },
+  "mlflow_run_id": "9fce9d31531f4ca2b9a3a532ac3b2e31",
+  "model_path": "models/xgboost_baseline.json",
+  "model_md5": "501872fc854eda5c126d47fb15e76e6e"
+}

@@ -1,0 +1,17 @@
+{
+  "task_id": "Task #111",
+  "task_name": "EODHD Connector & Standardization ETL",
+  "execution_time": "2026-01-15T21:49:44.913726",
+  "statistics": {
+    "total_symbols": 0,
+    "successful": 1,
+    "failed": 1,
+    "rows_processed": 7943,
+    "files_saved": 1
+  },
+  "output_files": {
+    "m1": null,
+    "d1": "data_lake/standardized/EURUSD_D1.parquet"
+  },
+  "output_directory": "data_lake/standardized"
+}

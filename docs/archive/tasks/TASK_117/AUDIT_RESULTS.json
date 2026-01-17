@@ -1,0 +1,46 @@
+{
+  "task": "TASK #117",
+  "timestamp": "2026-01-17T01:49:59.659994",
+  "checks": [
+    {
+      "name": "Shadow Log Exists",
+      "status": "PASS",
+      "log_path": "/opt/mt5-crs/logs/shadow_trading.log",
+      "size_bytes": 498
+    },
+    {
+      "name": "Shadow Markers",
+      "status": "PASS",
+      "shadow_signals_count": 5,
+      "sample_signals": [
+        "2026-01-17T01:30:00.582618 | MODEL=CHALLENGER | ACTION=BUY | CONF=0.8500 | PRICE=1.0523 | [SHADOW]\n",
+        "2026-01-17T01:30:00.582867 | MODEL=CHALLENGER | ACTION=SELL | CONF=0.7200 | PRICE=1.0525 | [SHADOW]\n",
+        "2026-01-17T01:30:00.582968 | MODEL=CHALLENGER | ACTION=HOLD | CONF=0.5500 | PRICE=1.0520 | [SHADOW]\n"
+      ]
+    },
+    {
+      "name": "Order Execution Blocked",
+      "status": "PASS",
+      "message": "\u8ba2\u5355\u6267\u884c\u88ab\u6b63\u786e\u62e6\u622a"
+    },
+    {
+      "name": "Signal Format",
+      "status": "PASS",
+      "valid_signals": 5,
+      "total_lines": 5
+    },
+    {
+      "name": "Model Files",
+      "status": "PASS",
+      "baseline_size_kb": 334.4892578125,
+      "challenger_size_kb": 460.77734375
+    },
+    {
+      "name": "Comparison Report",
+      "status": "PASS",
+      "report_path": "/opt/mt5-crs/docs/archive/tasks/TASK_117/MODEL_COMPARISON_REPORT.json",
+      "consistency": 0.407,
+      "diversity": 0.593
+    }
+  ]
+}
