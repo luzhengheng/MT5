@@ -1,0 +1,125 @@
+[96m[2026-01-18 14:08:54] ✅ ArchitectAdvisor v2.0 已初始化 (Session: b57a6214-826c-49e1-a3a3-b1e10387573e)[0m
+[96m[2026-01-18 14:08:54] 🔍 启动审查模式，目标文件数: 1[0m
+[96m[2026-01-18 14:08:54] 📄 正在审查: docs/archive/tasks/导出全量上下文.md[0m
+[96m[2026-01-18 14:08:54] 👤 Persona: 📝 技术作家[0m
+[96m[2026-01-18 14:08:54] 🤖 使用模型: gemini-3-pro-preview[0m
+[96m[2026-01-18 14:08:54] 
+🧠 正在呼叫外部大脑 (gemini-3-pro-preview)...[0m
+[96m[2026-01-18 14:08:54] ⏳ 系统将进行最多 50 次重试 (Protocol v4.4 Wait-or-Die)...[0m
+[96m[2026-01-18 14:09:25] ✅ API 调用成功[0m
+[96m[2026-01-18 14:09:25] 📊 Token Usage: input=1738, output=3115, total=4853[0m
+
+======================================================================
+审查报告: 导出全量上下文.md
+======================================================================
+这里是针对您提供的 Shell 脚本（用于生成全域资产数据包）的审查报告。
+
+作为 MT5-CRS 项目的资深技术作家与业务分析师，我基于 **Protocol v4.4** 和 **Task #123 (多品种并发)** 的最新架构状态进行了审查。
+
+---
+
+# 📝 文档/脚本审查报告 (Review Report)
+
+| 项目 | 详情 |
+| :--- | :--- |
+| **审查对象** | `full_context_pack_generator.sh` (Shell Script snippet) |
+| **审查版本** | v1.0 (User Provided) |
+| **审查人** | AI Review Gate v2.0 (Architect Edition) |
+| **基准架构** | Phase 6 Completed (Task #121 Config Centralization + Task #123 Multi-Symbol) |
+| **审查结果** | ⚠️ **NEEDS IMPROVEMENT (需改进)** |
+
+## 1. 核心发现 (Executive Summary)
+
+该脚本在**语法上是正确**的，能够执行基础的打包任务。但是，从**业务和架构**的角度来看，它**严重滞后**于当前系统状态。它遗漏了 Phase 6 引入的关键组件（配置中心、多品种引擎），导致生成的上下文包无法反映系统的真实全貌（特别是三层架构和 ZMQ 通讯部分）。
+
+## 2. 详细审查意见
+
+### 2.1 一致性 (Consistency) ⚠️
+*   **缺失配置中心 (Task #121)**: 项目已完成配置中心化，所有硬编码已移至配置文件。脚本未包含 `config/` 目录，导致上下文包中缺失最关键的运行参数（如 ZMQ 端口、品种列表、风险阈值）。
+*   **缺失核心引擎 (Task #123)**: 脚本仅抓取了 `launch_live_sync.py` 和 `train_core.py`。这属于旧版或外围脚本。当前核心逻辑位于 **Hub (策略层)** 和 **Gateway (执行层)**，特别是 `ConcurrentTradingEngine` 和 ZMQ 通讯代码未被包含。
+
+### 2.2 准确性 (Accuracy) ❌
+*   **文件路径过时**: 脚本引用的 `docs/asset_inventory.md` 可能已非最新单一事实来源（SSOT）。根据项目背景，`CENTRAL_COMMAND.md` 才是当前的最高指令文档。
+*   **代码覆盖率不足**: 仅包含 Ops 和 Model 文件夹是不够的。三层架构要求展示：
+    1.  **Hub**: 决策逻辑
+    2.  **INF**: 基础设施/ZMQ
+    3.  **GTW**: MT5 交互网关
+
+### 2.3 清晰度 (Clarity) ✅
+*   脚本结构清晰，使用了分节符（PART 1, PART 2...），输出格式易于阅读。
+*   使用了 `tree` 命令，能很好地展示目录结构。
+
+### 2.4 结构与规范 (Structure) ⚠️
+*   **Blueprints 截断风险**: `head -n 1000` 对于长文档可能导致关键信息丢失。建议直接 `cat` 或增加行数限制。
+*   **硬编码路径**: `/opt/mt5-crs` 是硬编码的，虽然在特定服务器上可行，但建议使用变量以增强灵活性。
+
+---
+
+## 3. 改进建议 (Action Plan)
+
+为了让上下文包符合 **Task #123** 和 **Protocol v4.4** 的标准，建议使用以下 **v2.0 版本** 脚本。
+
+### ✅ 推荐替换脚本 (v2.0)
+
+```bash
+(
+  echo "=================================================="
+  echo "📦 MT5-CRS 全域资产数据包 (Full Context Pack v2.0)"
+  echo "Ref: Protocol v4.4 | Task #123 Multi-Symbol Ready"
+  echo "Generated: $(date)"
+  echo "=================================================="
+
+  # 定义项目根目录
+  PROJECT_ROOT="/opt/mt5-crs"
+
+  echo -e "\n\n>>> PART 1: 项目骨架 (Structure)"
+  # 排除更多无关文件，保持上下文精简
+  tree -I "__pycache__|.git|.env|venv|*.log|__init__.py" "$PROJECT_ROOT"
+
+  echo -e "\n\n>>> PART 2: 中央指挥部 (SSOT)"
+  # 读取核心指令文档，而非过时的库存列表
+  cat "$PROJECT_ROOT/CENTRAL_COMMAND.md" 2>/dev/null || echo "⚠️ CENTRAL_COMMAND.md missing"
+  
+  echo -e "\n\n>>> PART 3: 配置中心 (Task #121 Config)"
+  # [关键] 包含配置中心化文件
+  for f in "$PROJECT_ROOT"/config/*.{py,json,yaml}; do
+    [ -e "$f" ] || continue
+    echo -e "\n--- [CONFIG] $(basename "$f") ---"
+    cat "$f"
+  done
+
+  echo -e "\n\n>>> PART 4: 核心代码库 (Task #123 Architecture)"
+  
+  # 1. 启动入口
+  echo -e "\n--- [ENTRY] main.py / launch.py ---"
+  cat "$PROJECT_ROOT/main.py" 2>/dev/null
+  
+  # 2. 策略层 (Hub) & 引擎
+  echo -e "\n--- [CORE] Trading Engine & ZMQ ---"
+  # 假设核心代码在 src 或 core 目录下，根据 Task #123 抓取关键文件
+  # 请根据实际路径调整，这里示例抓取 ZMQ 和 引擎相关
+  find "$PROJECT_ROOT/src" -name "*engine.py" -o -name "*zmq*.py" | while read f; do
+      echo -e "\n--- [SRC] $(basename "$f") ---"
+      cat "$f"
+  done
+
+  # 3. 运维与模型 (保留原有的)
+  echo -e "\n--- [OPS] scripts/ops/launch_live_sync.py ---"
+  cat "$PROJECT_ROOT/scripts/ops/launch_live_sync.py" 2>/dev/null
+  
+  echo -e "\n--- [MODEL] scripts/model/train_core.py ---"
+  cat "$PROJECT_ROOT/scripts/model/train_core.py" 2>/dev/null
+
+  echo -e "\n\n>>> PART 5: 审计日志 (Mission Log)"
+  # 读取最新的任务日志
+  cat "$PROJECT_ROOT/MISSION_LOG.md"
+
+) > full_context_pack_v2.txt && echo "✅ 全量打包完成: full_context_pack_v2.txt (已包含 Task #121/123 更新)"
+```
+
+### 变更理由
+1.  **引入 `CENTRAL_COMMAND.md`**: 确保 AI 审查时基于最新的项目状态。
+2.  **遍历 `config/`**: 捕获 Task #121 的成果，这对理解系统行为至关重要。
+3.  **扫描 `src/`**: 捕获 Task #123 的多品种引擎和 ZMQ 通讯代码，这是当前架构的核心。
+======================================================================
+
