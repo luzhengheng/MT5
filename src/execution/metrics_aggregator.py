@@ -39,6 +39,7 @@ class MetricsAggregator:
         pnl: float = 0.0,
         exposure: float = 0.0,
         win_rate: float = 0.0,
+        is_incremental: bool = True,
     ) -> bool:
         """
         Update metrics for specific symbol.
@@ -49,26 +50,60 @@ class MetricsAggregator:
             pnl: Profit/Loss in USD
             exposure: Current market exposure as percentage
             win_rate: Win rate percentage (0-100)
+            is_incremental: If True, ADD to existing values; else REPLACE
 
         Returns:
             True if successful
         """
         try:
             async with self.lock:
-                self.symbol_metrics[symbol] = {
-                    'trades': trades_count,
-                    'pnl': pnl,
-                    'exposure': exposure,
-                    'win_rate': win_rate,
-                    'last_updated': datetime.utcnow().isoformat(),
-                }
+                # Initialize if not exists
+                if symbol not in self.symbol_metrics:
+                    self.symbol_metrics[symbol] = {
+                        'trades': 0,
+                        'pnl': 0.0,
+                        'exposure': 0.0,
+                        'win_rate': 0.0,
+                        'last_updated': datetime.utcnow().isoformat(),
+                    }
+
+                # Update metrics (incremental or replacement)
+                if is_incremental:
+                    # Add to existing values (for cumulative tracking)
+                    self.symbol_metrics[symbol]['trades'] += trades_count
+                    self.symbol_metrics[symbol]['pnl'] += pnl
+                    self.symbol_metrics[symbol]['exposure'] += exposure
+                    # Win rate is averaged for incremental updates
+                    if trades_count > 0:
+                        prev_trades = (
+                            self.symbol_metrics[symbol]['trades'] - trades_count
+                        )
+                        prev_wr = self.symbol_metrics[symbol]['win_rate']
+                        new_wr = (
+                            (prev_wr * prev_trades + win_rate * trades_count) /
+                            (prev_trades + trades_count)
+                        )
+                        self.symbol_metrics[symbol]['win_rate'] = new_wr
+                else:
+                    # Replace values (for snapshot mode)
+                    self.symbol_metrics[symbol] = {
+                        'trades': trades_count,
+                        'pnl': pnl,
+                        'exposure': exposure,
+                        'win_rate': win_rate,
+                        'last_updated': datetime.utcnow().isoformat(),
+                    }
+
+                self.symbol_metrics[symbol]['last_updated'] = (
+                    datetime.utcnow().isoformat()
+                )
 
                 self.logger.info(
                     f"  {CYAN}[{symbol}]{RESET} "
-                    f"Trades: {trades_count}, "
-                    f"PnL: ${pnl:.2f}, "
-                    f"Exposure: {exposure:.2f}%, "
-                    f"Win Rate: {win_rate:.2f}%"
+                    f"Trades: {self.symbol_metrics[symbol]['trades']}, "
+                    f"PnL: ${self.symbol_metrics[symbol]['pnl']:.2f}, "
+                    f"Exposure: {self.symbol_metrics[symbol]['exposure']:.2f}%, "
+                    f"Win Rate: {self.symbol_metrics[symbol]['win_rate']:.2f}%"
                 )
                 return True
 
