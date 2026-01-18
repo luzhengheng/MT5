@@ -1,0 +1,74 @@
+# Task #126.1 AI审查请求 - unified_review_gate.py (Protocol v4.4 Wait-or-Die实施)
+
+## 审查文件信息
+- 文件: scripts/ai_governance/unified_review_gate.py
+- 修改范围: 第184-289行 (_send_request方法)
+- 核心改进: Wait-or-Die机制 (timeout=None + while True无限循环)
+
+## 关键代码片段待审查
+```python
+def _send_request(self, system_prompt: str, user_content: str, model: str = None) -> str:
+    """[Protocol v4.4 Enhanced] 发送请求到外部 AI 网关"""
+    
+    # 关键改动点1: timeout=None (第238行)
+    response = requests.post(
+        self.api_url,
+        json=payload,
+        headers=headers,
+        impersonate="chrome110",
+        timeout=None  # ← 从原来的400改为None
+    )
+    
+    # 关键改动点2: while True无限循环 (第230行)
+    while True:
+        try:
+            # ... 200 OK: 唯一合法出口
+            if response.status_code == 200:
+                return result_text
+            
+            # 429/5xx: 标准重试
+            elif response.status_code in [429, 500, 502, 503, 504]:
+                pass  # 继续循环
+            
+            # 4xx错误: 长睡眠
+            else:
+                time.sleep(300)  # 强制等待人工介入
+                continue
+        except Exception as e:
+            pass  # 继续循环
+        
+        # 指数退避重试
+        retry_delay = retry_delay * 1.5
+```
+
+## 审查清单 (Checklist):
+
+### 🔴 安全性审查 (Claude Logic Review)
+1. [ ] 无限循环是否会导致资源泄漏? (检查: socket/内存/连接)
+2. [ ] timeout=None是否可能导致僵尸连接?
+3. [ ] 异常处理是否覆盖所有网络故障场景?
+4. [ ] 是否存在HTTP 401/403这类需要人工介入但会进入死循环的情况?
+5. [ ] 指数退避的上限(max_delay=60s)是否合理?
+
+### 📝 架构性审查 (Gemini Context Review)
+1. [ ] 该改动是否违反非删减原则? (保留了execute_plan/execute_review吗?)
+2. [ ] Wait-or-Die机制是否与Protocol v4.4 Pillar V相符?
+3. [ ] 是否缺少日志记录重试次数的功能?
+4. [ ] 异常类型的分类是否足够细致? (ConnectionReset vs TimeoutError vs ChunkedEncodingError)
+5. [ ] dev_loop.sh中stage_review是否正确调用此方法?
+
+### 🔗 集成性审查
+1. [ ] 该方法是否被execute_plan和execute_review正确调用?
+2. [ ] 是否与VERIFY_LOG.log的记录一致?
+3. [ ] 是否与dev_loop.sh的5阶段流程协调?
+
+## 预期建议方向:
+- 代码质量问题 (syntax/logic/security)
+- 性能问题 (资源泄漏/死循环/内存占用)
+- 协议合规性问题 (是否满足Protocol v4.4)
+- 集成测试问题 (与其他模块的兼容性)
+
+## 关键约束:
+- 严禁推荐任何绕过等待的改动
+- 严禁建议修改业务逻辑
+- 严禁删除已有的功能
