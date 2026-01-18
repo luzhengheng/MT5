@@ -213,24 +213,22 @@ class JsonGatewayRouter:
             }
 
     # ========================================================================
-    # MT5 Handler with Resilience (Protocol v4.4)
+    # MT5 Handler with Financial Safety (Protocol v4.4 Revised)
     # ========================================================================
 
-    @wait_or_die(
-        timeout=30,
-        exponential_backoff=True,
-        max_retries=5,
-        initial_wait=1.0,
-        max_wait=10.0
-    ) if RESILIENCE_AVAILABLE else lambda f: f
     def _execute_order_with_resilience(
         self, payload: Dict[str, Any]
     ) -> Dict[str, Any]:
         """
-        Execute order on MT5 handler with @wait_or_die resilience.
+        Execute order on MT5 handler WITHOUT automatic timeout retry.
 
-        Protocol v4.4: Implement robust MT5 API calls with automatic retry
-        on transient network failures or service unavailability.
+        CRITICAL: Financial orders must NOT be retried on timeout to prevent
+        double spending risk. Timeout indicates uncertain state - the order
+        may have been executed on MT5 side but response was lost.
+
+        Protocol v4.4 Safety Principle:
+        - DO retry: Connection refused (network not established)
+        - DO NOT retry: Timeout (order status unknown)
 
         Args:
             payload: Order data
@@ -239,17 +237,38 @@ class JsonGatewayRouter:
             MT5 execution response
 
         Raises:
-            ConnectionError: If MT5 handler call fails
-            TimeoutError: If execution exceeds timeout
+            ConnectionError: If MT5 handler connection fails (safe to retry)
+            TimeoutError: If execution times out (NOT safe to retry)
         """
         try:
-            # Execute order on MT5 handler
+            # Execute order on MT5 handler (NO automatic retry on timeout)
             return self.mt5.execute_order(payload)
-        except Exception as e:
-            # Convert exceptions to ConnectionError for @wait_or_die
-            if "timeout" in str(e).lower():
-                raise TimeoutError(str(e))
+        except TimeoutError as e:
+            # Timeout means status unknown - DO NOT retry
+            # Return explicit error to upper layer for manual handling
+            logger.error(
+                f"[JsonGatewayRouter] Order execution timeout: {str(e)} "
+                f"(status unknown, NOT retrying to prevent double orders)"
+            )
+            return {
+                "error": True,
+                "ticket": 0,
+                "msg": f"Order execution timeout - status unknown (NOT retrying): {str(e)}",
+                "retcode": -1
+            }
+        except (ConnectionError, ConnectionRefusedError, ConnectionAbortedError) as e:
+            # Connection error means order NOT sent - safe to propagate
+            logger.error(f"[JsonGatewayRouter] Connection error: {str(e)}")
             raise ConnectionError(str(e))
+        except Exception as e:
+            # Other exceptions - treat as execution error, NOT safe to retry
+            logger.error(f"[JsonGatewayRouter] Order execution error: {str(e)}")
+            return {
+                "error": True,
+                "ticket": 0,
+                "msg": f"Order execution failed: {str(e)}",
+                "retcode": -4
+            }
 
     # ========================================================================
     # Order Execution Handler
@@ -356,25 +375,19 @@ class JsonGatewayRouter:
             # Map "OP_BUY"/"OP_SELL" to MT5 handler method
             if order_type == "OP_BUY":
                 order_payload["order_type"] = "BUY"
-                if RESILIENCE_AVAILABLE:
-                    logger.debug(
-                        "[JsonGatewayRouter] Using @wait_or_die resilience "
-                        "for MT5 order execution (5 retries, 30s timeout)"
-                    )
-                    result = self._execute_order_with_resilience(order_payload)
-                else:
-                    result = self.mt5.execute_order(**order_payload)
+                logger.debug(
+                    "[JsonGatewayRouter] Executing BUY order "
+                    "(NO timeout retry to prevent double orders)"
+                )
+                result = self._execute_order_with_resilience(order_payload)
 
             elif order_type == "OP_SELL":
                 order_payload["order_type"] = "SELL"
-                if RESILIENCE_AVAILABLE:
-                    logger.debug(
-                        "[JsonGatewayRouter] Using @wait_or_die resilience "
-                        "for MT5 order execution (5 retries, 30s timeout)"
-                    )
-                    result = self._execute_order_with_resilience(order_payload)
-                else:
-                    result = self.mt5.execute_order(**order_payload)
+                logger.debug(
+                    "[JsonGatewayRouter] Executing SELL order "
+                    "(NO timeout retry to prevent double orders)"
+                )
+                result = self._execute_order_with_resilience(order_payload)
             else:
                 return {
                     "error": True,

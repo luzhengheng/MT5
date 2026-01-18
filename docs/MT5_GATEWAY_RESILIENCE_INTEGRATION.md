@@ -9,14 +9,16 @@
 
 ## 📋 执行摘要
 
-将 `resilience.py` 的 `@wait_or_die` 装饰器集成到MT5网关的两个关键模块，提高网络通信的可靠性。
+将 `resilience.py` 的 `@wait_or_die` 装饰器集成到MT5网关模块，提高网络通信的可靠性。
+
+⚠️ **重要安全修订** (2026-01-19): 经外部AI审查，JSON网关订单执行已移除自动超时重试以防止重复下单风险。
 
 ### 集成成果
 
 | 模块 | 位置 | 改进 | 状态 |
 |------|------|------|------|
-| **ZMQ网关** | `src/gateway/zmq_service.py` | socket接收/发送 + 10次重试 | ✅ 完成 |
-| **JSON网关** | `src/gateway/json_gateway.py` | MT5订单执行 + 5次重试 | ✅ 完成 |
+| **ZMQ网关** | `src/gateway/zmq_service.py` | socket接收/发送 + 10次重试 (5s超时) | ✅ 完成 |
+| **JSON网关** | `src/gateway/json_gateway.py` | 连接错误处理 (NO超时重试) | ✅ 完成 |
 
 ---
 
@@ -31,17 +33,17 @@
 - `_send_json_with_resilience()`: Socket发送 (30秒超时, 10次重试)
 - `_command_loop()`: 主命令循环，使用上述两个方法
 
-**关键改进**:
+**关键改进** (2026-01-19修订):
 ```python
 @wait_or_die(
-    timeout=30,
+    timeout=5,           # Hub-aligned timeout (revised from 30s)
     exponential_backoff=True,
     max_retries=10,
     initial_wait=0.5,
-    max_wait=5.0
+    max_wait=2.0         # Reduced from 5.0 to 2.0
 ) if RESILIENCE_AVAILABLE else lambda f: f
 def _recv_json_with_resilience(self) -> Dict[str, Any]:
-    """使用 @wait_or_die 保护socket接收"""
+    """使用 @wait_or_die 保护socket接收 (Hub兼容超时)"""
     self.rep_socket.setsockopt(zmq.RCVTIMEO, 1000)
     try:
         return self.rep_socket.recv_json()
@@ -51,7 +53,8 @@ def _recv_json_with_resilience(self) -> Dict[str, Any]:
 
 **优势**:
 - ✅ 处理网络抖动 (10次重试 vs 原有的超时即失败)
-- ✅ 自动指数退避 (0.5s → 1s → 2s ... → 5s)
+- ✅ 自动指数退避 (0.5s → 1s → 2s → 2s ...)
+- ✅ Hub超时对齐 (5秒总超时，与Hub 2.5-5s对齐)
 - ✅ 优雅降级 (resilience不可用时使用原有超时机制)
 
 ### 2. JSON网关集成
@@ -59,32 +62,35 @@ def _recv_json_with_resilience(self) -> Dict[str, Any]:
 **文件**: `src/gateway/json_gateway.py`
 
 **集成点**:
-- `_execute_order_with_resilience()`: MT5订单执行 (30秒超时, 5次重试)
+- `_execute_order_with_resilience()`: MT5订单执行 (NO自动超时重试)
 - `_handle_order_send()`: 订单处理，使用上述方法
 
-**关键改进**:
+⚠️ **重要安全修订** (2026-01-19): 经外部AI审查发现，金融订单操作不应自动重试超时错误，因为超时表示订单状态不确定（可能已在MT5端执行），自动重试会导致重复下单风险。
+
+**关键改进** (修订后):
 ```python
-@wait_or_die(
-    timeout=30,
-    exponential_backoff=True,
-    max_retries=5,
-    initial_wait=1.0,
-    max_wait=10.0
-) if RESILIENCE_AVAILABLE else lambda f: f
 def _execute_order_with_resilience(self, payload: Dict[str, Any]) -> Dict[str, Any]:
-    """使用 @wait_or_die 保护MT5 API调用"""
+    """MT5订单执行 - 仅处理连接错误，NOT超时"""
     try:
         return self.mt5.execute_order(payload)
-    except Exception as e:
-        if "timeout" in str(e).lower():
-            raise TimeoutError(str(e))
+    except TimeoutError as e:
+        # 超时=状态不确定，返回错误给上层处理（不重试）
+        return {
+            "error": True,
+            "ticket": 0,
+            "msg": "Order timeout - status unknown (NOT retrying)",
+            "retcode": -1
+        }
+    except (ConnectionError, ConnectionRefusedError) as e:
+        # 连接错误=订单未发送，安全传播给上层
         raise ConnectionError(str(e))
 ```
 
-**优势**:
-- ✅ 订单执行更可靠 (网络故障时自动重试)
-- ✅ 防止订单丢失 (最多5次重试)
-- ✅ 清晰的错误分类 (超时 vs 连接错误)
+**安全原则**:
+- ✅ 连接错误可重试 (订单未发送)
+- ❌ 超时不可重试 (订单状态不确定，可能已执行)
+- ✅ 防止重复下单 (Double Spending Prevention)
+- ✅ 清晰的错误分类和日志记录
 
 ---
 
@@ -96,15 +102,17 @@ def _execute_order_with_resilience(self, payload: Dict[str, Any]) -> Dict[str, A
 |------|--------|--------|------|
 | **超时行为** | 立即失败 | 10次重试 | 更好的故障恢复 |
 | **网络抖动处理** | 无 | 自动 | 适应网络波动 |
-| **总等待时间** | 1秒 | 最多 30秒 | 仍然有超时保护 |
+| **总等待时间** | 1秒 | 最多 5秒 | Hub兼容的超时 |
+| **指数退避** | 无 | 0.5→2s | 防止网络雪崩 |
 
 ### MT5订单执行 (JSON)
 
 | 指标 | 改进前 | 改进后 | 说明 |
 |------|--------|--------|------|
-| **重试能力** | 无 | 5次 | 提高执行成功率 |
-| **暂时故障处理** | 失败 | 重试 | 减少订单失败 |
-| **超时保护** | 无 | 30秒 | 防止无限等待 |
+| **超时重试** | 无 | ❌ 已禁用 | 防止重复下单 |
+| **连接错误处理** | 失败 | 传播给上层 | 安全的错误处理 |
+| **订单安全性** | 中 | 高 | Double Spending 防护 |
+| **错误分类** | 简单 | 精确 | TimeoutError vs ConnectionError |
 
 ---
 
@@ -185,46 +193,54 @@ grep "成功\|success" *.log
 - [x] 代码注释完整
 
 ### 功能完整性
-- [x] ZMQ Socket接收增强
-- [x] ZMQ Socket发送增强
-- [x] MT5订单执行增强
+- [x] ZMQ Socket接收增强 (5s超时, 10次重试)
+- [x] ZMQ Socket发送增强 (5s超时, 10次重试)
+- [x] MT5订单执行安全处理 (NO超时重试)
 - [x] 原有功能保留
-- [x] 错误处理保留
+- [x] 错误处理保留并增强
 
 ### 部署就绪
 - [x] 所有模块编译通过
 - [x] 优雅降级机制 (fallback)
 - [x] Protocol v4.4合规
+- [x] P1安全修复完成 (2026-01-19)
 - [ ] 生产环境测试 (待执行)
+- [ ] 订单重复测试 (待执行)
 
 ---
 
-## 🔐 关键特性
+## 🔐 关键特性 (修订版本 2026-01-19)
 
-✅ **ZMQ网关**:
+✅ **ZMQ网关** (安全的重试):
 - 10次重试 (vs 原有的立即失败)
-- 30秒超时保护 (防止无限挂起)
-- 指数退避 0.5s → 5s
+- 5秒超时保护 (Hub兼容)
+- 指数退避 0.5s → 2s
 - 优雅降级
+- 双向保护 (接收+发送)
 
-✅ **JSON网关**:
-- 5次重试保护
-- 30秒超时保护
+✅ **JSON网关** (金融安全):
+- ❌ NO超时重试 (防止重复下单)
+- ✅ 连接错误安全传播
 - 清晰的异常分类
-- 幂等性保留
+- Double Spending 防护
+- 幂等性设计就绪
 
 ---
 
-## 🎯 后续建议
+## 🎯 后续建议 (修订版本)
 
-### 立即
+### 立即 (P1完成)
+- [x] 修复订单执行重复下单风险 (2026-01-19)
+- [x] 调整ZMQ超时与Hub对齐 (30s→5s)
+- [x] 更新文档移除风险声明
 - [ ] 部署到测试环境
-- [ ] 监控重试成功率
-- [ ] 验证订单执行成功率提升
+- [ ] 运行订单重复压力测试
+- [ ] 验证ZMQ延迟指标 (P99 < 5s)
 
 ### 近期
-- [ ] 收集性能数据
-- [ ] 调整重试参数 (根据实际故障率)
+- [ ] 收集生产性能数据
+- [ ] 监控订单执行安全性
+- [ ] 验证无重复订单发生
 - [ ] 部署到生产环境
 
 ### 长期
@@ -234,8 +250,22 @@ grep "成功\|success" *.log
 
 ---
 
-**集成完成日期**: 2026-01-18
-**验收状态**: ✅ 代码完成
-**下一步**: 部署到测试环境进行验证
+## 📝 修订历史
+
+**v1.0** (2026-01-18): 初始集成
+- ZMQ网关: 30s超时, 10次重试
+- JSON网关: 30s超时, 5次重试
+
+**v2.0** (2026-01-19): 安全修订 (外部AI审查)
+- ⚠️ 移除JSON网关订单执行的超时重试 (防止重复下单)
+- ✅ ZMQ超时从30s调整为5s (Hub兼容)
+- ✅ 改进异常分类和错误处理
+- ✅ 文档更新移除风险声明
+
+---
+
+**集成完成日期**: 2026-01-18 (初版) / 2026-01-19 (安全修订)
+**验收状态**: ✅ P1修复完成，待测试验证
+**下一步**: 运行订单重复测试 + ZMQ延迟测试
 
 Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>

@@ -185,18 +185,23 @@ class ZmqGatewayService:
     # ========================================================================
 
     @wait_or_die(
-        timeout=30,
+        timeout=5,           # Hub-aligned timeout (was 30s)
         exponential_backoff=True,
         max_retries=10,
         initial_wait=0.5,
-        max_wait=5.0
+        max_wait=2.0         # Reduced from 5.0 to 2.0
     ) if RESILIENCE_AVAILABLE else lambda f: f
     def _recv_json_with_resilience(self) -> Dict[str, Any]:
         """
         Receive JSON message from socket with @wait_or_die resilience.
 
-        Protocol v4.4: Implement robust socket receiving with automatic
-        retry on transient network failures (ConnectionError, TimeoutError).
+        Protocol v4.4 Revised: Implement robust socket receiving with Hub-aligned
+        timeout (5s). This ensures Gateway retry completes before Hub disconnect.
+
+        Hub Compatibility:
+        - Hub request timeout: 2.5s - 5s
+        - Gateway total retry: ~5s (10 retries, exponential 0.5→2s)
+        - Ensures coordination with upstream timeouts
 
         Returns:
             Parsed JSON dictionary
@@ -212,18 +217,18 @@ class ZmqGatewayService:
             raise TimeoutError("ZMQ receive timeout")
 
     @wait_or_die(
-        timeout=30,
+        timeout=5,           # Hub-aligned timeout (was 30s)
         exponential_backoff=True,
         max_retries=10,
         initial_wait=0.5,
-        max_wait=5.0
+        max_wait=2.0         # Reduced from 5.0 to 2.0
     ) if RESILIENCE_AVAILABLE else lambda f: f
     def _send_json_with_resilience(self, data: Dict[str, Any]) -> None:
         """
         Send JSON message to socket with @wait_or_die resilience.
 
-        Protocol v4.4: Implement robust socket sending with automatic
-        retry on transient network failures.
+        Protocol v4.4 Revised: Implement robust socket sending with Hub-aligned
+        timeout (5s). This ensures Gateway retry completes before Hub disconnect.
 
         Args:
             data: Dictionary to send as JSON
