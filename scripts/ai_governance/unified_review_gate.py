@@ -185,7 +185,8 @@ class ArchitectAdvisor:
     MAX_RETRIES = 50
 
     def _send_request(
-        self, system_prompt: str, user_content: str, model: Optional[str] = None
+        self, system_prompt: str, user_content: str,
+        model: Optional[str] = None
     ) -> str:
         """[Protocol v4.4 Enhanced v2] 发送请求到外部 AI 网关
 
@@ -254,8 +255,8 @@ class ArchitectAdvisor:
                 if response.status_code == 200:
                     try:
                         res_json = response.json()
-                        msg_content = res_json['choices'][0]['message']['content']
-                        result_text: str = msg_content
+                        msg = res_json['choices'][0]['message']['content']
+                        result_text: str = msg
                         usage = res_json.get('usage', {})
 
                         input_tokens = usage.get('prompt_tokens', 0)
@@ -279,14 +280,19 @@ class ArchitectAdvisor:
                 # 4xx (400/401/403): 认证或授权错误，立即失败
                 elif response.status_code in [400, 401, 403]:
                     err_text = response.text[:100]
-                    self._log(f"🛑 API认证错误 (HTTP {response.status_code}): {err_text}...")
+                    code = response.status_code
+                    msg = f"🛑 API认证错误 (HTTP {code})"
+                    self._log(f"{msg}: {err_text}...")
                     self._log("⚠️ 请检查 .env 配置或 API Key。")
-                    err_msg = f"❌ API 错误 (HTTP {response.status_code}): 认证失败"
-                    return err_msg
+                    err = f"❌ API错误 (HTTP {response.status_code}): 认证失败"
+                    return err
 
                 # 其他错误
                 else:
-                    self._log(f"⚠️ 未知响应 (HTTP {response.status_code}): {response.text[:100]}...")
+                    code = response.status_code
+                    text = response.text[:100]
+                    msg = f"⚠️ 未知响应 (HTTP {code})"
+                    self._log(f"{msg}: {text}...")
 
             except Exception as e:
                 # 捕获所有网络层异常 (ConnectionReset, ChunkedEncodingError 等)
@@ -465,9 +471,25 @@ grep "EODHD" VERIFY_LOG.log | tail -10
         print(f"\n{GREEN}【工单生成完成】{RESET}")
         print(f"输出路径: {output_path}")
 
-    def execute_review(self, file_paths: List[str]):
-        """审查模式：自动分流代码 vs 文档"""
+    def execute_review(self, file_paths: List[str],
+                       mode: str = 'fast',
+                       strict: bool = False,
+                       mock: bool = False):
+        """审查模式：自动分流代码 vs 文档
+
+        Args:
+            file_paths: 要审查的文件列表
+            mode: 审查模式 (dual/fast/deep)
+            strict: 是否使用严格模式
+            mock: 是否使用模拟模式
+        """
         self._log(f"🔍 启动审查模式，目标文件数: {len(file_paths)}")
+        self._log(f"🔧 审查模式: {mode}, 严格模式: {strict}, Mock模式: {mock}")
+
+        # Mock模式：临时禁用API调用
+        if mock:
+            self.api_key = None
+            self._log("📝 已启用Mock模式，将使用演示数据")
 
         for file_path in file_paths:
             if not os.path.exists(file_path):
@@ -585,6 +607,20 @@ def main():
     review_parser = subparsers.add_parser('review', help='审查代码或文档')
     review_parser.add_argument('files', nargs='+',
                                help='要审查的文件列表')
+    # 新增参数：--mode 和 --strict (Task #127.1修复)
+    review_parser.add_argument(
+        '--mode', default='fast',
+        choices=['dual', 'fast', 'deep'],
+        help='审查模式: dual=双脑, fast=快速, deep=深度 (默认: fast)'
+    )
+    review_parser.add_argument(
+        '--strict', action='store_true',
+        help='严格模式：任何问题都视为失败'
+    )
+    review_parser.add_argument(
+        '--mock', action='store_true',
+        help='演示模式：不调用实际API，使用模拟数据'
+    )
 
     args = parser.parse_args()
 
@@ -593,7 +629,14 @@ def main():
     if args.mode == 'plan':
         advisor.execute_plan(args.req, args.out)
     elif args.mode == 'review':
-        advisor.execute_review(args.files)
+        # Task #127.1修复：传递新参数
+        review_mode = getattr(args, 'mode', 'fast')
+        strict_mode = getattr(args, 'strict', False)
+        mock_mode = getattr(args, 'mock', False)
+        advisor.execute_review(args.files,
+                               mode=review_mode,
+                               strict=strict_mode,
+                               mock=mock_mode)
 
 
 if __name__ == "__main__":
