@@ -44,6 +44,18 @@ from src.mt5_bridge.protocol import (
     validate_request
 )
 
+# Import resilience module for @wait_or_die (Protocol v4.4)
+try:
+    from src.utils.resilience import wait_or_die
+    RESILIENCE_AVAILABLE = True
+except ImportError:
+    RESILIENCE_AVAILABLE = False
+    logger_init = logging.getLogger(__name__)
+    logger_init.warning(
+        "[ZMQ Gateway] resilience.py not available, "
+        "using ZMQ socket timeout fallback"
+    )
+
 logger = logging.getLogger(__name__)
 
 
@@ -169,6 +181,66 @@ class ZmqGatewayService:
         logger.info("[ZMQ Gateway] Service stopped")
 
     # ========================================================================
+    # Resilience-Enhanced Socket Operations (Protocol v4.4)
+    # ========================================================================
+
+    @wait_or_die(
+        timeout=30,
+        exponential_backoff=True,
+        max_retries=10,
+        initial_wait=0.5,
+        max_wait=5.0
+    ) if RESILIENCE_AVAILABLE else lambda f: f
+    def _recv_json_with_resilience(self) -> Dict[str, Any]:
+        """
+        Receive JSON message from socket with @wait_or_die resilience.
+
+        Protocol v4.4: Implement robust socket receiving with automatic
+        retry on transient network failures (ConnectionError, TimeoutError).
+
+        Returns:
+            Parsed JSON dictionary
+
+        Raises:
+            zmq.Again: If timeout before receiving
+            json.JSONDecodeError: If invalid JSON received
+        """
+        self.rep_socket.setsockopt(zmq.RCVTIMEO, 1000)
+        try:
+            return self.rep_socket.recv_json()
+        except zmq.Again:
+            raise TimeoutError("ZMQ receive timeout")
+
+    @wait_or_die(
+        timeout=30,
+        exponential_backoff=True,
+        max_retries=10,
+        initial_wait=0.5,
+        max_wait=5.0
+    ) if RESILIENCE_AVAILABLE else lambda f: f
+    def _send_json_with_resilience(self, data: Dict[str, Any]) -> None:
+        """
+        Send JSON message to socket with @wait_or_die resilience.
+
+        Protocol v4.4: Implement robust socket sending with automatic
+        retry on transient network failures.
+
+        Args:
+            data: Dictionary to send as JSON
+
+        Raises:
+            ConnectionError: If send fails after retries
+            zmq.ZMQError: If ZMQ operation fails
+        """
+        try:
+            self.rep_socket.send_json(data)
+        except zmq.ZMQError as e:
+            # Convert ZMQ errors to ConnectionError for @wait_or_die
+            if "Resource temporarily unavailable" in str(e):
+                raise TimeoutError(str(e))
+            raise ConnectionError(str(e))
+
+    # ========================================================================
     # Command Processing Loop
     # ========================================================================
 
@@ -177,7 +249,7 @@ class ZmqGatewayService:
         Main command processing loop (runs in daemon thread).
 
         Continuously receives requests, routes them to MT5 handler,
-        and sends responses.
+        and sends responses using Protocol v4.4 @wait_or_die resilience.
 
         This method runs until self.running is set to False.
         """
@@ -185,29 +257,76 @@ class ZmqGatewayService:
 
         while self.running:
             try:
-                # Receive request (with timeout to allow graceful shutdown)
-                self.rep_socket.setsockopt(zmq.RCVTIMEO, 1000)  # 1 second
-                req = self.rep_socket.recv_json()
+                # Receive request with resilience
+                if RESILIENCE_AVAILABLE:
+                    # Use @wait_or_die protected socket operations
+                    logger.debug(
+                        "[ZMQ Gateway] Using @wait_or_die socket protection "
+                        "(10 retries, 30s timeout)"
+                    )
+                    try:
+                        req = self._recv_json_with_resilience()
+                    except TimeoutError:
+                        # @wait_or_die timeout - continue to check self.running
+                        continue
+                else:
+                    # Fallback to original socket timeout logic
+                    self.rep_socket.setsockopt(zmq.RCVTIMEO, 1000)
+                    try:
+                        req = self.rep_socket.recv_json()
+                    except zmq.Again:
+                        continue
 
                 # Validate request structure
                 if not validate_request(req):
-                    logger.warning(f"[ZMQ Gateway] Invalid request structure: {req}")
+                    logger.warning(
+                        f"[ZMQ Gateway] Invalid request structure: {req}"
+                    )
                     error_resp = create_response(
                         req_id=req.get('req_id', 'unknown'),
                         status=ResponseStatus.ERROR,
                         error="Invalid request structure"
                     )
-                    self.rep_socket.send_json(error_resp)
+
+                    if RESILIENCE_AVAILABLE:
+                        try:
+                            self._send_json_with_resilience(error_resp)
+                        except Exception as send_err:
+                            logger.error(
+                                f"[ZMQ Gateway] Failed to send error response: "
+                                f"{send_err}"
+                            )
+                    else:
+                        try:
+                            self.rep_socket.send_json(error_resp)
+                        except Exception as send_err:
+                            logger.error(
+                                f"[ZMQ Gateway] Failed to send error response: "
+                                f"{send_err}"
+                            )
                     continue
 
                 # Process request
                 response = self._process_request(req)
 
-                # Send response
-                self.rep_socket.send_json(response)
+                # Send response with resilience
+                if RESILIENCE_AVAILABLE:
+                    try:
+                        self._send_json_with_resilience(response)
+                    except Exception as send_err:
+                        logger.error(
+                            f"[ZMQ Gateway] Failed to send response: {send_err}"
+                        )
+                else:
+                    try:
+                        self.rep_socket.send_json(response)
+                    except Exception as send_err:
+                        logger.error(
+                            f"[ZMQ Gateway] Failed to send response: {send_err}"
+                        )
 
             except zmq.Again:
-                # Timeout - continue loop to check self.running
+                # Timeout (when resilience not available) - continue
                 continue
 
             except Exception as e:
@@ -219,7 +338,13 @@ class ZmqGatewayService:
                         status=ResponseStatus.ERROR,
                         error=str(e)
                     )
-                    self.rep_socket.send_json(error_resp)
+                    if RESILIENCE_AVAILABLE:
+                        try:
+                            self._send_json_with_resilience(error_resp)
+                        except:
+                            pass
+                    else:
+                        self.rep_socket.send_json(error_resp)
                 except:
                     pass
 
