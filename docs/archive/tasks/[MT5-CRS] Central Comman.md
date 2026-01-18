@@ -396,11 +396,16 @@ Token消耗: 11,005 (input=7,005 + output=4,000)
 **关键修复**:
 
 1. **无限循环安全** (Problem #2): 添加MAX_RETRIES=50，防止永久挂起
+   - Wait-then-Die 机制: 重试耗尽后的系统行为
+     * 失败状态: 返回错误信息给 dev_loop.sh
+     * 自动重启: Systemd service 配置 `Restart=on-failure` (延迟30s)
+     * 人工报警: 日志 CRITICAL 事件触发监控告警 (PagerDuty/企业微信)
    ```python
    MAX_RETRIES = 50
    while retry_count < self.MAX_RETRIES:
        retry_count += 1
        # 最多50次重试后退出
+   # 重试耗尽 → 返回错误 → 触发告警 → 自动重启或人工介入
    ```
 
 2. **重试追踪** (Problem #3): 初始化retry_count并在日志中显示
@@ -620,6 +625,8 @@ print(f\"Total Exposure: {metrics.get(\"total_exposure\", 0):>10.2f}%\")
 
 **双轨交易启动检查清单**:
 - [ ] EURUSD 基线运行正常 (72h+ 监控)
+  - **强制条件**: P99延迟 < 100ms, PnL波动 < 3%, 零崩溃事件
+  - **失败行为 (Critical)**: 基线崩溃或关键指标超限 → 自动中止 BTCUSD.s 上线，发出 HALT 信号，等待人工审查
 - [ ] BTCUSD.s 符号验证通过 (§3.4.1)
 - [ ] 并发日志监控清空 (§3.4.2)
 - [ ] 配置文件包含双品种定义

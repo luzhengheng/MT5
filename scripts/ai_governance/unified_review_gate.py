@@ -15,7 +15,7 @@ import sys
 import argparse
 import logging
 import uuid
-from typing import List
+from typing import List, Optional
 from datetime import datetime
 
 # ============================================================================
