@@ -197,7 +197,12 @@ stage_plan() {
     # 检查是否有 AI API 可用
     if [ -z "$VENDOR_API_KEY" ]; then
         warning "API credentials not available, generating demo plan..."
-        NEXT_TASK=$((TASK_ID + 1))
+        # 支持子任务ID (如 126.1): 对于子任务，保持原ID
+        if [[ "$TASK_ID" == *"."* ]]; then
+            NEXT_TASK="${TASK_ID}"
+        else
+            NEXT_TASK=$((TASK_ID + 1))
+        fi
         PLAN_FILE="docs/archive/tasks/TASK_${NEXT_TASK}/TASK_${NEXT_TASK}_PLAN.md"
         mkdir -p "$(dirname "$PLAN_FILE")"
 
@@ -238,9 +243,15 @@ EOF
         success "Generated demo plan: $PLAN_FILE"
     else
         log "Using AI to generate next task..."
+        # 支持子任务ID: 计算下一个任务ID
+        if [[ "$TASK_ID" == *"."* ]]; then
+            NEXT_TASK="${TASK_ID}"
+        else
+            NEXT_TASK=$((TASK_ID + 1))
+        fi
         python3 scripts/ai_governance/unified_review_gate.py plan \
-            -r "完成 Task #$TASK_ID 后，下一步是什么？请生成 Task #$((TASK_ID + 1)) 的工单" \
-            -o "docs/archive/tasks/TASK_$((TASK_ID + 1))/TASK_$((TASK_ID + 1))_PLAN.md" \
+            -r "完成 Task #$TASK_ID 后，下一步是什么？请生成 Task #${NEXT_TASK} 的工单" \
+            -o "docs/archive/tasks/TASK_${NEXT_TASK}/TASK_${NEXT_TASK}_PLAN.md" \
             2>&1 | tee -a "$VERIFY_LOG" || true
     fi
 
@@ -256,7 +267,12 @@ stage_register() {
 
     log "Starting register phase..."
 
-    NEXT_TASK=$((TASK_ID + 1))
+    # 支持子任务ID (如 126.1): 对于子任务，保持原ID
+    if [[ "$TASK_ID" == *"."* ]]; then
+        NEXT_TASK="${TASK_ID}"
+    else
+        NEXT_TASK=$((TASK_ID + 1))
+    fi
     PLAN_FILE="docs/archive/tasks/TASK_${NEXT_TASK}/TASK_${NEXT_TASK}_PLAN.md"
 
     if [ ! -f "$PLAN_FILE" ]; then
@@ -313,9 +329,15 @@ stage_halt() {
     log "Closed-loop execution paused. Awaiting human confirmation."
     log ""
     log "Next steps:"
-    log "  1. Review the generated Task #$((TASK_ID + 1)) in Notion"
+    # 支持子任务ID: 对于HALT消息也要处理子任务
+    if [[ "$TASK_ID" == *"."* ]]; then
+        NEXT_TASK="${TASK_ID}"
+    else
+        NEXT_TASK=$((TASK_ID + 1))
+    fi
+    log "  1. Review the generated Task #${NEXT_TASK} in Notion"
     log "  2. Click 'Approve' button in Notion to continue"
-    log "  3. Run: bash scripts/dev_loop.sh $((TASK_ID + 1)) to start next cycle"
+    log "  3. Run: bash scripts/dev_loop.sh ${NEXT_TASK} to start next cycle"
     log ""
 
     # 在演示模式下，我们不实际等待用户输入
@@ -363,7 +385,13 @@ main() {
     log "=========================================="
     log "Verification log: $VERIFY_LOG"
     log "Task report: docs/archive/tasks/TASK_${TASK_ID}/COMPLETION_REPORT.md"
-    log "Next task plan: docs/archive/tasks/TASK_$((TASK_ID + 1))/TASK_$((TASK_ID + 1))_PLAN.md"
+    # 支持子任务ID: 计算下一个任务ID用于日志
+    if [[ "$TASK_ID" == *"."* ]]; then
+        NEXT_TASK="${TASK_ID}"
+    else
+        NEXT_TASK=$((TASK_ID + 1))
+    fi
+    log "Next task plan: docs/archive/tasks/TASK_${NEXT_TASK}/TASK_${NEXT_TASK}_PLAN.md"
     log ""
 
     success "All stages completed successfully!"

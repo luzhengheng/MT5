@@ -182,7 +182,12 @@ class ArchitectAdvisor:
             f.write("")
 
     def _send_request(self, system_prompt: str, user_content: str, model: str = None) -> str:
-        """使用 curl_cffi 发送请求到 API
+        """[Protocol v4.4 Enhanced] 发送请求到外部 AI 网关
+
+        改进点:
+        1. 实施 Wait-or-Die 机制: 无限重试，直到获取有效响应
+        2. 移除超时限制: timeout=None 适应深度思考模型的长耗时
+        3. 显式状态反馈: 打印详细的连接状态和等待提示
 
         Args:
             system_prompt: 系统提示词
@@ -196,6 +201,16 @@ class ArchitectAdvisor:
         # 如果没有指定模型，使用文档模型作为默认值
         if model is None:
             model = self.doc_model
+
+        import time
+        import random
+
+        # 基础退避参数
+        retry_delay = 5
+        max_delay = 60
+
+        self._log(f"\n🧠 正在呼叫外部大脑 ({model})...")
+        self._log("⏳ 系统将无限等待真实响应 (Protocol v4.4 Wait-or-Die)...")
 
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -212,40 +227,65 @@ class ArchitectAdvisor:
             ]
         }
 
-        try:
-            self._log(f"🤔 正在连接 AI 大脑 ({model})...")
-            response = requests.post(
-                self.api_url,
-                json=payload,
-                headers=headers,
-                impersonate="chrome110",
-                timeout=400
-            )
+        while True:
+            try:
+                # 关键: timeout=None 允许 socket 无限期保持连接
+                response = requests.post(
+                    self.api_url,
+                    json=payload,
+                    headers=headers,
+                    impersonate="chrome110",
+                    timeout=None
+                )
 
-            if response.status_code == 200:
-                res_json = response.json()
-                result_text = res_json['choices'][0]['message']['content']
-                usage = res_json.get('usage', {})
+                # 200 OK: 唯一合法的出口
+                if response.status_code == 200:
+                    try:
+                        res_json = response.json()
+                        result_text = res_json['choices'][0]['message']['content']
+                        usage = res_json.get('usage', {})
 
-                input_tokens = usage.get('prompt_tokens', 0)
-                output_tokens = usage.get('completion_tokens', 0)
-                total_tokens = input_tokens + output_tokens
+                        input_tokens = usage.get('prompt_tokens', 0)
+                        output_tokens = usage.get('completion_tokens', 0)
+                        total_tokens = input_tokens + output_tokens
 
-                self._log("✅ API 调用成功")
-                msg = (f"📊 Token Usage: input={input_tokens}, "
-                       f"output={output_tokens}, total={total_tokens}")
-                self._log(msg)
+                        self._log("✅ API 调用成功")
+                        msg = (f"📊 Token Usage: input={input_tokens}, "
+                               f"output={output_tokens}, total={total_tokens}")
+                        self._log(msg)
 
-                return result_text
-            else:
-                error_msg = (f"❌ API Error {response.status_code}: "
-                             f"{response.text[:200]}")
-                self._log(error_msg)
-                return error_msg
-        except Exception as e:
-            error_msg = f"❌ Connection Error: {str(e)[:200]}"
-            self._log(error_msg)
-            return error_msg
+                        return result_text
+                    except Exception as json_err:
+                        self._log(f"❌ JSON 解析异常: {json_err}")
+                        # JSON 错误通常是传输截断，属于重试范畴
+
+                # 429/5xx: 标准重试场景
+                elif response.status_code in [429, 500, 502, 503, 504]:
+                    self._log(f"🌊 流量控制/服务繁忙 (HTTP {response.status_code})...")
+
+                # 4xx (400/401): 配置错误，但根据不绕过原则，死锁并报警
+                else:
+                    self._log(f"🛑 致命配置错误 (HTTP {response.status_code}): {response.text[:100]}...")
+                    self._log("⚠️ 请检查 .env 配置或 API Key。脚本将保持挂起状态。")
+                    # 长睡眠，强迫人类介入修复配置，防止 Agent 自动跳过
+                    time.sleep(300)
+                    continue
+
+            except Exception as e:
+                # 捕获所有网络层异常 (ConnectionReset, ChunkedEncodingError 等)
+                self._log(f"🔌 网络波动: {str(e)}")
+
+            # 指数退避 (Exponential Backoff)
+            sleep_time = min(retry_delay, max_delay)
+            # 添加随机抖动，防止共振
+            jitter = random.uniform(0, 3)
+            total_sleep = sleep_time + jitter
+
+            self._log(f"🔄 {total_sleep:.1f}秒后发起第 N 次重连... (请勿中断)")
+            time.sleep(total_sleep)
+
+            # 增加下一次等待基数
+            retry_delay = retry_delay * 1.5
 
     def _generate_demo_response(self, user_content: str) -> str:
         """演示模式：生成示例输出（用于测试）"""

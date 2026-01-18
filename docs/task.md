@@ -36,16 +36,18 @@
 ### Step 2: 核心开发 (Development)  
 * [ ] **编写代码**: 实施业务逻辑。  
 * [ ] **本地验证 (Gate 1)**: 运行 `python3 audit_current_task.py` 直到零报错。  
-* [ ] **物理留痕**: 运行 `python3 [script] | tee -a VERIFY_LOG.log`。  
-    * *关键*: 确保输出中包含业务实质数据 (如: 订单ID, PnL, API响应头)。  
-  
-### Step 3: 治理闭环 (The Governance Loop) 🚀  
-*本步骤由自动化脚本编排。注意：这是绝对的阻断性环节。*  
-  
-* [ ] **启动闭环**: 运行 `bash scripts/dev_loop.sh`  
-* [ ] **🔴 阻断与修复协议 (Blocking Protocol)**:  
-    > **循环修正 (Fix Loop)**: 若 Gate 返回 `❌ FAIL` 或 `⚠️ CHANGES REQUESTED`，Agent **必须**立即读取反馈 -> 修改代码 -> 重新运行 `dev_loop.sh`。  
-    > **死磕到底 (Until Pass)**: 重复上述步骤，直到获得 `✅ PASS`。禁止在未通过的情况下手动创建报告。  
+* [ ] **物理留痕**: 运行 `python3 [script] | tee -a VERIFY_LOG.log`。
+    * *关键*: 确保输出中包含业务实质数据 (如: 订单ID, PnL, API响应头)。
+
+### Step 3: 治理闭环 (The Governance Loop) 🚀
+
+*本步骤由自动化脚本编排。注意：这是绝对的阻断性环节。*
+
+* [ ] **启动闭环**: 运行 `bash scripts/dev_loop.sh`
+* [ ] **🔴 阻断与修复协议 (Blocking Protocol)** - Protocol v4.4 宪法级强制:
+    > **无限等待 (Wait-or-Die)**: 外部 API 响应慢是常态。脚本必须一直挂起等待，严禁手动中断或修改代码绕过。timeout 必须设置为 None，允许 socket 无限期保持连接。
+    > **循环修正 (Fix Loop)**: 若 Gate 返回 `❌ FAIL` 或 `⚠️ CHANGES REQUESTED`，Agent **必须**立即读取反馈 -> 修改代码 -> 重新运行 `dev_loop.sh`。
+    > **死磕到底 (Until Pass)**: 重复上述步骤，直到获得 `✅ PASS`。禁止在未通过的情况下手动创建报告。
     > **严禁绕过 (No Bypass)**: 任何跳过此步骤直接提交的行为，均视为违反 Protocol v4.4 宪法，任务视为失败。  
   
 * *系统自动化动作预览*:  
