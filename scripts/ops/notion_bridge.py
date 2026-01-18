@@ -21,7 +21,7 @@ import time
 import argparse
 import logging
 import re
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, Tuple
 from datetime import datetime
 
 try:
@@ -40,6 +40,14 @@ try:
 except ImportError:
     print("⚠️  tenacity not installed. Run: pip install tenacity")
     sys.exit(1)
+
+# Import resilience module for @wait_or_die decorator (Protocol v4.4)
+try:
+    from src.utils.resilience import wait_or_die
+except ImportError:
+    print("⚠️  resilience module not found.")
+    # Fallback: use tenacity only
+    wait_or_die = None
 
 # ============================================================================
 # Configuration
@@ -185,9 +193,29 @@ def parse_markdown_task(filepath: str) -> Dict[str, Any]:
 # ============================================================================
 
 
+@wait_or_die(
+    timeout=30,
+    exponential_backoff=True,
+    max_retries=5,
+    initial_wait=1.0,
+    max_wait=10.0
+) if wait_or_die else lambda f: f
+def _validate_token_internal(token: str) -> Tuple[bool, str]:
+    """
+    内部函数：实际执行 Token 验证（带 @wait_or_die 重试）
+
+    Returns:
+        (is_valid, user_name) tuple
+    """
+    client = Client(auth=token)
+    user = client.users.me()
+    user_name = user.get('name', 'Unknown')
+    return (True, user_name)
+
+
 def validate_token(token: Optional[str] = None) -> bool:
     """
-    验证 Notion Token 的有效性。
+    验证 Notion Token 的有效性（Protocol v4.4 enhanced with resilience）。
 
     Args:
         token: Notion Token (如果为空则从环境变量读取)
@@ -202,12 +230,10 @@ def validate_token(token: Optional[str] = None) -> bool:
         return False
 
     try:
-        client = Client(auth=token)
-        # 尝试获取用户信息来验证 token
-        user = client.users.me()
-        user_name = user.get('name', 'Unknown')
-        logger.info(f"✅ Notion Token validated. User: {user_name}")
-        return True
+        is_valid, user_name = _validate_token_internal(token)
+        if is_valid:
+            logger.info(f"✅ Notion Token validated. User: {user_name}")
+        return is_valid
     except Exception as e:
         logger.error(f"❌ Token validation failed: {str(e)}")
         return False
@@ -218,7 +244,13 @@ def validate_token(token: Optional[str] = None) -> bool:
 # ============================================================================
 
 
-@retry(
+@wait_or_die(
+    timeout=300,
+    exponential_backoff=True,
+    max_retries=50,
+    initial_wait=1.0,
+    max_wait=60.0
+) if wait_or_die else retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=2, max=10),
     retry=retry_if_exception_type((ConnectionError, TimeoutError)),
@@ -229,7 +261,12 @@ def _push_to_notion_with_retry(
     task_metadata: Dict[str, Any],
     database_id: str,
 ) -> Dict[str, Any]:
-    """内部函数：执行带重试的 Notion 推送"""
+    """
+    内部函数：执行带重试的 Notion 推送（Protocol v4.4 @wait_or_die 机制）
+
+    使用 @wait_or_die 实现 50 次重试 + 指数退避，比 tenacity 的 3 次重试更有韧性。
+    总超时时间为 300 秒（5分钟），覆盖 Notion API 的暂时性故障和网络波动。
+    """
     properties = {
         "Name": {
             "title": [
@@ -271,7 +308,10 @@ def _push_to_notion_with_retry(
         }
 
     # 创建 Page
-    logger.info(f"Pushing task {task_metadata['task_id']} to Notion...")
+    task_id = task_metadata['task_id']
+    logger.info(
+        f"🔄 Pushing task {task_id} to Notion (with resilience.py)..."
+    )
     time.sleep(NOTION_API_RATE_LIMIT)  # Rate limiting
 
     response = client.pages.create(
@@ -331,9 +371,13 @@ def push_to_notion(
 
     try:
         client = Client(auth=token)
-        logger.info(f"[RETRY] Attempting to push {task_metadata.get('task_id')} with tenacity...")
+        retry_mode = 'resilience.py @wait_or_die' if wait_or_die else 'tenacity'
+        logger.info(
+            f"🚀 Attempting to push {task_metadata.get('task_id')} "
+            f"(using {retry_mode})..."
+        )
 
-        # 调用带重试机制的内部函数
+        # 调用带重试机制的内部函数（现已支持 Protocol v4.4 @wait_or_die）
         response = _push_to_notion_with_retry(
             client,
             task_metadata,
@@ -353,7 +397,7 @@ def push_to_notion(
             'created_at': response.get('created_time', ''),
         }
 
-        logger.info(f"✅ Task pushed to Notion: {page_url}")
+        logger.info(f"✅ Task pushed to Notion: {page_url}")  # noqa: E501
         return result
 
     except Exception as e:

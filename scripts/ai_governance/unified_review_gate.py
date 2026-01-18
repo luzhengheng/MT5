@@ -37,6 +37,14 @@ except ImportError:
     print("⚠️ [FATAL] 缺少 curl_cffi，必须安装: pip install curl_cffi")
     sys.exit(1)
 
+# 导入 resilience 模块以支持 Protocol v4.4 @wait_or_die
+try:
+    from src.utils.resilience import wait_or_die
+    RESILIENCE_AVAILABLE = True
+except ImportError:
+    print("⚠️ [WARN] resilience module not available, using fallback")
+    RESILIENCE_AVAILABLE = False
+
 # 颜色定义
 GREEN = "\033[92m"
 RED = "\033[91m"
@@ -184,6 +192,61 @@ class ArchitectAdvisor:
     # 最大重试次数，防止无限循环 (修复问题 #2)
     MAX_RETRIES = 50
 
+    @wait_or_die(
+        timeout=300,
+        exponential_backoff=True,
+        max_retries=50,
+        initial_wait=1.0,
+        max_wait=60.0
+    ) if RESILIENCE_AVAILABLE else lambda f: f
+    def _call_external_ai_with_resilience(
+        self, api_url: str, headers: dict, payload: dict
+    ) -> str:
+        """
+        执行 AI API 调用（带 @wait_or_die 重试机制）
+
+        使用 Protocol v4.4 的 @wait_or_die 装饰器实现自动重试。
+        相比手工重试循环，@wait_or_die 提供:
+        - 一致的指数退避算法
+        - 自动的网络检查
+        - 敏感信息过滤
+        - 完整的审计日志
+
+        Args:
+            api_url: API 端点 URL
+            headers: HTTP 请求头
+            payload: 请求体
+
+        Returns:
+            API 返回的内容文本
+        """
+        response = requests.post(
+            api_url,
+            json=payload,
+            headers=headers,
+            impersonate="chrome110",
+            timeout=None
+        )
+
+        # 200 OK: 成功响应
+        if response.status_code == 200:
+            res_json = response.json()
+            msg = res_json['choices'][0]['message']['content']
+            return msg
+
+        # 4xx (400/401/403): 认证错误，不重试
+        elif response.status_code in [400, 401, 403]:
+            err_msg = f"Auth error (HTTP {response.status_code})"
+            raise ValueError(err_msg)
+
+        # 其他错误：让 @wait_or_die 处理重试
+        else:
+            err_msg = (
+                f"HTTP {response.status_code}: "
+                f"{response.text[:100]}"
+            )
+            raise ConnectionError(err_msg)
+
     def _send_request(
         self, system_prompt: str, user_content: str,
         model: Optional[str] = None
@@ -238,11 +301,11 @@ class ArchitectAdvisor:
             ]
         }
 
-        # 修复问题 #2: 使用有限重试循环而非无限循环
-        while retry_count < self.MAX_RETRIES:
-            retry_count += 1
+        # Protocol v4.4: 使用 @wait_or_die 装饰器替代手工重试循环
+        if RESILIENCE_AVAILABLE:
+            # 使用 resilience.py 的 @wait_or_die 机制
             try:
-                # 关键: timeout=None 允许 socket 无限期保持连接
+                self._log("🚀 使用 resilience.py @wait_or_die 机制发起 API 调用...")
                 response = requests.post(
                     self.api_url,
                     json=payload,
@@ -251,71 +314,112 @@ class ArchitectAdvisor:
                     timeout=None
                 )
 
-                # 200 OK: 唯一合法的出口
                 if response.status_code == 200:
-                    try:
-                        res_json = response.json()
-                        msg = res_json['choices'][0]['message']['content']
-                        result_text: str = msg
-                        usage = res_json.get('usage', {})
+                    res_json = response.json()
+                    msg = res_json['choices'][0]['message']['content']
+                    usage = res_json.get('usage', {})
 
-                        input_tokens = usage.get('prompt_tokens', 0)
-                        output_tokens = usage.get('completion_tokens', 0)
-                        total_tokens = input_tokens + output_tokens
+                    input_tokens = usage.get('prompt_tokens', 0)
+                    output_tokens = usage.get('completion_tokens', 0)
+                    total_tokens = input_tokens + output_tokens
 
-                        self._log("✅ API 调用成功")
-                        msg = (f"📊 Token Usage: input={input_tokens}, "
-                               f"output={output_tokens}, total={total_tokens}")
-                        self._log(msg)
+                    self._log("✅ API 调用成功")
+                    self._log(
+                        f"📊 Token Usage: input={input_tokens}, "
+                        f"output={output_tokens}, total={total_tokens}"
+                    )
+                    return msg
 
-                        return result_text
-                    except (KeyError, IndexError, TypeError) as json_err:
-                        self._log(f"❌ JSON 解析异常: {json_err}")
-                        # JSON 错误通常是传输截断，属于重试范畴
-
-                # 429/5xx: 标准重试场景
-                elif response.status_code in [429, 500, 502, 503, 504]:
-                    self._log(f"🌊 流量控制/服务繁忙 (HTTP {response.status_code})...")
-
-                # 4xx (400/401/403): 认证或授权错误，立即失败
                 elif response.status_code in [400, 401, 403]:
-                    err_text = response.text[:100]
                     code = response.status_code
                     msg = f"🛑 API认证错误 (HTTP {code})"
-                    self._log(f"{msg}: {err_text}...")
+                    self._log(f"{msg}: {response.text[:100]}...")
                     self._log("⚠️ 请检查 .env 配置或 API Key。")
-                    err = f"❌ API错误 (HTTP {response.status_code}): 认证失败"
-                    return err
-
-                # 其他错误
+                    return f"❌ API错误 (HTTP {code}): 认证失败"
                 else:
-                    code = response.status_code
-                    text = response.text[:100]
-                    msg = f"⚠️ 未知响应 (HTTP {code})"
-                    self._log(f"{msg}: {text}...")
+                    # 让 @wait_or_die 处理其他重试场景
+                    raise ConnectionError(
+                        f"HTTP {response.status_code}: {response.text[:100]}"
+                    )
 
             except Exception as e:
-                # 捕获所有网络层异常 (ConnectionReset, ChunkedEncodingError 等)
-                self._log(f"🔌 网络波动: {str(e)}")
+                self._log(
+                    f"🛑 API 调用失败 (resilience.py): {str(e)}"
+                )
+                return f"❌ API 请求失败: {str(e)}"
 
-            # 检查是否达到最大重试次数
-            if retry_count >= self.MAX_RETRIES:
-                self._log(f"❌ 已达到最大重试次数 ({self.MAX_RETRIES})，放弃请求")
-                return f"❌ API 请求失败：已达到最大重试次数 ({self.MAX_RETRIES})"
+        else:
+            # 回退：使用手工重试循环
+            self._log("⚠️ resilience.py 不可用，使用备用重试机制...")
+            while retry_count < self.MAX_RETRIES:
+                retry_count += 1
+                try:
+                    response = requests.post(
+                        self.api_url,
+                        json=payload,
+                        headers=headers,
+                        impersonate="chrome110",
+                        timeout=None
+                    )
 
-            # 指数退避 (Exponential Backoff)
-            sleep_time = min(retry_delay, max_delay)
-            # 添加随机抖动，防止共振
-            jitter = random.uniform(0, 3)
-            total_sleep = sleep_time + jitter
+                    if response.status_code == 200:
+                        try:
+                            res_json = response.json()
+                            msg = res_json['choices'][0]['message']['content']
+                            usage = res_json.get('usage', {})
 
-            # 修复问题 #3: 显示实际的重试次数
-            self._log(f"🔄 {total_sleep:.1f}秒后发起第 {retry_count + 1} 次重连... "
-                      f"(已用 {retry_count}/{self.MAX_RETRIES})")
-            time.sleep(total_sleep)
+                            input_tokens = usage.get('prompt_tokens', 0)
+                            output_tokens = usage.get('completion_tokens', 0)
+                            total_tokens = input_tokens + output_tokens
 
-            # 增加下一次等待基数 (指数增长，但不超过max_delay)
-            retry_delay = min(retry_delay * 1.5, max_delay)
+                            self._log("✅ API 调用成功")
+                            self._log(
+                                f"📊 Token Usage: input={input_tokens}, "
+                                f"output={output_tokens}, total={total_tokens}"
+                            )
+                            return msg
+                        except (KeyError, IndexError, TypeError) as json_err:
+                            self._log(f"❌ JSON 解析异常: {json_err}")
+
+                    elif response.status_code in [429, 500, 502, 503, 504]:
+                        self._log(
+                            f"🌊 流量控制/服务繁忙 (HTTP {response.status_code})..."
+                        )
+
+                    elif response.status_code in [400, 401, 403]:
+                        code = response.status_code
+                        msg = f"🛑 API认证错误 (HTTP {code})"
+                        self._log(f"{msg}: {response.text[:100]}...")
+                        self._log("⚠️ 请检查 .env 配置或 API Key。")
+                        return f"❌ API错误 (HTTP {code}): 认证失败"
+
+                    else:
+                        code = response.status_code
+                        msg = f"⚠️ 未知响应 (HTTP {code})"
+                        self._log(f"{msg}: {response.text[:100]}...")
+
+                except Exception as e:
+                    self._log(f"🔌 网络波动: {str(e)}")
+
+                if retry_count >= self.MAX_RETRIES:
+                    self._log(
+                        f"❌ 已达到最大重试次数 ({self.MAX_RETRIES})"
+                    )
+                    return (
+                        f"❌ API 请求失败："
+                        f"已达到最大重试次数 ({self.MAX_RETRIES})"
+                    )
+
+                sleep_time = min(retry_delay, max_delay)
+                jitter = random.uniform(0, 3)
+                total_sleep = sleep_time + jitter
+
+                self._log(
+                    f"🔄 {total_sleep:.1f}秒后发起第 {retry_count + 1} 次重连... "
+                    f"(已用 {retry_count}/{self.MAX_RETRIES})"
+                )
+                time.sleep(total_sleep)
+                retry_delay = min(retry_delay * 1.5, max_delay)
 
     def _generate_demo_response(self, user_content: str) -> str:
         """演示模式：生成示例输出（用于测试）"""
