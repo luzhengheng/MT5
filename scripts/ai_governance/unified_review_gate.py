@@ -593,7 +593,7 @@ def main():
 """
     )
 
-    subparsers = parser.add_subparsers(dest='mode', help='选择运行模式')
+    subparsers = parser.add_subparsers(dest='command', help='选择运行模式')
     subparsers.required = True
 
     # Plan Mode
@@ -626,9 +626,9 @@ def main():
 
     advisor = ArchitectAdvisor()
 
-    if args.mode == 'plan':
+    if args.command == 'plan':
         advisor.execute_plan(args.req, args.out)
-    elif args.mode == 'review':
+    elif args.command == 'review':
         # Task #127.1修复：传递新参数
         review_mode = getattr(args, 'mode', 'fast')
         strict_mode = getattr(args, 'strict', False)
