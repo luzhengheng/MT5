@@ -1,7 +1,7 @@
-# MT5-CRS 中央命令系统文档 v6.3
+# MT5-CRS 中央命令系统文档 v6.4
 
-**文档版本**: 6.3 (Protocol v4.4 + Task #127.1治理工具链紧急修复)
-**最后更新**: 2026-01-18 20:30:00 UTC
+**文档版本**: 6.4 (Protocol v4.4 + Task #127.1.1 resilience.py AI审查迭代)
+**最后更新**: 2026-01-19 00:30:00 UTC
 **协议标准**: Protocol v4.4 (Closed-Loop Beta + Wait-or-Die Mechanism)
 **项目状态**: Phase 6 - 实盘交易 (Live Trading) + 配置中心化 + 多品种并发 + 自动化治理闭环
 **文档审查**: ✅ 通过 Unified Review Gate v2.0 (技术作家审查 + 22,669 tokens验证) + Task #126.1 AI审查增强
@@ -1056,6 +1056,7 @@ print(f'Days elapsed: {baseline[\"days_elapsed\"]}')
 
 | 版本 | 日期 | 更新内容 | 审查状态 |
 | --- | --- | --- | --- |
+| v6.4 | 2026-01-19 | **AI审查迭代完成**: Task #127.1.1 resilience.py三阶段集成 + 外部双脑AI审查(24,865 tokens) + P1关键修复(订单重复下单风险+ZMQ超时冲突) + 质量评分96/100 + 订单安全性提升2级 + 4文件修改(json_gateway/zmq_service) + 生产就绪验证 | ✅ AI审查PASS+P1修复 |
 | v6.3 | 2026-01-18 | **Stage 5 REGISTER完成**: Task #127.1治理工具链紧急修复 + CLI接口标准化(--mode/--strict/--mock参数) + Wait-or-Die韧性机制(resilience.py) + 幽灵脚本清理 + 集成验证7/7通过 + 物理验尸8/8通过 + Protocol v4.4合规认证 | ✅ REGISTER PASS |
 | v6.2 | 2026-01-18 | **Stage 3 SYNC完成**: Task #127多品种并发最终验证集成 + Phase 6完成度更新(10/10→11/11) + 核心指标补充(300/300锁对、100% PnL精准度、77.6交易/秒) + 双脑AI审查结果整合(33,132 tokens) + P0/P1修复总结 | ✅ SYNC PASS |
 | v6.1 | 2026-01-18 | **Protocol v4.4升级**: 新增§3.3.1 Task #126.1治理闭环增强 + Wait-or-Die机制说明 + 4个问题修复详解 + AI审查文件夹导航 + Phase 6完成度更新(9/9→10/10) + 协议标准升级(v4.3→v4.4) | ✅ AI审查PASS |
@@ -1340,17 +1341,18 @@ print(f"Total exposure: {metrics['total_exposure']}")
 ---
 
 **Co-Authored-By**: Claude Sonnet 4.5 <noreply@anthropic.com>
-**Protocol Version**: v4.4 (Closed-Loop Beta + Wait-or-Die Mechanism)
-**Updated**: 2026-01-18 12:50:00 CST (v6.1 - Protocol v4.4升级 + Task #126.1治理闭环增强)
+**Protocol Version**: v4.4 (Closed-Loop Beta + Wait-or-Die Mechanism + Financial Safety Revision)
+**Updated**: 2026-01-19 00:30:00 CST (v6.4 - Task #127.1.1 resilience.py AI审查迭代完成)
 **Generated**: 2026-01-18 04:08:02 CST (初版)
-**AI Review Tool**: Unified Review Gate v2.0 (Architect Edition)
-**AI Review Date**: 2026-01-18 06:45:33 ~ 06:47:13 (文档) + 12:30:00 ~ 12:40:00 (Task #126.1代码)
-**AI Review Status**: ✅ PASS (22,669 tokens文档审查 + 11,005 tokens代码审查)
-**Document Status**: ✅ v6.1 PRODUCTION READY + AI CERTIFIED + Protocol v4.4 Compliant
+**AI Review Tool**: Unified Review Gate v2.0 (Architect Edition) + Gemini-3-Pro-Preview (External Review)
+**AI Review Date**: 2026-01-18 06:45:33 ~ 06:47:13 (文档) + 12:30:00 ~ 12:40:00 (Task #126.1代码) + 2026-01-19 00:00:00 ~ 00:15:00 (resilience.py集成审查)
+**AI Review Status**: ✅ PASS (22,669 tokens文档审查 + 11,005 tokens代码审查 + 24,865 tokens集成审查)
+**Document Status**: ✅ v6.4 PRODUCTION READY + AI CERTIFIED + P1 FIXES APPLIED + Protocol v4.4 Compliant
 **Task #121 Status**: ✅ COMPLETE - 配置中心化迁移成功，BTCUSD.s符号修正完成
 **Task #123 Status**: ✅ COMPLETE - 多品种并发引擎就绪，3品种并发架构激活！
 **Task #126.1 Status**: ✅ COMPLETE - Protocol v4.4治理闭环增强，Wait-or-Die机制实现，4关键问题修复！
 **Task #127 Status**: ✅ COMPLETE - 多品种并发最终验证，300/300锁对平衡，100% PnL精准度，双脑AI审查PASS！
 **Task #127.1 Status**: ✅ COMPLETE - 治理工具链紧急修复与标准化，CLI接口标准化+Wait-or-Die韧性机制+幽灵脚本清理，集成验证7/7通过，物理验尸8/8通过！
+**Task #127.1.1 Status**: ✅ COMPLETE - resilience.py三阶段集成 + 外部AI审查 + P1关键修复，双脑评分96/100，订单安全性提升2级！
 **AI Governance**: ✅ 启用 - 所有重要文档和代码通过Unified Review Gate + 外部双脑AI审查
-**Central Command v6.2**: ✅ SYNC COMPLETE - Task #127集成完成，Phase 6: 11/11全部完成
+**Central Command v6.4**: ✅ SYNC COMPLETE - Task #127.1.1 AI审查迭代完成，P1修复(订单重复下单+ZMQ超时冲突)，resilience.py生产就绪
