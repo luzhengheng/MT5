@@ -18,7 +18,7 @@
   - **Gate 2 (AI)**: Dual-Brain审查 (Gemini Context + Claude Logic)
 * **Dual-Brain Routing**:
   - **Brain 1 (Gemini-3-Pro-Preview)**: 文档质量、一致性、清晰度 (长上下文优势)
-  - **Brain 2 (Claude-Opus-4.5-Thinking)**: 代码逻辑、安全、异常处理 (深度推理优势)
+  - **Brain 2 (Claude-3.7-Opus)**: 代码逻辑、安全、异常处理 (深度推理优势) - 配置在 unified_review_gate.py
 * **Success Criteria**: 两脑在各自领域都返回 `✅ PASS` 时，Gate 2 才算通过
 
 ### 🔄 **Pillar II: 衔尾蛇闭环** (The Ouroboros Loop)
@@ -58,11 +58,12 @@ AI 幻觉是系统的癌症，物理日志是唯一的解药。
 
 ## 1. 任务定义 (Definition)
 * **核心目标**: [一句话描述要做什么]
+* **Decision Hash**: [上游任务授权的哈希值，用于链路追踪，如 Task #118->#119 的令牌]
 * **实质验收标准 (Substance)**:
     * [ ] **功能交付**: [具体的功能点，如：实现双均线策略]
     * [ ] **物理证据**: 终端必须回显 `[UnifiedGate] PASS` 及业务关键日志 (时间戳+UUID+Token消耗)。
     * [ ] **闭环注册**: 必须成功调用 `notion_bridge.py` 并在 Notion 中生成下一阶段工单 (提供 Page ID)。
-    * [ ] **双脑认证**: 代码必须通过 Claude-Opus-4.5-Thinking (Logic) 审查，文档必须通过 Gemini-3-Pro-Preview (Context) 审查。
+    * [ ] **双脑认证**: 代码必须通过 Claude-3.7-Opus (Logic) 审查，文档必须通过 Gemini-3-Pro-Preview (Context) 审查。
     * [ ] **策略合规**: 代码必须通过 AST 扫描 (Policy-as-Code) 和 Pylint (Linter) 检查，无违反零信任的模式。
 * **归档路径**: `docs/archive/tasks/TASK_[ID]/`
 * **Notion 链接**: [将由 notion_bridge.py 自动生成，记录在 COMPLETION_REPORT.md 中]  
@@ -251,7 +252,7 @@ Protocol v4.4 定义了四类自动防御机制，Agent 必须严格遵守：
 * **幂等性**: 所有操作必须支持重复执行而不产生副作用
 
 ### 实盘风险管理 (Production Risk Management)
-* 涉及资金操作的代码，必须经过 **Claude-Opus-4.5-Thinking (High-Reasoning 模型)** 的深度逻辑审查
+* 涉及资金操作的代码，必须经过 **Claude-3.7-Opus (High-Reasoning 模型)** 的深度逻辑审查
 * 选择支持长链路推理的模型，以应对复杂的风险管理场景
 * 所有实盘交易必须通过财务护栏检查 (Pillar V Kill Switch)
 
@@ -285,7 +286,10 @@ Protocol v4.4 定义了四类自动防御机制，Agent 必须严格遵守：
 ---
 
 **Protocol v4.4 Compliance**: ✅ 五大支柱完整融合
-**Last Updated**: 2026-01-20
-**Version**: Task Template v4.4 (Autonomous Living System Edition)
+**Last Updated**: 2026-01-20 (AI Review完成)
+**Version**: Task Template v4.4 (Autonomous Living System Edition - v4.4.1 Refined)
+**AI Review Status**: ✅ APPROVED (Dual-Brain Review: Gemini + Claude)
+**Model Standardization**: ✅ Claude-3.7-Opus + Gemini-3-Pro-Preview
 
 Co-Authored-By: Claude Sonnet 4.5 <noreply@anthropic.com>
+Reviewed-By: Gemini-3-Pro-Preview + Claude-3-Pro-Preview (Dual-Brain Architecture)
