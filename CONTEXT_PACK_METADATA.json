@@ -1,0 +1,33 @@
+{
+  "name": "MT5-CRS Full Context Pack",
+  "version": "3.0",
+  "protocol": "v4.4",
+  "generated": "2026-01-18T17:49:27Z",
+  "execution_timestamp": 1768758566,
+  "session_uuid": "a98fb986-b92e-40f0-8e8d-2bb0fcbca57b",
+  "output_file": "full_context_pack.txt",
+  "file_size_bytes": 327517,
+  "file_sha256": "26b00bd053c4fe96b49df56c9e19ceed6353f150c80e5e115d7296e7b117c174",
+  "project_root": "/opt/mt5-crs",
+  "script_version": "3.0",
+  "compliance": {
+    "pillar_i_dual_gate": true,
+    "pillar_ii_ouroboros": true,
+    "pillar_iii_zero_trust": true,
+    "pillar_iv_policy_as_code": true,
+    "pillar_v_kill_switch": true
+  },
+  "sections": {
+    "part_1_structure": "Project directory tree",
+    "part_2_configuration": "JSON configs (security redacted)",
+    "part_3_documentation": "Blueprints, asset inventory, Central Command SSOT",
+    "part_4_codebase": "Core Python infrastructure and governance tools",
+    "part_5_reviews": "Recent AI review records",
+    "part_6_audit": "Mission log (recent 500 lines)"
+  },
+  "physical_evidence": {
+    "timestamp_utc": "2026-01-18 17:49:27 UTC",
+    "uuid": "a98fb986-b92e-40f0-8e8d-2bb0fcbca57b",
+    "sha256": "26b00bd053c4fe96b49df56c9e19ceed6353f150c80e5e115d7296e7b117c174"
+  }
+}
