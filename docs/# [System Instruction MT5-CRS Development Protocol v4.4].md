@@ -9,11 +9,12 @@
   
 ## 1. 宪法级原则 (The Five Pillars)  
   
-### 🏛️ Pillar I: 双重门禁与双脑路由 (Dual-Gate & Dual-Brain)  
-系统不再依赖单一模型的判断，必须实行“认知分权”。  
-* **Routing Logic**: 治理工具必须实现智能路由：  
-    * **Context Layer (Gemini)**: 负责长文档理解、上下文拼接、资产清单维护 (因其 massive context window)。  
-    * **Logic Layer (Claude)**: 负责复杂代码审查、逻辑漏洞挖掘、安全策略生成 (因其 deep reasoning)。  
+### 🏛️ Pillar I: 双重门禁与双脑路由 (Dual-Gate & Dual-Brain)
+系统不再依赖单一模型的判断，必须实行"认知分权"。
+* **Routing Logic**: 治理工具必须实现智能路由：
+    * **Context Layer (Gemini)**: 负责长文档理解、上下文拼接、资产清单维护 (因其 massive context window)。
+      - 资产清单路径: `docs/archive/tasks/[MT5-CRS] Central Comman.md`
+    * **Logic Layer (Claude)**: 负责复杂代码审查、逻辑漏洞挖掘、安全策略生成 (因其 deep reasoning)。
 * **Gate Standard**: 只有当两个模型在各自领域都返回 `PASS` 时，Gate 2 才算通过。  
   
 ### 🔄 Pillar II: 衔尾蛇闭环 (The Ouroboros Loop)  
@@ -42,11 +43,14 @@
   
 ## 2. 标准作业循环 (The v4.4 Ouroboros Workflow)  
   
-### Phase 1: Cognitive Definition (认知定义)  
-* **Role**: Gemini (Context Brain)  
-* **Input**: 读取 `full_context_pack.txt` 和 `asset_inventory.md`。  
-* **Action**: 生成包含“实质验收标准”的 `task.md`。  
-* **Output**: 明确的战略意图和验收清单。  
+### Phase 1: Cognitive Definition (认知定义)
+* **Role**: Gemini (Context Brain)
+* **Input**:
+  - 资产清单: `docs/archive/tasks/[MT5-CRS] Central Comman.md`
+  - 上下文: `full_context_pack.txt`
+* **Action**: 基于 `docs/task.md` 模板，生成包含"实质验收标准"的具体工单。
+  - 输出路径: `docs/archive/tasks/TASK_XXX/TASK_XXX_PLAN.md`
+* **Output**: 明确的战略意图、验收清单和执行步骤。  
   
 ### Phase 2: Execution & Forensics (执行与取证)  
 * **Role**: Agent + Logic Brain  
@@ -55,21 +59,28 @@
 * **Verification**: 运行 `python3 script.py | tee -a VERIFY_LOG.log`。  
     * *Requirement*: 日志必须包含 `[PHYSICAL_EVIDENCE]` 标签。  
   
-### Phase 3: The Governance Loop (治理闭环) 🚀  
-*此阶段由 `scripts/dev_loop.sh` 编排，是 v4.4 的灵魂。*  
-  
-1.  **[AUDIT] 智能审查**:  
-    * 指令: `unified_review_gate.py review --mode=dual`  
-    * 动作: 并行调用 Gemini 审文档、Claude 审代码。  
-2.  **[SYNC] 动态文档**:  
-    * 指令: `unified_review_gate.py review --mode=doc_patch`  
-    * 动作: 将代码变更“反向传播”到中央文档。  
-3.  **[PLAN] 进化规划**:  
-    * 指令: `unified_review_gate.py plan`  
-    * 动作: 基于当前结果，预测下一个最优任务。  
-4.  **[REGISTER] 链上注册**:  
-    * 指令: `notion_bridge.py push --retry=3`  
-    * 动作: 将 Next Task 写入 Notion，获取 Page ID，完成闭环。  
+### Phase 3: The Governance Loop (治理闭环) 🚀
+*此阶段由 `scripts/dev_loop.sh` 编排，是 v4.4 的灵魂。*
+
+1.  **[AUDIT] 智能审查**:
+    * 指令: `unified_review_gate.py review --mode=dual`
+    * 动作: 并行调用 Gemini 审文档、Claude 审代码。
+    * 审查对象: 当前任务的代码和文档 (`docs/archive/tasks/TASK_XXX/`)
+
+2.  **[SYNC] 动态文档**:
+    * 指令: `unified_review_gate.py review --mode=doc_patch`
+    * 动作: 将代码变更"反向传播"到中央文档。
+    * 更新对象: `docs/archive/tasks/[MT5-CRS] Central Comman.md`
+
+3.  **[PLAN] 进化规划**:
+    * 指令: `unified_review_gate.py plan`
+    * 动作: 基于当前结果，预测下一个最优任务。
+    * 输出: 生成 `docs/archive/tasks/TASK_[N+1]/TASK_[N+1]_PLAN.md`
+
+4.  **[REGISTER] 链上注册**:
+    * 指令: `notion_bridge.py push --retry=3`
+    * 动作: 将 Next Task 写入 Notion，获取 Page ID，完成闭环。
+    * 记录: 在完成报告中保存 Notion Page ID  
   
 ### Phase 4: Human Authorization (人类授权)  
 * **State**: System HALTED.  
@@ -77,15 +88,18 @@
   
 ---  
   
-## 3. 交付物矩阵 (The v4.4 Standard)  
-  
-| 类型 | 文件/证据 | 验收标准 (v4.4) |  
-| :--- | :--- | :--- |  
-| **代码** | `src/...` | 通过 Dual-Gate (Linter + AI Logic Check) |  
-| **日志** | `VERIFY_LOG.log` | 包含 `[UnifiedGate: PASS]` 和 `[Dual-Model: AUTHENTIC]` 标记 |  
-| **文档** | `docs/...` | 必须反映最新代码状态 (Inventory Updated) |  
-| **凭证** | **Notion ID** | **必须在结案报告中提供 Notion Page Link/ID** |  
-| **架构** | `Protocol` | 符合 v4.4 闭环定义，无手动旁路操作 |  
+## 3. 交付物矩阵 (The v4.4 Standard)
+
+| 类型 | 文件/证据 | 路径 | 验收标准 (v4.4) |
+| :--- | :--- | :--- | :--- |
+| **工单模板** | `task.md` | `docs/task.md` | 定义工单的标准格式 |
+| **具体工单** | `TASK_XXX_PLAN.md` | `docs/archive/tasks/TASK_XXX/TASK_XXX_PLAN.md` | 包含角色、目标、验收标准、执行步骤 |
+| **资产清单** | `Central Command` | `docs/archive/tasks/[MT5-CRS] Central Comman.md` | 系统全局状态、Phase进度、已完成任务 |
+| **代码** | `src/...` | `src/...` | 通过 Dual-Gate (Linter + AI Logic Check) |
+| **日志** | `VERIFY_LOG.log` | `docs/archive/tasks/TASK_XXX/VERIFY_LOG.log` | 包含 `[UnifiedGate: PASS]` 和 Token 消耗证明 |
+| **完成报告** | `COMPLETION_REPORT.md` | `docs/archive/tasks/TASK_XXX/COMPLETION_REPORT.md` | 包含 Notion Page ID、执行总结、交付物清单 |
+| **凭证** | **Notion ID** | 在 `COMPLETION_REPORT.md` 中记录 | **必须通过 notion_bridge.py 获取并验证** |
+| **架构** | `Protocol` | `docs/# [System Instruction MT5-CRS Development Protocol v4.4].md` | 符合 v4.4 闭环定义，无手动旁路操作 |  
   
 ---  
   
