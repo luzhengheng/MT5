@@ -45,7 +45,7 @@
 
 * [ ] **启动闭环**: 运行 `bash scripts/dev_loop.sh`
 * [ ] **🔴 阻断与修复协议 (Blocking Protocol)** - Protocol v4.4 宪法级强制:
-    > **无限等待 (Wait-or-Die)**: 外部 API 响应慢是常态。脚本必须一直挂起等待，严禁手动中断或修改代码绕过。timeout 必须设置为 None，允许 socket 无限期保持连接。
+    > **无限等待 (Wait-or-Die)**: 外部 API 响应慢是常态。脚本必须一直挂起等待，严禁手动中断或修改代码绕过。timeout 必须设置为 None (Infinite Read Timeout)，在 requests/curl_cffi socket 层级允许连接无限期保持。
     > **循环修正 (Fix Loop)**: 若 Gate 返回 `❌ FAIL` 或 `⚠️ CHANGES REQUESTED`，Agent **必须**立即读取反馈 -> 修改代码 -> 重新运行 `dev_loop.sh`。
     > **死磕到底 (Until Pass)**: 重复上述步骤，直到获得 `✅ PASS`。禁止在未通过的情况下手动创建报告。
     > **严禁绕过 (No Bypass)**: 任何跳过此步骤直接提交的行为，均视为违反 Protocol v4.4 宪法，任务视为失败。  
@@ -66,7 +66,7 @@
 * [ ] **HALT**: 确认 `dev_loop.sh` 已暂停并显示 "Waiting for Human Trigger"。  
 * [ ] **报告**: 生成 `COMPLETION_REPORT.md` 并等待人类在 Notion 上确认状态变更。  
   
-## 4. 架构师备注 (Architect's Notes)  
-* **成本控制**: 如果 `dev_loop.sh` 进入死循环 (连续 3 次 Review Fail)，请立即停止并请求人类介入，避免消耗过多 Token。  
-* **数据一致性**: 任何时候，**Notion 上的工单状态** 优于本地文件。如果 Notion 显示任务已取消，请立即停止执行。  
-* **实盘风险**: 涉及资金操作的代码，必须经过 `claude-opus-thinking` 模型的深度逻辑审查。  
+## 4. 架构师备注 (Architect's Notes)
+* **成本控制**: 如果 `dev_loop.sh` 进入死循环 (连续 3 次 Review Fail)，请立即停止并请求人类介入，避免消耗过多 Token。
+* **数据一致性**: 任何时候，**Notion 上的工单状态** 优于本地文件。如果 Notion 显示任务已取消，请立即停止执行。
+* **实盘风险**: 涉及资金操作的代码，必须经过 **High-Reasoning 模型 (例: Sonnet 4.5 / Opus)** 的深度逻辑审查。确保选择支持长链路推理的模型，以应对复杂的风险管理场景。  
