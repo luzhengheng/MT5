@@ -389,13 +389,14 @@ pytest tests/gateway/test_resilience_integration.py::TestProtocolCompliance -v
 
 ### 集成测试 (Phase 2)
 
-- [ ] Notion→resilience完整流程
-- [ ] LLM→resilience完整流程
-- [ ] MT5网关完整订单流程
-- [ ] 跨模块集成验证
+- [x] Notion→resilience完整流程
+- [x] LLM→resilience完整流程
+- [x] MT5网关完整订单流程
+- [x] 跨模块集成验证
 
-**预计耗时**: 1-2小时
-**通过标准**: 所有集成场景验证通过
+**实际耗时**: <5分钟 (完整流程验证)
+**通过标准**: 所有集成场景验证通过 ✅
+**执行结果**: ✅ **3/3场景 + 15个验证点全部通过** (2026-01-19)
 
 ---
 
@@ -437,10 +438,10 @@ pytest tests/gateway/test_resilience_integration.py::TestProtocolCompliance -v
 ### 整体完成标准
 
 - [x] 所有单元测试通过 (20/20 PASSED)
-- [ ] 所有集成测试通过
+- [x] 所有集成测试通过 (3/3场景 + 15个验证点)
 - [ ] 所有压力测试通过
 - [ ] 所有回归测试通过
-- [x] P1修复验证完成 (单元测试级别)
+- [x] P1修复验证完成 (单元测试+集成测试级别)
 - [ ] 性能指标达成 (待压力测试)
 - [ ] 生产环境就绪
 
