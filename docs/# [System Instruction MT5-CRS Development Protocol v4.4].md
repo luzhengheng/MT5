@@ -13,7 +13,7 @@
 系统不再依赖单一模型的判断，必须实行"认知分权"。
 * **Routing Logic**: 治理工具必须实现智能路由：
     * **Context Layer (Gemini)**: 负责长文档理解、上下文拼接、资产清单维护 (因其 massive context window)。
-      - 资产清单路径: `docs/archive/tasks/[MT5-CRS] Central Comman.md`
+      - 资产清单路径: `docs/archive/tasks/[MT5-CRS] Central Command.md`
       - 实现: `scripts/ai_governance/unified_review_gate.py` (Gemini-3-Pro-Preview)
     * **Logic Layer (Claude)**: 负责复杂代码审查、逻辑漏洞挖掘、安全策略生成 (因其 deep reasoning)。
       - 实现: `scripts/ai_governance/unified_review_gate.py` (Claude-Opus-4.5-Thinking)
@@ -43,12 +43,18 @@
 
 ---
 
+**模型角色说明**:
+* **Claude Sonnet 4.5**: 用于代码生成、文档创作等创意任务
+* **Claude Opus 4.5 Thinking**: 专用于 Gate 2 深度审查，支持扩展思考 (@thinking 标签)
+
+---
+
 ## 2. 标准作业循环 (The v4.4 Ouroboros Workflow)
 
 ### Phase 1: Cognitive Definition (认知定义)
 * **Role**: Gemini (Context Brain)
 * **Input**:
-  - 资产清单: `docs/archive/tasks/[MT5-CRS] Central Comman.md`
+  - 资产清单: `docs/archive/tasks/[MT5-CRS] Central Command.md`
   - 上下文: `full_context_pack.txt`
 * **Action**: 基于 `docs/task.md` 模板，生成包含"实质验收标准"的具体工单。
   - 输出路径: `docs/archive/tasks/TASK_XXX/TASK_XXX_PLAN.md`
@@ -104,10 +110,12 @@ v4.4 通过 **双脑AI架构** 实现外部AI的深度集成。详见 `docs/EXTE
       - `--mode=fast`: Gemini 快速审查 (3分钟)，覆盖率 60%
       - `--mode=deep`: Claude 深度审查 (5分钟)，覆盖率 75%
     * API配置:
-      - 端点: `https://api.yyds168.net/v1/chat/completions` (OpenAI兼容格式)
-      - 模型: Gemini-3-Pro-Preview + Claude-Opus-4-5-Thinking
-      - 超时: 300秒/文件，自动重试50次
-      - Token消耗: 任务平均 20K-25K tokens
+      | 参数 | 值 | 说明 |
+      |------|-----|------|
+      | **端点** | `https://api.yyds168.net/v1/chat/completions` | OpenAI兼容格式 |
+      | **模型** | Gemini-3-Pro-Preview<br>Claude-Opus-4.5-Thinking | 双脑异构配置 |
+      | **超时** | 300秒/文件 | 配合 `@wait_or_die` (50次重试) |
+      | **Token** | 平均 20K-25K | 任务级别成本估算 |
     * 输出:
       - `EXTERNAL_AI_REVIEW_FEEDBACK.md` - 审查意见汇总 (优先级分类P1/P2/P3)
       - `VERIFY_URG_V2.log` - 完整的执行日志 (含 token消耗、异常处理)
@@ -120,7 +128,7 @@ v4.4 通过 **双脑AI架构** 实现外部AI的深度集成。详见 `docs/EXTE
 2.  **[SYNC] 动态文档**:
     * 指令: `python3 scripts/ai_governance/unified_review_gate.py review <files> --mode=doc_patch`
     * 动作: 将代码变更"反向传播"到中央文档。
-    * 更新对象: `docs/archive/tasks/[MT5-CRS] Central Comman.md`
+    * 更新对象: `docs/archive/tasks/[MT5-CRS] Central Command.md`
 
 3.  **[PLAN] 进化规划**:
     * 指令: `python3 scripts/ai_governance/unified_review_gate.py plan`
@@ -144,7 +152,7 @@ v4.4 通过 **双脑AI架构** 实现外部AI的深度集成。详见 `docs/EXTE
 | :--- | :--- | :--- | :--- |
 | **工单模板** | `task.md` | `docs/task.md` | 定义工单的标准格式 |
 | **具体工单** | `TASK_XXX_PLAN.md` | `docs/archive/tasks/TASK_XXX/TASK_XXX_PLAN.md` | 包含角色、目标、验收标准、执行步骤 |
-| **资产清单** | `Central Command` | `docs/archive/tasks/[MT5-CRS] Central Comman.md` | 系统全局状态、Phase进度、已完成任务 |
+| **资产清单** | `Central Command` | `docs/archive/tasks/[MT5-CRS] Central Command.md` | 系统全局状态、Phase进度、已完成任务 |
 | **代码** | `src/...` | `src/...` | 通过 Dual-Gate (Linter + AI Logic Check) |
 | **AI审查脚本** | `unified_review_gate.py` | `scripts/ai_governance/unified_review_gate.py` | ArchitectAdvisor v2.0，支持双脑路由 |
 | **韧性机制** | `resilience.py` | `src/utils/resilience.py` | @wait_or_die 装饰器，50次重试+指数退避 |
