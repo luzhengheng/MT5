@@ -16,7 +16,7 @@ import random
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Any
 import sys
 
 # Add src to path
@@ -33,13 +33,17 @@ CYAN = "\033[96m"
 BLUE = "\033[94m"
 RESET = "\033[0m"
 
-# Setup logging
+# Setup logging (P1 fix: ensure log directory exists)
+log_dir = Path("docs/archive/tasks/TASK_127")
+log_dir.mkdir(parents=True, exist_ok=True)
+log_file = log_dir / "STRESS_TEST.log"
+
 logging.basicConfig(
     level=logging.DEBUG,
     format="%(asctime)s - [%(levelname)s] - %(message)s",
     handlers=[
         logging.StreamHandler(),
-        logging.FileHandler("docs/archive/tasks/TASK_127/STRESS_TEST.log")
+        logging.FileHandler(str(log_file))
     ]
 )
 
@@ -150,6 +154,12 @@ class StressTestSimulator:
         self.config_mgr = ConfigManager(config_path)
 
         self.symbols = self.config_mgr.get_all_symbols()
+
+        # Zero-Trust: Symbols validation (P0 issue from CSO review)
+        assert self.symbols, "[FATAL] No symbols loaded from config - cannot proceed"
+        assert all(isinstance(s, str) and len(s) > 0 for s in self.symbols), \
+            f"[FATAL] Invalid symbol format detected: {self.symbols}"
+
         self.test_start_time = None
         self.test_end_time = None
 
@@ -164,7 +174,7 @@ class StressTestSimulator:
         symbol: str,
         signal_count: int,
         min_interval_ms: int = 10
-    ) -> Dict[str, any]:
+    ) -> Dict[str, Any]:
         """
         Simulate high-frequency trading signals for one symbol.
 
@@ -176,6 +186,19 @@ class StressTestSimulator:
         Returns:
             Metrics dict with generated data
         """
+        # Zero-Trust: Input parameter validation (P1 issue)
+        assert isinstance(symbol, str) and len(symbol) > 0, \
+            f"[INVALID_INPUT] symbol must be non-empty string, got: {symbol!r}"
+        assert isinstance(signal_count, int) and signal_count > 0, \
+            f"[INVALID_INPUT] signal_count must be positive int, got: {signal_count}"
+        assert isinstance(min_interval_ms, int) and min_interval_ms >= 1, \
+            f"[INVALID_INPUT] min_interval_ms must be >= 1, got: {min_interval_ms}"
+
+        logger.debug(
+            f"[PARAM_VALIDATED] symbol={symbol}, "
+            f"signal_count={signal_count}, min_interval_ms={min_interval_ms}"
+        )
+
         logger.info(
             f"{BLUE}🚀 Starting signal simulation: {symbol}{RESET}"
         )
@@ -298,7 +321,16 @@ class StressTestSimulator:
                 f"signal streams{RESET}"
             )
 
-            results = await asyncio.gather(*tasks)
+            results = await asyncio.gather(*tasks, return_exceptions=True)
+
+            # Check for exceptions in results (P0 fix: granular error handling)
+            for i, result in enumerate(results):
+                if isinstance(result, Exception):
+                    logger.error(
+                        f"[TASK_FAILURE] Symbol task {i} failed: "
+                        f"{type(result).__name__}: {result}"
+                    )
+                    raise result
 
             # Verify lock atomicity
             lock_valid, violations = self.lock_verifier.verify_atomicity()
@@ -309,11 +341,17 @@ class StressTestSimulator:
             self.test_end_time = datetime.utcnow()
             return lock_valid and len(violations) == 0
 
-        except Exception as e:
-            logger.error(
-                f"{RED}❌ Stress test failed: {e}{RESET}"
-            )
+        except asyncio.CancelledError:
+            logger.warning("[CANCELLED] Stress test was cancelled")
+            raise
+        except (ConnectionError, TimeoutError) as e:
+            logger.error(f"[NETWORK_ERROR] {type(e).__name__}: {e}")
             return False
+        except Exception as e:
+            logger.exception(
+                f"[UNEXPECTED_ERROR] {type(e).__name__}: {e}"
+            )
+            raise
 
     async def _print_stress_test_report(
         self,
@@ -355,7 +393,7 @@ class StressTestSimulator:
             total_trades += result['trades']
 
         # Aggregated metrics from MetricsAggregator
-        agg_status = self.metrics_agg.get_status()
+        agg_status = await self.metrics_agg.get_status()
         total_pnl_agg = agg_status['total_pnl']
 
         logger.info(f"\n{CYAN}🎯 Aggregation Consistency Check:{RESET}")

@@ -42,7 +42,7 @@ class MetricsAggregator:
         is_incremental: bool = True,
     ) -> bool:
         """
-        Update metrics for specific symbol.
+        Update metrics for specific symbol with Zero-Trust validation.
 
         Args:
             symbol: Trading symbol
@@ -55,6 +55,18 @@ class MetricsAggregator:
         Returns:
             True if successful
         """
+        # Zero-Trust: Input validation (P0 issue from CSO review)
+        assert symbol and isinstance(symbol, str), \
+            f"[ASSERT_FAIL] Invalid symbol: {symbol!r}"
+        assert isinstance(trades_count, int) and trades_count >= 0, \
+            f"[ASSERT_FAIL] Invalid trades_count: {trades_count}"
+        assert isinstance(pnl, (int, float)), \
+            f"[ASSERT_FAIL] Invalid pnl type: {type(pnl)}"
+        assert isinstance(exposure, (int, float)) and exposure >= 0, \
+            f"[ASSERT_FAIL] Invalid exposure: {exposure}"
+        assert isinstance(win_rate, (int, float)) and 0 <= win_rate <= 100, \
+            f"[ASSERT_FAIL] Invalid win_rate: {win_rate} (must be 0-100)"
+
         try:
             async with self.lock:
                 # Initialize if not exists
@@ -107,11 +119,20 @@ class MetricsAggregator:
                 )
                 return True
 
-        except Exception as e:
+        except (TypeError, ValueError, KeyError) as e:
             self.logger.error(
-                f"Failed to update metrics for {symbol}: {e}"
+                f"[METRICS_UPDATE_FAIL] symbol={symbol} "
+                f"error_type={type(e).__name__} error={e} "
+                f"trades={trades_count} pnl={pnl}"
             )
             return False
+        except Exception as e:
+            # Unknown errors should propagate, not be silently masked
+            self.logger.critical(
+                f"[METRICS_CRITICAL] Unexpected error in update_metrics: "
+                f"{type(e).__name__}: {e}"
+            )
+            raise
 
     async def get_symbol_metrics(self, symbol: str) -> Optional[Dict]:
         """
@@ -186,40 +207,43 @@ class MetricsAggregator:
 
         return is_safe
 
-    def get_status(self) -> Dict[str, Any]:
+    async def get_status(self) -> Dict[str, Any]:
         """
-        Get current aggregated status (thread-safe read).
+        Get current aggregated status (async-safe read with lock protection).
 
         Returns:
             Dict with aggregated metrics and per-symbol breakdown
         """
-        if not self.symbol_metrics:
+        async with self.lock:
+            if not self.symbol_metrics:
+                return {
+                    'total_trades': 0,
+                    'total_pnl': 0.0,
+                    'total_exposure': 0.0,
+                    'symbol_count': 0,
+                    'per_symbol': {},
+                    'timestamp': datetime.utcnow().isoformat(),
+                }
+
+            total_trades = sum(
+                m['trades'] for m in self.symbol_metrics.values()
+            )
+            total_pnl = sum(
+                m['pnl'] for m in self.symbol_metrics.values()
+            )
+            total_exposure = sum(
+                m['exposure'] for m in self.symbol_metrics.values()
+            )
+
+            # Deep copy to avoid external modification
             return {
-                'total_trades': 0,
-                'total_pnl': 0.0,
-                'total_exposure': 0.0,
-                'symbol_count': 0,
-                'per_symbol': {},
+                'total_trades': total_trades,
+                'total_pnl': total_pnl,
+                'total_exposure': total_exposure,
+                'symbol_count': len(self.symbol_metrics),
+                'timestamp': datetime.utcnow().isoformat(),
+                'per_symbol': {k: dict(v) for k, v in self.symbol_metrics.items()},
             }
-
-        total_trades = sum(
-            m['trades'] for m in self.symbol_metrics.values()
-        )
-        total_pnl = sum(
-            m['pnl'] for m in self.symbol_metrics.values()
-        )
-        total_exposure = sum(
-            m['exposure'] for m in self.symbol_metrics.values()
-        )
-
-        return {
-            'total_trades': total_trades,
-            'total_pnl': total_pnl,
-            'total_exposure': total_exposure,
-            'symbol_count': len(self.symbol_metrics),
-            'timestamp': datetime.utcnow().isoformat(),
-            'per_symbol': dict(self.symbol_metrics),
-        }
 
     async def reset_metrics(self, symbol: Optional[str] = None) -> bool:
         """
@@ -247,13 +271,21 @@ class MetricsAggregator:
                     )
                 return True
 
-        except Exception as e:
-            self.logger.error(f"Failed to reset metrics: {e}")
+        except KeyError as e:
+            self.logger.error(
+                f"[RESET_FAIL] symbol not found: {e}"
+            )
             return False
+        except Exception as e:
+            self.logger.critical(
+                f"[RESET_CRITICAL] Unexpected error in reset_metrics: "
+                f"{type(e).__name__}: {e}"
+            )
+            raise
 
     async def print_report(self) -> None:
         """Print formatted metrics report."""
-        status = self.get_status()
+        status = await self.get_status()
 
         print()
         print("=" * 80)
