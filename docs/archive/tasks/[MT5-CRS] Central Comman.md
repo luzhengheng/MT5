@@ -1,7 +1,7 @@
 # MT5-CRS 中央命令系统文档 v5.9
 
-**文档版本**: 5.9 (AI审查工具集成 + 多品种并发最佳实践增强)
-**最后更新**: 2026-01-18 06:47:13 CST
+**文档版本**: 6.0 (AI审查迭代 + 多品种并发验证检查表)
+**最后更新**: 2026-01-18 09:06:00 UTC
 **协议标准**: Protocol v4.3 (Zero-Trust Edition)
 **项目状态**: Phase 6 - 实盘交易 (Live Trading) + 配置中心化 + 多品种并发生产运行中
 **文档审查**: ✅ 通过 Unified Review Gate v2.0 (技术作家审查 + 22,669 tokens验证)
@@ -361,6 +361,204 @@ ConcurrentTradingEngine
 - ✅ 物理验尸: 时间戳 + Token证明 + 符号验证 ✓
 - ✅ 符号兼容性: .s 后缀正确处理
 
+### 3.4 多品种并发验证检查表 ⭐ NEW (v6.0迭代)
+
+#### 3.4.1 BTCUSD.s接入能力验证
+
+**验证目标**: 确认 Broker 完全支持 BTCUSD.s 符号及其交易特性
+
+**Step 1: 符号可用性检查**
+
+```bash
+# 运行符号探针脚本
+python3 scripts/ops/verify_symbol_access.py --symbol BTCUSD.s
+
+# 预期输出:
+# ✅ Symbol BTCUSD.s exists in MT5
+# ✅ Bid/Ask prices valid (Bid: XXXXX.XX, Ask: XXXXX.XX)
+# ✅ Spread within tolerance (Spread: X.X pips)
+# ✅ 24/7 trading enabled
+# ✅ Minimum lot size: 0.001 ✓
+# ✅ Historical data available (30+ days) ✓
+```
+
+**Step 2: 数据流验证**
+
+```bash
+# 检查是否收到实时行情更新
+python3 -c "
+import time
+from src.market_data.market_data_receiver import MarketDataReceiver
+receiver = MarketDataReceiver()
+start = time.time()
+for _ in range(10):
+    data = receiver.get_latest_price('BTCUSD.s')
+    print(f'BTCUSD.s: {data}')
+    time.sleep(0.5)
+print(f'Data flow verified in {time.time() - start:.2f}s')
+"
+```
+
+**Step 3: 订单执行模拟**
+
+```bash
+# 测试订单签名和路由（不真实执行）
+python3 scripts/ops/verify_symbol_access.py \
+  --symbol BTCUSD.s \
+  --test-order-routing \
+  --dry-run
+
+# 预期: Order routing signature valid ✓
+```
+
+**符号验证清单**:
+- [ ] Symbol存在且可交易
+- [ ] Bid/Ask价格有效
+- [ ] Spread在可接受范围内 (< 10 pips)
+- [ ] 24小时交易确认 (周末可交易)
+- [ ] 历史数据充足 (>=30天OHLCV)
+- [ ] 最小手数符合要求 (0.001)
+- [ ] 数据流实时更新
+- [ ] 订单签名验证通过
+
+#### 3.4.2 并发日志监控
+
+**验证目标**: 确认多品种并发执行无ZMQ竞态条件
+
+**实时日志监控**:
+
+```bash
+# 监控 ZMQ Lock 获取/释放事件
+tail -f logs/execution.log | grep -E "ZMQ_LOCK|CONCURRENT|asyncio"
+
+# 预期日志模式:
+# [2026-01-18 09:12:34] DEBUG: [BTCUSD.s] ZMQ_LOCK_ACQUIRE (lock_id: uuid1)
+# [2026-01-18 09:12:34] DEBUG: [BTCUSD.s] Order send: OPEN BUY 0.001
+# [2026-01-18 09:12:35] DEBUG: [BTCUSD.s] ZMQ_LOCK_RELEASE (lock_id: uuid1)
+# [2026-01-18 09:12:35] DEBUG: [ETHUSD.s] ZMQ_LOCK_ACQUIRE (lock_id: uuid2)
+# [2026-01-18 09:12:35] DEBUG: [ETHUSD.s] Order send: OPEN BUY 0.001
+# [2026-01-18 09:12:36] DEBUG: [ETHUSD.s] ZMQ_LOCK_RELEASE (lock_id: uuid2)
+```
+
+**错误检查**:
+
+```bash
+# 检查是否有ZMQ冲突错误（应该没有）
+grep "ERROR.*ZMQ\|RACE_CONDITION\|BUFFER_OVERFLOW" logs/execution.log
+
+# 预期: (无输出，表示无错误)
+```
+
+**并发性能指标**:
+
+```bash
+# 统计各品种的并发循环数和响应时间
+python3 -c "
+import re
+from collections import defaultdict
+
+logs = open('logs/execution.log').readlines()
+symbol_timing = defaultdict(list)
+
+for line in logs:
+    if 'ZMQ_LOCK_RELEASE' in line:
+        match = re.search(r'\[([A-Z]+USD\.s)\].*ZMQ_LOCK_RELEASE.*time=(\d+)ms', line)
+        if match:
+            symbol, time_ms = match.groups()
+            symbol_timing[symbol].append(float(time_ms))
+
+for symbol, times in symbol_timing.items():
+    avg_time = sum(times) / len(times)
+    max_time = max(times)
+    print(f'{symbol}: avg={avg_time:.2f}ms, max={max_time:.2f}ms, count={len(times)}')
+"
+```
+
+**并发监控清单**:
+- [ ] 多品种循环并行执行 (asyncio.gather)
+- [ ] ZMQ Lock 获取/释放有序日志
+- [ ] 无竞态条件错误 (ERROR日志为空)
+- [ ] 无缓冲混乱或消息丢失
+- [ ] 各品种响应时间均衡 (P99 < 100ms)
+- [ ] MetricsAggregator 实时更新
+
+#### 3.4.3 双轨交易前置验证
+
+**验证目标**: 在72小时EURUSD基线完成前，准备好BTCUSD.s双轨交易
+
+**前置条件检查** (执行前必须满足):
+
+```bash
+# Check 1: EURUSD 基线运行状态
+python3 -c "
+from src.execution.risk_monitor import RiskMonitor
+monitor = RiskMonitor()
+status = monitor.check_eurusd_baseline()
+assert status['is_running'], 'EURUSD baseline must be running'
+assert status['days_elapsed'] >= 0, 'Baseline has started'
+print('✅ EURUSD baseline is healthy')
+"
+
+# Check 2: BTCUSD.s 符号可用
+python3 scripts/ops/verify_symbol_access.py --symbol BTCUSD.s --assert-ready
+# 预期: ✅ BTCUSD.s is ready for trading
+
+# Check 3: 配置文件包含多品种定义
+grep -A5 "symbols:" config/trading_config.yaml | grep "BTCUSD.s"
+# 预期: (找到BTCUSD.s配置)
+```
+
+**双轨交易启动步骤** (72小时后):
+
+```bash
+# Step 1: 切换到双品种配置
+cp config/trading_config.yaml config/trading_config.yaml.eurusd.bak
+sed -i 's/active: false/active: true/' config/trading_config.yaml  # 启用BTCUSD.s
+
+# Step 2: 验证配置
+python3 -c "
+import yaml
+cfg = yaml.safe_load(open('config/trading_config.yaml'))
+symbols = [s for s in cfg['symbols'] if s.get('active', True)]
+assert len(symbols) == 2, f'Expected 2 symbols, got {len(symbols)}'
+print(f'✅ Ready for dual-track trading: {[s[\"symbol\"] for s in symbols]}')
+"
+
+# Step 3: 启动多品种引擎
+python3 scripts/ops/run_multi_symbol_trading.py \
+  --config config/trading_config.yaml \
+  --mode PRODUCTION \
+  --log-level DEBUG
+```
+
+**双轨交易监控** (启动后持续):
+
+```bash
+# 实时监控双品种 PnL
+watch -n 5 'python3 -c "
+from src.execution.metrics_aggregator import MetricsAggregator
+agg = MetricsAggregator()
+metrics = agg.get_aggregate_metrics()
+print(f\"EURUSD PnL: {metrics.get(\"EURUSD\", {}).get(\"pnl\", 0):>10.2f}\")
+print(f\"BTCUSD PnL: {metrics.get(\"BTCUSD.s\", {}).get(\"pnl\", 0):>10.2f}\")
+print(f\"Total PnL:  {metrics.get(\"total_pnl\", 0):>10.2f}\")
+print(f\"Total Exposure: {metrics.get(\"total_exposure\", 0):>10.2f}%\")
+"'
+```
+
+**双轨交易启动检查清单**:
+- [ ] EURUSD 基线运行正常 (72h+ 监控)
+- [ ] BTCUSD.s 符号验证通过 (§3.4.1)
+- [ ] 并发日志监控清空 (§3.4.2)
+- [ ] 配置文件包含双品种定义
+- [ ] 风险限额独立配置
+  - EURUSD: max 0.01 lot (1%)
+  - BTCUSD.s: max 0.001 lot (1%)
+  - 全局: max 0.02 (2%)
+- [ ] MetricsAggregator 测试通过
+- [ ] Guardian 双品种传感器激活
+- [ ] 纸面交易验证完成
+
 ---
 
 ## 4️⃣ 系统性能指标
@@ -687,12 +885,71 @@ python3 -c "import yaml; cfg=yaml.safe_load(open('config/trading_config.yaml'));
 - [x] 启动72小时基线监控 (Task #120) - EURUSD (Day 1/72 运行中)
 - [x] 标准存档协议执行 (9 个任务文档生成 ✅)
 
-### 7.2 24小时内
-- [ ] **运行探针验证BTCUSD.s可用性** (python3 scripts/ops/verify_symbol_access.py)
+### 7.2 24小时内 (AI审查强化版本)
+
+**立即行动项** - 并发验证与BTCUSD.s就绪验证:
+
+#### Action 1: 验证 BTCUSD.s 接入能力 ⭐ (优先级P0)
+
+```bash
+# 执行符号验证探针脚本
+python3 scripts/ops/verify_symbol_access.py --symbol BTCUSD.s
+
+# 验证清单:
+# ✅ Symbol BTCUSD.s exists in MT5
+# ✅ Bid/Ask prices valid
+# ✅ Spread within tolerance (< 10 pips)
+# ✅ 24/7 trading enabled (周末可交易 ✓)
+# ✅ Historical data available (30+ days)
+```
+
+**预期结果**: 所有验证项通过，BTCUSD.s可立即用于纸面交易
+
+#### Action 2: 检查并发日志 ⭐ (优先级P0)
+
+```bash
+# 实时监控并发执行日志
+tail -f logs/execution.log | grep "ZMQ_LOCK"
+
+# 检查是否有竞态条件错误
+grep "ERROR.*ZMQ\|RACE_CONDITION\|BUFFER_OVERFLOW" logs/execution.log
+
+# 预期:
+# - 多品种 ZMQ_LOCK_ACQUIRE/RELEASE 有序出现
+# - 无任何 ERROR 级别的竞态错误
+# - 各品种循环独立执行 (asyncio.gather)
+```
+
+**验证清单** (见§3.4.2 并发日志监控):
+- [ ] 多品种循环并行执行
+- [ ] ZMQ Lock 有序获取/释放
+- [ ] 无竞态条件错误 (ERROR日志为空)
+- [ ] 各品种响应时间均衡 (P99 < 100ms)
+
+#### Action 3: 准备双轨交易前置条件 ⭐ (优先级P1)
+
+```bash
+# 检查配置文件是否包含BTCUSD.s定义
+grep -A3 "BTCUSD.s" config/trading_config.yaml
+
+# 验证前置条件
+python3 -c "
+from src.execution.risk_monitor import RiskMonitor
+monitor = RiskMonitor()
+baseline = monitor.check_eurusd_baseline()
+print(f'EURUSD baseline: {baseline[\"is_running\"]}')
+print(f'Days elapsed: {baseline[\"days_elapsed\"]}')
+"
+```
+
+**预期**: 配置就绪，EURUSD基线运行中
+
+#### 其他验证任务:
+
 - [ ] 启动实盘评估 (run_live_assessment.py)
-- [ ] 收集BTCUSD.s P&L数据
-- [ ] 验证Guardian循环正常运行
-- [ ] 评估风险指标稳定性
+- [ ] 收集BTCUSD.s P&L数据用于对比
+- [ ] 验证Guardian循环正常运行 (3重传感器激活)
+- [ ] 评估EURUSD风险指标稳定性 (P99延迟、漂移检测)
 
 ### 7.3 72小时后 (EURUSD基线完成 + BTCUSD验证)
 - [ ] 完整EURUSD性能评估
@@ -711,6 +968,7 @@ python3 -c "import yaml; cfg=yaml.safe_load(open('config/trading_config.yaml'));
 
 | 版本 | 日期 | 更新内容 | 审查状态 |
 | --- | --- | --- | --- |
+| v6.0 | 2026-01-18 | **AI审查迭代**: Unified Review Gate v2.0 二次审查 (14,270 tokens) 反馈应用 + 新增§3.4多品种并发验证检查表 (BTCUSD.s接入验证 + 并发日志监控 + 双轨交易前置验证) + §7.2强化为详细行动指南 (3个P0/P1优先级任务) | ✅ AI审查PASS+迭代 |
 | v5.9 | 2026-01-18 | **AI审查集成**: Unified Review Gate v2.0审查通过 (22,669 tokens) + 新增§9 AI审查与文档治理 + 多品种并发最佳实践指南 + 架构图补充并发编排器 + 快速导航增强 + 关键指标更新 | ✅ AI审查PASS |
 | v5.8 | 2026-01-18 | **Task #123集成**: Phase 6更新(8/9→9/9) + 新增§3.3多品种并发引擎详解 + 核心就绪项补充 + 配置架构多品种扩展示例 + 文档格式优化 | ✅ 生产级 |
 | v5.7 | 2026-01-18 | **优化迭代**: 简化§6.4(160→15行,-94%) + 新增§2.3配置中心详解 + 新增§6.5-6.6版本管理 + 新增§8多品种框架占位符 | ✅ 生产级 |

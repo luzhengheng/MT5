@@ -65,10 +65,13 @@ class ArchitectAdvisor:
         self.session_id = str(uuid.uuid4())
         self.project_root = self._find_project_root()
         self.context_cache = self._load_project_context()
-        # 模型配置：优先级 GEMINI_MODEL > VENDOR_MODEL > 默认值
-        self.model = os.getenv("GEMINI_MODEL") or os.getenv(
-            "VENDOR_MODEL", "gemini-3-pro-preview"
-        )
+
+        # 双模型智能路由配置
+        # 文档审查（📝 技术作家）：使用 gemini-3-pro-preview（长上下文优势）
+        self.doc_model = "gemini-3-pro-preview"
+        # 代码审查（🔒 安全官）：使用 claude-opus-4-5-thinking（深度思考优势）
+        self.code_model = "claude-opus-4-5-thinking"
+
         self.log_file = "VERIFY_URG_V2.log"
         # API 密钥配置：优先级 VENDOR_API_KEY > GEMINI_API_KEY > CLAUDE_API_KEY
         self.api_key = os.getenv("VENDOR_API_KEY") or os.getenv(
@@ -178,11 +181,21 @@ class ArchitectAdvisor:
         with open(self.log_file, 'w', encoding='utf-8') as f:
             f.write("")
 
-    def _send_request(self, system_prompt: str, user_content: str) -> str:
-        """使用 curl_cffi 发送请求到 API"""
+    def _send_request(self, system_prompt: str, user_content: str, model: str = None) -> str:
+        """使用 curl_cffi 发送请求到 API
+
+        Args:
+            system_prompt: 系统提示词
+            user_content: 用户内容
+            model: 指定使用的模型（如果为None，则使用默认的gemini-3-pro-preview）
+        """
         if not self.api_key:
             self._log("⚠️ 环境变量 AI_API_KEY 未设置，使用演示模式")
             return self._generate_demo_response(user_content)
+
+        # 如果没有指定模型，使用文档模型作为默认值
+        if model is None:
+            model = self.doc_model
 
         headers = {
             "Authorization": f"Bearer {self.api_key}",
@@ -190,7 +203,7 @@ class ArchitectAdvisor:
         }
 
         payload = {
-            "model": self.model,
+            "model": model,
             "max_tokens": 4000,
             "temperature": 0.3,
             "system": system_prompt,
@@ -200,13 +213,13 @@ class ArchitectAdvisor:
         }
 
         try:
-            self._log(f"🤔 正在连接 AI 大脑 ({self.model})...")
+            self._log(f"🤔 正在连接 AI 大脑 ({model})...")
             response = requests.post(
                 self.api_url,
                 json=payload,
                 headers=headers,
                 impersonate="chrome110",
-                timeout=180
+                timeout=400
             )
 
             if response.status_code == 200:
@@ -374,7 +387,8 @@ grep "EODHD" VERIFY_LOG.log | tail -10
 """
 
         result = self._send_request(system_prompt,
-                                    f"任务需求: {requirement}")
+                                    f"任务需求: {requirement}",
+                                    model=self.doc_model)
 
         # 写入文件
         output_path = os.path.join(self.project_root, output_file)
@@ -407,9 +421,9 @@ grep "EODHD" VERIFY_LOG.log | tail -10
 
             ext = os.path.splitext(file_path)[1].lower()
 
-            # 分流逻辑：Markdown 文档 vs Python 代码
+            # 分流逻辑：Markdown 文档 vs Python 代码（双模型智能路由）
             if ext in ['.md', '.txt']:
-                # 文档审查 Persona
+                # 文档审查 Persona（📝 技术作家）- 使用 gemini-3-pro-preview（长上下文）
                 system_prompt = f"""
 你是 [MT5-CRS] 项目的资深技术作家和业务分析师。
 
@@ -427,8 +441,9 @@ grep "EODHD" VERIFY_LOG.log | tail -10
 如果文档优秀，请给出肯定的评价。
 """
                 persona = "📝 技术作家"
+                model = self.doc_model
             else:
-                # 代码审查 Persona
+                # 代码审查 Persona（🔒 安全官）- 使用 claude-opus-4-5-thinking（深度思考）
                 system_prompt = f"""
 你是 [MT5-CRS] 项目的首席安全官 (CSO) 和 Python 专家。
 
@@ -459,10 +474,12 @@ grep "EODHD" VERIFY_LOG.log | tail -10
 请给出评分 (0-100) 和具体的修改建议。
 """
                 persona = "🔒 安全官"
+                model = self.code_model
 
             self._log(f"👤 Persona: {persona}")
+            self._log(f"🤖 使用模型: {model}")
 
-            advice = self._send_request(system_prompt, content)
+            advice = self._send_request(system_prompt, content, model=model)
 
             print(f"\n{'='*70}")
             print(f"审查报告: {os.path.basename(file_path)}")
