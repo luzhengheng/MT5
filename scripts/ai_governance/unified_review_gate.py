@@ -181,13 +181,20 @@ class ArchitectAdvisor:
         with open(self.log_file, 'w', encoding='utf-8') as f:
             f.write("")
 
-    def _send_request(self, system_prompt: str, user_content: str, model: str = None) -> str:
-        """[Protocol v4.4 Enhanced] 发送请求到外部 AI 网关
+    # 最大重试次数，防止无限循环 (修复问题 #2)
+    MAX_RETRIES = 50
+
+    def _send_request(
+        self, system_prompt: str, user_content: str, model: Optional[str] = None
+    ) -> str:
+        """[Protocol v4.4 Enhanced v2] 发送请求到外部 AI 网关
 
         改进点:
-        1. 实施 Wait-or-Die 机制: 无限重试，直到获取有效响应
+        1. 实施 Wait-or-Die 机制: 有限重试，直到获取有效响应或达到上限
         2. 移除超时限制: timeout=None 适应深度思考模型的长耗时
         3. 显式状态反馈: 打印详细的连接状态和等待提示
+        4. 重试计数跟踪: 显示当前重试次数和剩余次数
+        5. OpenAI兼容格式: 改用messages中的system角色
 
         Args:
             system_prompt: 系统提示词
@@ -206,28 +213,33 @@ class ArchitectAdvisor:
         import random
 
         # 基础退避参数
-        retry_delay = 5
-        max_delay = 60
+        retry_delay = 5.0
+        max_delay = 60.0
+        retry_count = 0  # 修复问题 #3: 初始化重试计数
 
         self._log(f"\n🧠 正在呼叫外部大脑 ({model})...")
-        self._log("⏳ 系统将无限等待真实响应 (Protocol v4.4 Wait-or-Die)...")
+        wait_msg = f"⏳ 系统将进行最多 {self.MAX_RETRIES} 次重试"
+        self._log(f"{wait_msg} (Protocol v4.4 Wait-or-Die)...")
 
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json"
         }
 
+        # 修复问题 #4: 改用OpenAI兼容格式 (system在messages中)
         payload = {
             "model": model,
             "max_tokens": 4000,
             "temperature": 0.3,
-            "system": system_prompt,
             "messages": [
+                {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_content}
             ]
         }
 
-        while True:
+        # 修复问题 #2: 使用有限重试循环而非无限循环
+        while retry_count < self.MAX_RETRIES:
+            retry_count += 1
             try:
                 # 关键: timeout=None 允许 socket 无限期保持连接
                 response = requests.post(
@@ -242,7 +254,8 @@ class ArchitectAdvisor:
                 if response.status_code == 200:
                     try:
                         res_json = response.json()
-                        result_text = res_json['choices'][0]['message']['content']
+                        msg_content = res_json['choices'][0]['message']['content']
+                        result_text: str = msg_content
                         usage = res_json.get('usage', {})
 
                         input_tokens = usage.get('prompt_tokens', 0)
@@ -255,7 +268,7 @@ class ArchitectAdvisor:
                         self._log(msg)
 
                         return result_text
-                    except Exception as json_err:
+                    except (KeyError, IndexError, TypeError) as json_err:
                         self._log(f"❌ JSON 解析异常: {json_err}")
                         # JSON 错误通常是传输截断，属于重试范畴
 
@@ -263,17 +276,26 @@ class ArchitectAdvisor:
                 elif response.status_code in [429, 500, 502, 503, 504]:
                     self._log(f"🌊 流量控制/服务繁忙 (HTTP {response.status_code})...")
 
-                # 4xx (400/401): 配置错误，但根据不绕过原则，死锁并报警
+                # 4xx (400/401/403): 认证或授权错误，立即失败
+                elif response.status_code in [400, 401, 403]:
+                    err_text = response.text[:100]
+                    self._log(f"🛑 API认证错误 (HTTP {response.status_code}): {err_text}...")
+                    self._log("⚠️ 请检查 .env 配置或 API Key。")
+                    err_msg = f"❌ API 错误 (HTTP {response.status_code}): 认证失败"
+                    return err_msg
+
+                # 其他错误
                 else:
-                    self._log(f"🛑 致命配置错误 (HTTP {response.status_code}): {response.text[:100]}...")
-                    self._log("⚠️ 请检查 .env 配置或 API Key。脚本将保持挂起状态。")
-                    # 长睡眠，强迫人类介入修复配置，防止 Agent 自动跳过
-                    time.sleep(300)
-                    continue
+                    self._log(f"⚠️ 未知响应 (HTTP {response.status_code}): {response.text[:100]}...")
 
             except Exception as e:
                 # 捕获所有网络层异常 (ConnectionReset, ChunkedEncodingError 等)
                 self._log(f"🔌 网络波动: {str(e)}")
+
+            # 检查是否达到最大重试次数
+            if retry_count >= self.MAX_RETRIES:
+                self._log(f"❌ 已达到最大重试次数 ({self.MAX_RETRIES})，放弃请求")
+                return f"❌ API 请求失败：已达到最大重试次数 ({self.MAX_RETRIES})"
 
             # 指数退避 (Exponential Backoff)
             sleep_time = min(retry_delay, max_delay)
@@ -281,11 +303,13 @@ class ArchitectAdvisor:
             jitter = random.uniform(0, 3)
             total_sleep = sleep_time + jitter
 
-            self._log(f"🔄 {total_sleep:.1f}秒后发起第 N 次重连... (请勿中断)")
+            # 修复问题 #3: 显示实际的重试次数
+            self._log(f"🔄 {total_sleep:.1f}秒后发起第 {retry_count + 1} 次重连... "
+                      f"(已用 {retry_count}/{self.MAX_RETRIES})")
             time.sleep(total_sleep)
 
-            # 增加下一次等待基数
-            retry_delay = retry_delay * 1.5
+            # 增加下一次等待基数 (指数增长，但不超过max_delay)
+            retry_delay = min(retry_delay * 1.5, max_delay)
 
     def _generate_demo_response(self, user_content: str) -> str:
         """演示模式：生成示例输出（用于测试）"""
