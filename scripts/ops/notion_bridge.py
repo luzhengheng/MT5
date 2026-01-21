@@ -61,17 +61,16 @@ except ImportError:
 # Configuration
 # ============================================================================
 
-# [Zero-Trust Security] Token 和 Database ID 不在模块加载时读取
-# 改为在需要时通过 _get_notion_token() 和 _get_database_id() 动态获取
-# 这样避免了全局变量暴露敏感信息的风险
-
-# 保留这些变量以实现后向兼容，但建议使用函数版本
-NOTION_TOKEN = None  # 不在加载时读取，改为按需获取
-NOTION_DATABASE_ID = None  # 不在加载时读取，改为按需获取
-NOTION_TASK_DATABASE_ID = None  # 不在加载时读取，改为按需获取
+# [Zero-Trust Security] Token 和 Database ID 完全通过函数动态获取
+# 不保留全局变量声明以避免混淆和潜在的信息泄露风险
+# 参见 _get_notion_token() 和 _get_database_id() 函数
 
 # Rate limiting: Notion API allows ~3 requests/second
 NOTION_API_RATE_LIMIT = 0.35  # seconds between requests
+
+# [Security] ReDoS 防护：限制内容长度防止正则表达式拒绝服务
+MAX_CONTENT_LENGTH = 100000  # 100 KB limit for content processing
+MAX_SUMMARY_LENGTH = 2000    # Notion API 限制摘要长度
 
 # Project structure
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -84,6 +83,74 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
+
+
+# ============================================================================
+# [Quality] 结构化日志辅助函数 (JSON structured logging)
+# ============================================================================
+
+
+def log_structured(event: str, **kwargs) -> None:
+    """
+    记录结构化 JSON 日志，便于自动化解析和监控
+
+    Args:
+        event: 事件名称 (如 "TASK_PARSED", "NOTION_PUSH_STARTED")
+        **kwargs: 事件属性 (如 task_id, status, duration)
+    """
+    log_entry = {
+        "event": event,
+        "timestamp": datetime.utcnow().isoformat() + 'Z',
+        **kwargs
+    }
+    logger.info(json.dumps(log_entry, ensure_ascii=False))
+
+
+# ============================================================================
+# [Quality] 装饰器应用辅助函数 (Improved readability)
+# ============================================================================
+
+
+def apply_resilient_decorator(
+    func: Callable,
+    timeout: Optional[float] = 30,
+    max_retries: Optional[int] = 5,
+    max_wait: float = 10.0,
+) -> Callable:
+    """
+    统一的韧性装饰器应用函数
+
+    根据 wait_or_die 模块的可用性选择装饰器:
+    - 优先使用 @wait_or_die (可配置重试次数和超时)
+    - 降级到 @retry 从 tenacity 库
+    - 若都不可用则返回原函数
+
+    [Quality] 改进了可读性：消除了三元表达式装饰器
+
+    Args:
+        func: 要装饰的函数
+        timeout: 总超时时间 (秒)
+        max_retries: 最大重试次数
+        max_wait: 最大等待时间 (秒)
+
+    Returns:
+        装饰后的函数
+    """
+    if wait_or_die:
+        return wait_or_die(
+            timeout=timeout,
+            exponential_backoff=True,
+            max_retries=max_retries,
+            initial_wait=1.0,
+            max_wait=max_wait
+        )(func)
+    else:
+        return retry(
+            stop=stop_after_attempt(3),
+            wait=wait_exponential(multiplier=1, min=2, max=10),
+            retry=retry_if_exception_type((ConnectionError, TimeoutError)),
+            reraise=True,
+        )(func)
 
 
 # ============================================================================
@@ -252,11 +319,12 @@ def find_completion_report(task_id: str) -> Optional[Path]:
 
 def extract_report_summary(report_path: Path, max_length: int = 2000) -> str:
     """
-    从 COMPLETION_REPORT.md 提取核心摘要
+    从 COMPLETION_REPORT.md 提取核心摘要 (Protocol v4.4 ReDoS防护)
 
     提取策略:
       1. 提取 "## 📊 执行摘要" 章节
       2. 如果没有，提取前 max_length 字符
+      3. [Security] 截断大内容以防止 ReDoS 攻击
 
     Args:
         report_path: 报告文件路径
@@ -268,6 +336,14 @@ def extract_report_summary(report_path: Path, max_length: int = 2000) -> str:
     try:
         with open(report_path, 'r', encoding='utf-8') as f:
             content = f.read()
+
+        # [Security] ReDoS 防护：限制内容长度
+        if len(content) > MAX_CONTENT_LENGTH:
+            logger.warning(
+                f"[SECURITY] Content exceeds {MAX_CONTENT_LENGTH} bytes, "
+                f"truncating to prevent ReDoS: {report_path}"
+            )
+            content = content[:MAX_CONTENT_LENGTH]
 
         # 尝试提取执行摘要章节
         summary_match = re.search(
@@ -414,7 +490,14 @@ def parse_markdown_task(filepath: str) -> Dict[str, Any]:
         'file_path': filepath,
     }
 
-    logger.info(f"✅ Parsed task: {result['task_id']} - {result['title']}")
+    # [Quality] 使用结构化日志便于自动化解析
+    log_structured(
+        "TASK_PARSED",
+        task_id=result['task_id'],
+        title=result['title'],
+        priority=result.get('priority', 'Normal'),
+        status=result.get('status', 'Unknown')
+    )
     return result
 
 
@@ -423,16 +506,11 @@ def parse_markdown_task(filepath: str) -> Dict[str, Any]:
 # ============================================================================
 
 
-@wait_or_die(
-    timeout=30,
-    exponential_backoff=True,
-    max_retries=5,
-    initial_wait=1.0,
-    max_wait=10.0
-) if wait_or_die else lambda f: f
 def _validate_token_internal(token: str) -> Tuple[bool, str]:
     """
     内部函数：实际执行 Token 验证（带 @wait_or_die 重试）
+
+    Protocol v4.4 Pillar IV: 使用 apply_resilient_decorator 替代三元表达式装饰器
 
     Returns:
         (is_valid, user_name) tuple
@@ -441,6 +519,15 @@ def _validate_token_internal(token: str) -> Tuple[bool, str]:
     user = client.users.me()
     user_name = user.get('name', 'Unknown')
     return (True, user_name)
+
+
+# 应用韧性装饰器到 _validate_token_internal (超时30秒, 5次重试)
+_validate_token_internal = apply_resilient_decorator(
+    _validate_token_internal,
+    timeout=30,
+    max_retries=5,
+    max_wait=10.0
+)
 
 
 def validate_token(token: Optional[str] = None) -> bool:
@@ -478,18 +565,6 @@ def validate_token(token: Optional[str] = None) -> bool:
 # ============================================================================
 
 
-@wait_or_die(
-    timeout=300,
-    exponential_backoff=True,
-    max_retries=50,
-    initial_wait=1.0,
-    max_wait=60.0
-) if wait_or_die else retry(
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=1, min=2, max=10),
-    retry=retry_if_exception_type((ConnectionError, TimeoutError)),
-    reraise=True,
-)
 def _push_to_notion_with_retry(
     client: Client,
     task_metadata: Dict[str, Any],
@@ -500,6 +575,8 @@ def _push_to_notion_with_retry(
 
     使用 @wait_or_die 实现 50 次重试 + 指数退避，比 tenacity 的 3 次重试更有韧性。
     总超时时间为 300 秒（5分钟），覆盖 Notion API 的暂时性故障和网络波动。
+
+    Protocol v4.4 Pillar IV: 使用 apply_resilient_decorator 替代三元表达式装饰器
     """
     properties = {
         "标题": {
@@ -572,6 +649,15 @@ def _push_to_notion_with_retry(
     )
 
     return response
+
+
+# 应用韧性装饰器到 _push_to_notion_with_retry (超时300秒, 50次重试)
+_push_to_notion_with_retry = apply_resilient_decorator(
+    _push_to_notion_with_retry,
+    timeout=300,
+    max_retries=50,
+    max_wait=60.0
+)
 
 
 def push_to_notion(
@@ -667,12 +753,34 @@ def push_to_notion(
             'timestamp': timestamp,
         }
 
-        logger.info(f"✅ [NOTION_BRIDGE] SUCCESS: Page updated (ID: {page_id})")
-        logger.info(f"🔗 [NOTION] URL: {page_url}")
+        # [Quality] 使用结构化日志记录成功的推送事件
+        log_structured(
+            "NOTION_PUSH_SUCCESS",
+            task_id=task_metadata.get('task_id'),
+            page_id=page_id,
+            page_url=page_url,
+            session_uuid=session_uuid,
+            duration_seconds=(datetime.utcnow() - datetime.fromisoformat(timestamp.replace('Z', '+00:00'))).total_seconds()
+        )
         return result
 
+    # [Quality] 异常分类细化：区分网络/验证/未知错误
+    except (ConnectionError, TimeoutError) as e:
+        logger.error(
+            f"❌ [NETWORK] Failed to connect to Notion API: {type(e).__name__}"
+        )
+        logger.debug(f"[DEBUG] Network error detail: {str(e)[:100]}")
+        raise
+    except ValueError as e:
+        logger.error(
+            f"❌ [VALIDATION] Invalid data for Notion push: {e}"
+        )
+        raise
     except Exception as e:
-        logger.error(f"❌ Failed to push task to Notion after retries: {str(e)}")
+        logger.error(
+            f"❌ [UNKNOWN] Unexpected error pushing to Notion: {type(e).__name__}"
+        )
+        logger.debug(f"[DEBUG] Unexpected error detail: {str(e)[:100]}")
         raise
 
 
