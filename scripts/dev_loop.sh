@@ -28,10 +28,13 @@ CURRENT_TASK_ID="${1:-130}"
 TARGET_TASK_ID="${2:-131}"
 REQUIREMENT="${3:-继续实现系统功能}"
 VERIFY_LOG="VERIFY_LOG.log"
-LOCK_FILE="/tmp/dev_loop_${TARGET_TASK_ID}.lock"
 START_TIME=$(date +%s)
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+
+# [Zero-Trust] 安全的锁文件位置（从 /tmp 移至项目目录，避免劫持风险）
+LOCK_DIR="${PROJECT_ROOT}/.locks"
+LOCK_FILE="${LOCK_DIR}/dev_loop_${TARGET_TASK_ID}.lock"
 
 # Color codes for terminal output
 COLOR_RESET='\033[0m'
@@ -117,6 +120,12 @@ validate_inputs() {
         return 1
     fi
 
+    # [Zero-Trust] Security: 过滤 REQUIREMENT 中的危险字符（防止命令注入）
+    if [[ "${REQUIREMENT}" =~ [\`\$\(\)\{\}\[\]\;\&\|\<\>] ]]; then
+        error "REQUIREMENT contains potentially dangerous characters: \` \$ ( ) { } [ ] ; & | < >"
+        return 1
+    fi
+
     success "Input validation passed"
     return 0
 }
@@ -128,21 +137,19 @@ validate_inputs() {
 acquire_lock() {
     log "🔒 [Lock] Acquiring execution lock..."
 
-    if [ -f "${LOCK_FILE}" ]; then
-        local pid
-        pid=$(cat "${LOCK_FILE}")
-        if kill -0 "${pid}" 2>/dev/null; then
-            error "Another instance is already running (PID: ${pid})"
-            error "Lock file: ${LOCK_FILE}"
-            return 1
-        else
-            warn "Stale lock file found (PID ${pid} not running), removing..."
-            rm -f "${LOCK_FILE}"
-        fi
+    # [Zero-Trust] 创建安全的锁目录（仅所有者可访问）
+    mkdir -p "${LOCK_DIR}"
+    chmod 700 "${LOCK_DIR}"
+
+    # [Zero-Trust] 使用 flock 替代手动锁管理，避免 TOCTOU 竞态条件
+    exec 200>"${LOCK_FILE}"
+    if ! flock -n 200; then
+        error "Another instance is already running"
+        error "Lock file: ${LOCK_FILE}"
+        return 1
     fi
 
-    echo $$ > "${LOCK_FILE}"
-    trap 'rm -f "${LOCK_FILE}"' EXIT
+    trap 'flock -u 200; rm -f "${LOCK_FILE}"' EXIT
     success "Lock acquired (PID: $$)"
     return 0
 }
@@ -161,8 +168,8 @@ check_environment() {
     fi
     log "✓ .env file found"
 
-    # Check PYTHONPATH
-    export PYTHONPATH="${PROJECT_ROOT}:${PYTHONPATH}"
+    # Check PYTHONPATH [健壮性] 添加默认值，避免未定义变量
+    export PYTHONPATH="${PROJECT_ROOT}:${PYTHONPATH:-}"
     log "✓ PYTHONPATH set to: $PYTHONPATH"
 
     # Check simple_planner.py exists
@@ -306,14 +313,21 @@ phase_4_done() {
     log "   • Duration: ${duration}s"
     log "   • Evidence: See VERIFY_LOG.log"
 
-    # Optionally call notion_bridge.py if it exists (future integration)
-    if [ -f "${PROJECT_ROOT}/scripts/notion_bridge.py" ]; then
-        log "📌 [Optional] Registering with Notion via notion_bridge.py..."
-        if python3 scripts/notion_bridge.py push --task_id="${TARGET_TASK_ID}" 2>&1 | tee -a "$VERIFY_LOG"; then
-            success "Notion registration successful"
+    # Phase 4 [DONE]: Notion Bridge Integration (Protocol v4.4 Pillar II)
+    log "🔗 [Phase 4] Registering to Notion (SSOT)..."
+    if [ -f "${PROJECT_ROOT}/scripts/ops/notion_bridge.py" ]; then
+        log "📌 [NOTION_BRIDGE] Starting Notion registration for Task #${TARGET_TASK_ID}..."
+        cd "${PROJECT_ROOT}"
+
+        if python3 scripts/ops/notion_bridge.py push --task-id="${TARGET_TASK_ID}" 2>&1 | tee -a "$VERIFY_LOG"; then
+            success "Notion Registration Complete."
+            log "✅ [UnifiedGate] PASS - Notion Bridge integration successful"
         else
-            warn "Notion registration encountered an issue (non-critical)"
+            warn "Notion Registration Failed (governance layer warning)"
+            log "⚠️ Note: Code execution completed, registration issue is non-blocking"
         fi
+    else
+        warn "notion_bridge.py not found at scripts/ops/notion_bridge.py"
     fi
 
     success "dev_loop.sh v2.0 completed successfully"
@@ -326,6 +340,10 @@ phase_4_done() {
 # ============================================================================
 
 main() {
+    # [Zero-Trust] 设置日志文件权限（仅所有者可读写，防止敏感信息泄露）
+    touch "$VERIFY_LOG"
+    chmod 600 "$VERIFY_LOG"
+
     log "🚀 [Ouroboros Loop Controller v2.0] Starting..."
     log "   Protocol: v4.4 (Autonomous Living System)"
     log "   Timestamp: $(date -u '+%Y-%m-%d %H:%M:%S UTC')"

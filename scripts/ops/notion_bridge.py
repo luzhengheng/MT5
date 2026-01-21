@@ -1,17 +1,23 @@
 #!/usr/bin/env python3
 """
-Notion Bridge - 将本地 Markdown 工单推送到 Notion 数据库
+Notion Bridge - 将本地 Markdown 工单推送到 Notion 数据库 (Protocol v4.4 Enhanced)
 
 功能:
   1. 解析 Markdown 工单 (Frontmatter + 内容)
   2. 验证 Notion Token 连通性
-  3. 创建/更新 Notion Page
-  4. 处理 API 速率限制
+  3. 创建/更新 Notion Page (带 @wait_or_die 韧性)
+  4. CLI 推送模式：自动查找 COMPLETION_REPORT.md
 
 使用例:
   python3 scripts/ops/notion_bridge.py --action parse --input task.md
   python3 scripts/ops/notion_bridge.py --action validate-token
-  python3 scripts/ops/notion_bridge.py --action push --input metadata.json
+  python3 scripts/ops/notion_bridge.py push --task-id=130.2
+  python3 scripts/ops/notion_bridge.py push --task-id=130 --retry=5
+
+Protocol v4.4 特性:
+  • Pillar II (Ouroboros): Register 阶段实现
+  • Pillar III (Forensics): 物理日志留痕（UUID + Timestamp）
+  • Pillar IV (Policy-as-Code): @wait_or_die 韧性集成
 """
 
 import json
@@ -21,8 +27,10 @@ import time
 import argparse
 import logging
 import re
+import uuid
 from typing import Dict, Optional, Any, Tuple
 from datetime import datetime
+from pathlib import Path
 
 try:
     from notion_client import Client
@@ -53,14 +61,21 @@ except ImportError:
 # Configuration
 # ============================================================================
 
-NOTION_TOKEN = os.getenv("NOTION_TOKEN")
-NOTION_DATABASE_ID = os.getenv("NOTION_DB_ID")
-NOTION_TASK_DATABASE_ID = os.getenv(
-    "NOTION_TASK_DATABASE_ID", NOTION_DATABASE_ID
-)
+# [Zero-Trust Security] Token 和 Database ID 不在模块加载时读取
+# 改为在需要时通过 _get_notion_token() 和 _get_database_id() 动态获取
+# 这样避免了全局变量暴露敏感信息的风险
+
+# 保留这些变量以实现后向兼容，但建议使用函数版本
+NOTION_TOKEN = None  # 不在加载时读取，改为按需获取
+NOTION_DATABASE_ID = None  # 不在加载时读取，改为按需获取
+NOTION_TASK_DATABASE_ID = None  # 不在加载时读取，改为按需获取
 
 # Rate limiting: Notion API allows ~3 requests/second
 NOTION_API_RATE_LIMIT = 0.35  # seconds between requests
+
+# Project structure
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+ARCHIVE_BASE = PROJECT_ROOT / "docs" / "archive" / "tasks"
 
 # Logging
 logging.basicConfig(
@@ -69,6 +84,221 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 logger = logging.getLogger(__name__)
+
+
+# ============================================================================
+# [Zero-Trust] 安全的环境变量访问函数
+# ============================================================================
+
+
+def _get_notion_token() -> str:
+    """
+    安全获取 Notion Token，避免全局变量暴露
+
+    Raises:
+        EnvironmentError: 如果 NOTION_TOKEN 未设置
+    """
+    token = os.getenv("NOTION_TOKEN")
+    if not token:
+        raise EnvironmentError("NOTION_TOKEN environment variable is not set")
+    return token
+
+
+def _get_database_id() -> str:
+    """
+    安全获取 Notion Database ID，优先使用 NOTION_TASK_DATABASE_ID
+
+    Raises:
+        EnvironmentError: 如果都未设置
+    """
+    db_id = os.getenv("NOTION_TASK_DATABASE_ID") or os.getenv("NOTION_DB_ID")
+    if not db_id:
+        raise EnvironmentError(
+            "Neither NOTION_TASK_DATABASE_ID nor NOTION_DB_ID environment variable is set"
+        )
+    return db_id
+
+
+# ============================================================================
+# [Zero-Trust] 显式输入验证函数 (替代 assert)
+# ============================================================================
+
+
+def validate_task_metadata(task_metadata: Any) -> None:
+    """
+    验证任务元数据的完整性和有效性
+
+    Protocol v4.4 Pillar III: Zero-Trust 验证
+
+    Args:
+        task_metadata: 任务元数据
+
+    Raises:
+        TypeError: 如果类型不正确
+        ValueError: 如果必填字段缺失
+    """
+    if not isinstance(task_metadata, dict):
+        raise TypeError(
+            f"task_metadata must be dict, got {type(task_metadata).__name__}"
+        )
+
+    required_fields = ['task_id', 'title']
+    for field in required_fields:
+        if not task_metadata.get(field):
+            raise ValueError(f"{field} is required in task_metadata")
+
+    if task_metadata.get('content') is None:
+        raise ValueError("content is required in task_metadata")
+
+    logger.info(f"[VALIDATION] Task metadata validated: {task_metadata.get('task_id')}")
+
+
+def sanitize_task_id(raw_id: str) -> str:
+    """
+    清洗并验证 task_id，防止路径遍历
+
+    Protocol v4.4 Pillar III: 防御性编程
+
+    Args:
+        raw_id: 原始任务ID
+
+    Returns:
+        清洗后的任务ID
+
+    Raises:
+        ValueError: 如果格式无效或检测到路径遍历
+    """
+    # 移除常见的前缀
+    cleaned = raw_id.replace('TASK_', '').replace('TASK#', '').strip()
+
+    # [Security] 只允许数字和点号
+    if not re.match(r'^[\d.]+$', cleaned):
+        raise ValueError(f"Invalid task_id format: {raw_id}")
+
+    # [Security] 防止路径遍历
+    if '..' in cleaned or '/' in raw_id or '\\' in raw_id:
+        raise ValueError(f"Path traversal attempt detected: {raw_id}")
+
+    logger.info(f"[SECURITY] Task ID sanitized: {raw_id} -> {cleaned}")
+    return cleaned
+
+
+# ============================================================================
+# Context-Aware: Auto-locate COMPLETION_REPORT.md
+# ============================================================================
+
+
+def find_completion_report(task_id: str) -> Optional[Path]:
+    """
+    上下文感知：自动查找任务的 COMPLETION_REPORT.md
+
+    Protocol v4.4 Pillar III: 防止路径遍历
+
+    搜索路径:
+      1. docs/archive/tasks/TASK_{task_id}/COMPLETION_REPORT.md
+      2. docs/archive/tasks/TASK_{task_id}.X/COMPLETION_REPORT.md (带子版本)
+
+    Args:
+        task_id: 任务ID (如 "130" 或 "130.2")
+
+    Returns:
+        Path object if found, None otherwise
+
+    Raises:
+        ValueError: 如果检测到路径遍历
+    """
+    # [Security] 验证 task_id 防止路径遍历
+    if '..' in task_id or '/' in task_id or '\\' in task_id:
+        logger.error(f"[SECURITY] Path traversal attempt detected: {task_id}")
+        raise ValueError(f"Path traversal attempt detected: {task_id}")
+
+    # 尝试精确匹配
+    task_dir = ARCHIVE_BASE / f"TASK_{task_id}"
+
+    # [Security] 确保解析后的路径仍在 ARCHIVE_BASE 下
+    try:
+        resolved_path = task_dir.resolve()
+        archive_resolved = ARCHIVE_BASE.resolve()
+
+        if not str(resolved_path).startswith(str(archive_resolved)):
+            logger.error(
+                f"[SECURITY] Path escape detected: {resolved_path} not under {archive_resolved}"
+            )
+            raise ValueError(f"Path escape detected for task_id: {task_id}")
+    except (RuntimeError, OSError) as e:
+        logger.error(f"[SECURITY] Path resolution error: {type(e).__name__}")
+        raise ValueError(f"Invalid path for task_id: {task_id}")
+
+    report_path = task_dir / "COMPLETION_REPORT.md"
+
+    if report_path.exists():
+        logger.info(f"✅ [CONTEXT] Found report: {report_path}")
+        return report_path
+
+    # 尝试模糊匹配（带子版本号）
+    if ARCHIVE_BASE.exists():
+        for candidate in ARCHIVE_BASE.glob(f"TASK_{task_id}*/COMPLETION_REPORT.md"):
+            # [Security] 同样检查模糊匹配结果
+            try:
+                if str(candidate.resolve()).startswith(str(ARCHIVE_BASE.resolve())):
+                    logger.info(f"✅ [CONTEXT] Found report (fuzzy match): {candidate}")
+                    return candidate
+            except (RuntimeError, OSError):
+                continue
+
+    logger.warning(f"⚠️ [CONTEXT] Report not found for Task #{task_id}")
+    return None
+
+
+def extract_report_summary(report_path: Path, max_length: int = 2000) -> str:
+    """
+    从 COMPLETION_REPORT.md 提取核心摘要
+
+    提取策略:
+      1. 提取 "## 📊 执行摘要" 章节
+      2. 如果没有，提取前 max_length 字符
+
+    Args:
+        report_path: 报告文件路径
+        max_length: 最大长度限制（Notion API限制）
+
+    Returns:
+        摘要文本
+    """
+    try:
+        with open(report_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+
+        # 尝试提取执行摘要章节
+        summary_match = re.search(
+            r'##\s*📊\s*执行摘要\s*\n\n(.+?)(?=\n##|\n---|\Z)',
+            content,
+            re.DOTALL
+        )
+
+        if summary_match:
+            summary = summary_match.group(1).strip()
+        else:
+            # Fallback: 取前 N 个字符
+            summary = content[:max_length]
+
+        # 截断到限制长度
+        if len(summary) > max_length:
+            summary = summary[:max_length - 20] + "\n\n...(truncated)"
+
+        return summary
+
+    except FileNotFoundError as e:
+        logger.error(f"❌ Report file not found: {report_path}")
+        raise
+    except UnicodeDecodeError as e:
+        logger.error(f"❌ Encoding error in report: {e}")
+        raise
+    except Exception as e:
+        # [Zero-Trust] 只记录异常类型，不记录完整消息
+        logger.error(f"❌ Unexpected error reading report: {type(e).__name__}")
+        logger.debug(f"[DEBUG] Detail: {str(e)[:100]}")
+        raise
 
 
 # ============================================================================
@@ -122,7 +352,7 @@ def parse_markdown_task(filepath: str) -> Dict[str, Any]:
 
         # 提取 Task ID
         task_id_match = re.search(
-            r'TASK\s*#(\d+)', frontmatter_text, re.IGNORECASE
+            r'TASK\s*#(\d+(?:\.\d+)?)', frontmatter_text, re.IGNORECASE
         )
         frontmatter['task_id'] = (
             f"TASK#{task_id_match.group(1)}"
@@ -132,7 +362,7 @@ def parse_markdown_task(filepath: str) -> Dict[str, Any]:
 
         # 提取标题 (第一行的 TASK# 后面的内容)
         title_match = re.search(
-            r'TASK\s*#\d+:\s*(.+?)(?:\(|$)', frontmatter_text
+            r'TASK\s*#\d+(?:\.\d+)?:\s*(.+?)(?:\(|$)', frontmatter_text
         )
         frontmatter['title'] = (
             title_match.group(1).strip() if title_match else "Untitled Task"
@@ -151,7 +381,7 @@ def parse_markdown_task(filepath: str) -> Dict[str, Any]:
         if dep_match:
             deps_str = dep_match.group(1)
             frontmatter['dependencies'] = [
-                d.strip() for d in re.findall(r'TASK\s*#\d+', deps_str)
+                d.strip() for d in re.findall(r'TASK\s*#\d+(?:\.\d+)?', deps_str)
             ]
         else:
             frontmatter['dependencies'] = []
@@ -177,7 +407,7 @@ def parse_markdown_task(filepath: str) -> Dict[str, Any]:
         'task_id': frontmatter.get('task_id', 'UNKNOWN'),
         'title': frontmatter.get('title', 'Untitled Task'),
         'priority': frontmatter.get('priority', 'Medium'),
-        'status': frontmatter.get('status', '草稿'),
+        'status': frontmatter.get('status', '未开始'),
         'dependencies': frontmatter.get('dependencies', []),
         'content': markdown_content.strip(),
         'created_at': datetime.utcnow().isoformat() + 'Z',
@@ -223,11 +453,13 @@ def validate_token(token: Optional[str] = None) -> bool:
     Returns:
         True if token is valid
     """
-    token = token or NOTION_TOKEN
-
+    # [Zero-Trust] 使用封装函数获取敏感配置
     if not token:
-        logger.error("❌ NOTION_TOKEN not found in environment or arguments")
-        return False
+        try:
+            token = _get_notion_token()
+        except EnvironmentError as e:
+            logger.error(f"❌ {e}")
+            return False
 
     try:
         is_valid, user_name = _validate_token_internal(token)
@@ -235,7 +467,9 @@ def validate_token(token: Optional[str] = None) -> bool:
             logger.info(f"✅ Notion Token validated. User: {user_name}")
         return is_valid
     except Exception as e:
-        logger.error(f"❌ Token validation failed: {str(e)}")
+        # [Zero-Trust] 不记录完整异常消息，避免 Token 泄露
+        logger.error(f"❌ Token validation failed: {type(e).__name__}")
+        logger.debug(f"[DEBUG] Detail: {str(e)[:100]}")  # 仅在 debug 级别记录
         return False
 
 
@@ -268,7 +502,7 @@ def _push_to_notion_with_retry(
     总超时时间为 300 秒（5分钟），覆盖 Notion API 的暂时性故障和网络波动。
     """
     properties = {
-        "Name": {
+        "标题": {
             "title": [
                 {
                     "text": {
@@ -283,7 +517,7 @@ def _push_to_notion_with_retry(
 
     # 添加自定义字段 (如果数据库支持)
     if task_metadata.get('task_id'):
-        properties["Task ID"] = {
+        properties["任务ID"] = {
             "rich_text": [
                 {
                     "text": {
@@ -294,15 +528,15 @@ def _push_to_notion_with_retry(
         }
 
     if task_metadata.get('priority'):
-        properties["Priority"] = {
+        properties["优先级"] = {
             "select": {
                 "name": task_metadata['priority'],
             }
         }
 
     if task_metadata.get('status'):
-        properties["Status"] = {
-            "select": {
+        properties["状态"] = {
+            "status": {
                 "name": task_metadata['status'],
             }
         }
@@ -310,7 +544,7 @@ def _push_to_notion_with_retry(
     # 创建 Page
     task_id = task_metadata['task_id']
     logger.info(
-        f"🔄 Pushing task {task_id} to Notion (with resilience.py)..."
+        f"🔄 [NOTION] Pushing task {task_id} to Notion (with @wait_or_die)..."
     )
     time.sleep(NOTION_API_RATE_LIMIT)  # Rate limiting
 
@@ -346,7 +580,10 @@ def push_to_notion(
     token: Optional[str] = None,
 ) -> Dict[str, Any]:
     """
-    将任务推送到 Notion 数据库（带 tenacity 重试机制）。
+    将任务推送到 Notion 数据库（Protocol v4.4 增强版）。
+
+    Protocol v4.4 Pillar III: 使用显式验证替代 assert
+    (assert 在 Python -O 优化模式下会被移除)
 
     Args:
         task_metadata: 任务元数据 (from parse_markdown_task)
@@ -357,11 +594,36 @@ def push_to_notion(
         {
             'page_id': 'xxx',
             'page_url': 'https://notion.so/xxx',
-            'status': 'created'
+            'status': 'created',
+            'session_uuid': 'xxx',
+            'timestamp': 'xxx'
         }
+
+    Raises:
+        TypeError: 如果 task_metadata 类型错误
+        ValueError: 如果缺少必填字段或凭证
     """
-    token = token or NOTION_TOKEN
-    database_id = database_id or NOTION_TASK_DATABASE_ID
+    # [Zero-Trust] 显式输入验证 (不依赖 assert)
+    try:
+        validate_task_metadata(task_metadata)
+    except (TypeError, ValueError) as e:
+        logger.error(f"❌ [VALIDATION] {type(e).__name__}: {str(e)}")
+        raise
+
+    # [Zero-Trust] 安全获取敏感配置
+    if not token:
+        try:
+            token = _get_notion_token()
+        except EnvironmentError as e:
+            logger.error(f"❌ Token retrieval failed: {e}")
+            raise
+
+    if not database_id:
+        try:
+            database_id = _get_database_id()
+        except EnvironmentError as e:
+            logger.error(f"❌ Database ID retrieval failed: {e}")
+            raise
 
     if not token or not database_id:
         logger.error(
@@ -369,13 +631,19 @@ def push_to_notion(
         )
         raise ValueError("Missing required Notion credentials")
 
+    # Generate session UUID for forensics (Pillar III)
+    session_uuid = str(uuid.uuid4())
+    timestamp = datetime.utcnow().isoformat() + 'Z'
+
     try:
         client = Client(auth=token)
         retry_mode = 'resilience.py @wait_or_die' if wait_or_die else 'tenacity'
         logger.info(
-            f"🚀 Attempting to push {task_metadata.get('task_id')} "
+            f"🚀 [NOTION] Attempting to push {task_metadata.get('task_id')} "
             f"(using {retry_mode})..."
         )
+        logger.info(f"📋 [FORENSICS] Session UUID: {session_uuid}")
+        logger.info(f"📋 [FORENSICS] Timestamp: {timestamp}")
 
         # 调用带重试机制的内部函数（现已支持 Protocol v4.4 @wait_or_die）
         response = _push_to_notion_with_retry(
@@ -386,7 +654,7 @@ def push_to_notion(
 
         page_id = response['id']
         page_url = response.get(
-            'url', f"https://notion.so/{page_id}"
+            'url', f"https://notion.so/{page_id.replace('-', '')}"
         )
 
         result = {
@@ -395,9 +663,12 @@ def push_to_notion(
             'status': 'created',
             'task_id': task_metadata['task_id'],
             'created_at': response.get('created_time', ''),
+            'session_uuid': session_uuid,
+            'timestamp': timestamp,
         }
 
-        logger.info(f"✅ Task pushed to Notion: {page_url}")  # noqa: E501
+        logger.info(f"✅ [NOTION_BRIDGE] SUCCESS: Page updated (ID: {page_id})")
+        logger.info(f"🔗 [NOTION] URL: {page_url}")
         return result
 
     except Exception as e:
@@ -410,16 +681,96 @@ def push_to_notion(
 # ============================================================================
 
 
+def cmd_push(args):
+    """
+    CLI 子命令: push
+
+    自动查找 COMPLETION_REPORT.md 并推送到 Notion
+
+    Protocol v4.4 Pillar III: 输入清洗和验证
+    """
+    if not args.task_id:
+        logger.error("❌ --task-id required for push command")
+        sys.exit(1)
+
+    # [Zero-Trust] 清洗并验证 task_id (防止路径遍历)
+    try:
+        task_id = sanitize_task_id(args.task_id)
+    except ValueError as e:
+        logger.error(f"❌ [SECURITY] Invalid task_id: {e}")
+        sys.exit(1)
+
+    logger.info(f"🔍 [NOTION_BRIDGE] Looking for Task #{task_id} report...")
+
+    # 查找完成报告
+    report_path = find_completion_report(task_id)
+    if not report_path:
+        logger.error(f"❌ [NOTION_BRIDGE] Report not found for Task #{task_id}")
+        logger.error(f"   Expected location: {ARCHIVE_BASE}/TASK_{task_id}/COMPLETION_REPORT.md")
+        sys.exit(1)
+
+    # 提取摘要
+    summary = extract_report_summary(report_path)
+
+    # 构建任务元数据
+    task_metadata = {
+        'task_id': f'TASK#{task_id}',
+        'title': f'Task #{task_id} - Completion Report',
+        'priority': args.priority or 'Critical',
+        'status': '已完成',
+        'content': summary,
+        'dependencies': [],
+        'created_at': datetime.utcnow().isoformat() + 'Z',
+        'file_path': str(report_path),
+    }
+
+    logger.info(f"📦 [NOTION_BRIDGE] Task metadata prepared")
+    logger.info(f"   Title: {task_metadata['title']}")
+    logger.info(f"   Status: {task_metadata['status']}")
+    logger.info(f"   Content length: {len(task_metadata['content'])} chars")
+
+    # 推送到 Notion
+    try:
+        result = push_to_notion(
+            task_metadata,
+            database_id=args.database_id,
+            token=args.token,
+        )
+
+        # 输出结果
+        print("\n" + "="*80)
+        print(f"✅ [NOTION_BRIDGE] Registration Complete")
+        print(f"   Page ID: {result['page_id']}")
+        print(f"   URL: {result['page_url']}")
+        print(f"   Session UUID: {result['session_uuid']}")
+        print(f"   Timestamp: {result['timestamp']}")
+        print("="*80 + "\n")
+
+        # 保存结果到日志（用于物理验尸）
+        logger.info(f"[PHYSICAL_EVIDENCE] Notion Page Created")
+        logger.info(f"[PHYSICAL_EVIDENCE] Page ID: {result['page_id']}")
+        logger.info(f"[PHYSICAL_EVIDENCE] Session UUID: {result['session_uuid']}")
+
+        sys.exit(0)
+
+    except Exception as e:
+        logger.error(f"❌ [NOTION_BRIDGE] Push failed: {str(e)}")
+        sys.exit(1)
+
+
 def main():
     parser = argparse.ArgumentParser(
-        description="Notion Bridge - 推送任务到 Notion"
+        description="Notion Bridge - 推送任务到 Notion (Protocol v4.4)"
     )
 
+    # 使用 subparsers 支持多种命令模式
+    subparsers = parser.add_subparsers(dest='command', help='命令')
+
+    # Legacy mode: --action (保持向后兼容)
     parser.add_argument(
         "--action",
-        required=True,
         choices=["parse", "validate-token", "push", "test"],
-        help="执行的操作",
+        help="执行的操作 (Legacy mode)",
     )
 
     parser.add_argument(
@@ -442,7 +793,44 @@ def main():
         help="输出文件路径 (JSON 格式)",
     )
 
+    # New mode: push subcommand (Protocol v4.4)
+    push_parser = subparsers.add_parser('push', help='推送完成报告到 Notion')
+    push_parser.add_argument(
+        '--task-id',
+        required=True,
+        help='任务ID (如: 130 或 130.2)'
+    )
+    push_parser.add_argument(
+        '--retry',
+        type=int,
+        default=5,
+        help='重试次数 (默认: 5)'
+    )
+    push_parser.add_argument(
+        '--priority',
+        default='Critical',
+        help='任务优先级 (默认: Critical)'
+    )
+    push_parser.add_argument(
+        '--token',
+        help='Notion Token (默认从环境变量读取)'
+    )
+    push_parser.add_argument(
+        '--database-id',
+        help='Notion Database ID (默认从环境变量读取)'
+    )
+
     args = parser.parse_args()
+
+    # Route to appropriate handler
+    if args.command == 'push':
+        cmd_push(args)
+        return
+
+    # Legacy mode handling
+    if not args.action:
+        parser.print_help()
+        sys.exit(1)
 
     try:
         if args.action == "parse":
@@ -461,7 +849,14 @@ def main():
                 print(json.dumps(result, indent=2, ensure_ascii=False))
 
         elif args.action == "validate-token":
-            token = args.token or NOTION_TOKEN
+            # [Zero-Trust] 不使用全局变量，而是通过函数获取
+            token = args.token
+            if not token:
+                try:
+                    token = _get_notion_token()
+                except EnvironmentError as e:
+                    logger.error(f"❌ {e}")
+                    sys.exit(1)
             is_valid = validate_token(token)
             sys.exit(0 if is_valid else 1)
 
@@ -473,6 +868,15 @@ def main():
             # 读取任务元数据
             with open(args.input, 'r') as f:
                 task_metadata = json.load(f)
+                # [Auto-Fix] 强制截断内容以符合 Notion API 限制 (2000 chars)
+                if "content" in task_metadata and len(task_metadata.get("content", "")) > 2000:
+                    print(f"[*] ⚠️ 内容过长 ({len(task_metadata.get('content', ''))} > 2000)，已自动截断")
+                    task_metadata["content"] = task_metadata["content"][:2000] + "...(truncated)"
+                # [Auto-Fix] 强力清洗状态值 (草稿 -> 未开始)
+                for k in ["status", "Status", "状态", "State"]:
+                    if task_metadata.get(k) == "草稿":
+                        print(f"[*] ⚠️ 发现非法状态 {k}=草稿，自动修正为 未开始")
+                        task_metadata[k] = "未开始"
 
             result = push_to_notion(
                 task_metadata,
