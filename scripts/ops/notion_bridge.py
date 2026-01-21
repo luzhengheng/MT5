@@ -28,7 +28,7 @@ import argparse
 import logging
 import re
 import uuid
-from typing import Dict, Optional, Any, Tuple
+from typing import Dict, Optional, Any, Tuple, Callable
 from datetime import datetime
 from pathlib import Path
 
@@ -71,6 +71,14 @@ NOTION_API_RATE_LIMIT = 0.35  # seconds between requests
 # [Security] ReDoS 防护：限制内容长度防止正则表达式拒绝服务
 MAX_CONTENT_LENGTH = 100000  # 100 KB limit for content processing
 MAX_SUMMARY_LENGTH = 2000    # Notion API 限制摘要长度
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB file size limit
+
+# [Performance] 预编译正则表达式
+TASK_ID_PATTERN = re.compile(r'^[\d.]+$')
+SUMMARY_PATTERN = re.compile(
+    r'##\s*📊\s*执行摘要\s*\n\n(.+?)(?=\n##|\n---|\Z)',
+    re.DOTALL
+)
 
 # Project structure
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -238,8 +246,8 @@ def sanitize_task_id(raw_id: str) -> str:
     # 移除常见的前缀
     cleaned = raw_id.replace('TASK_', '').replace('TASK#', '').strip()
 
-    # [Security] 只允许数字和点号
-    if not re.match(r'^[\d.]+$', cleaned):
+    # [Security] 只允许数字和点号 (使用预编译的正则)
+    if not TASK_ID_PATTERN.match(cleaned):
         raise ValueError(f"Invalid task_id format: {raw_id}")
 
     # [Security] 防止路径遍历
@@ -334,6 +342,14 @@ def extract_report_summary(report_path: Path, max_length: int = 2000) -> str:
         摘要文本
     """
     try:
+        # [Security] 文件大小检查
+        file_size = report_path.stat().st_size
+        if file_size > MAX_FILE_SIZE:
+            logger.error(
+                f"[SECURITY] File exceeds maximum size: {file_size} > {MAX_FILE_SIZE}"
+            )
+            raise ValueError(f"Report file too large: {file_size} bytes")
+
         with open(report_path, 'r', encoding='utf-8') as f:
             content = f.read()
 
@@ -345,12 +361,8 @@ def extract_report_summary(report_path: Path, max_length: int = 2000) -> str:
             )
             content = content[:MAX_CONTENT_LENGTH]
 
-        # 尝试提取执行摘要章节
-        summary_match = re.search(
-            r'##\s*📊\s*执行摘要\s*\n\n(.+?)(?=\n##|\n---|\Z)',
-            content,
-            re.DOTALL
-        )
+        # 尝试提取执行摘要章节 (使用预编译的正则)
+        summary_match = SUMMARY_PATTERN.search(content)
 
         if summary_match:
             summary = summary_match.group(1).strip()
