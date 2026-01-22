@@ -1,0 +1,121 @@
+name: Code Quality - Notion Bridge
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'scripts/ops/notion_bridge.py'
+      - 'tests/test_notion_bridge*.py'
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  quality:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install black flake8 mypy isort pylint
+
+      - name: Format check with black
+        run: |
+          echo "Checking Python code format..."
+          black --check --line-length=100 scripts/ops/notion_bridge.py || echo "Format issues found (non-blocking)"
+
+      - name: Import sort check
+        run: |
+          echo "Checking import order..."
+          isort --check-only --profile black scripts/ops/notion_bridge.py || echo "Import order issues (non-blocking)"
+
+      - name: Style check with flake8
+        run: |
+          echo "Checking code style..."
+          flake8 scripts/ops/notion_bridge.py --max-line-length=100 --ignore=E203,W503 --count --statistics || echo "Style issues found (non-blocking)"
+
+      - name: Type checking with mypy
+        run: |
+          echo "Type checking..."
+          mypy scripts/ops/notion_bridge.py --ignore-missing-imports --warn-unused-ignores || echo "Type checking issues (non-blocking)"
+
+      - name: Security check with bandit
+        run: |
+          pip install bandit
+          echo "Security scanning..."
+          bandit -r scripts/ops/notion_bridge.py -f json -o bandit-report.json || true
+          bandit -r scripts/ops/notion_bridge.py || echo "Security issues (review manually)"
+
+      - name: Complexity check
+        run: |
+          pip install radon
+          echo "Checking code complexity..."
+          radon cc scripts/ops/notion_bridge.py -a || echo "Complexity report complete"
+
+      - name: Maintainability index
+        run: |
+          pip install radon
+          echo "Checking maintainability..."
+          radon mi scripts/ops/notion_bridge.py || echo "Maintainability report complete"
+
+      - name: Upload security report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: security-report
+          path: bandit-report.json
+
+  coverage:
+    name: Code Coverage
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install pytest pytest-cov
+
+      - name: Run tests with coverage
+        run: |
+          pytest tests/test_notion_bridge_redos.py tests/test_notion_bridge_exceptions.py tests/test_notion_bridge_integration.py \
+            --cov=scripts.ops.notion_bridge \
+            --cov-report=term-missing \
+            --cov-report=html \
+            --cov-report=xml
+
+      - name: Check coverage threshold
+        run: |
+          echo "Checking coverage threshold..."
+          coverage report --fail-under=80 || echo "Coverage below 80% (non-blocking)"
+
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          flags: notion-bridge
+          name: notion-bridge-coverage
+
+      - name: Archive coverage report
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: htmlcov/
