@@ -58,6 +58,69 @@ except ImportError:
     wait_or_die = None
 
 # ============================================================================
+# [Quality] 异常分类体系 (Protocol v4.4 + 优化 2)
+# ============================================================================
+
+class NotionBridgeException(Exception):
+    """Notion Bridge 基础异常类"""
+    pass
+
+
+class SecurityException(NotionBridgeException):
+    """安全相关异常"""
+    pass
+
+
+class PathTraversalError(SecurityException):
+    """路径遍历攻击异常"""
+    pass
+
+
+class CredentialError(SecurityException):
+    """凭证相关异常"""
+    pass
+
+
+class ValidationException(NotionBridgeException):
+    """数据验证异常"""
+    pass
+
+
+class TaskMetadataError(ValidationException):
+    """任务元数据格式错误"""
+    pass
+
+
+class NetworkException(NotionBridgeException):
+    """网络相关异常"""
+    pass
+
+
+class NotionAPIError(NetworkException):
+    """Notion API 调用失败"""
+    pass
+
+
+class TimeoutException(NetworkException):
+    """超时异常"""
+    pass
+
+
+class FileException(NotionBridgeException):
+    """文件操作异常"""
+    pass
+
+
+class FileTooLargeError(FileException):
+    """文件过大异常"""
+    pass
+
+
+class EncodingError(FileException):
+    """编码错误异常"""
+    pass
+
+# ============================================================================
 # Configuration
 # ============================================================================
 
@@ -75,6 +138,14 @@ MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB file size limit
 
 # [Performance] 预编译正则表达式
 TASK_ID_PATTERN = re.compile(r'^[\d.]+$')
+
+# [Security] 更严格的任务 ID 模式 (防止 ReDoS，限制长度)
+TASK_ID_STRICT_PATTERN = re.compile(r'^[0-9]{1,3}(?:\.[0-9]{1,2})?$')
+
+# [Security] 危险字符检测模式
+DANGEROUS_CHARS_PATTERN = re.compile(r'[\x00-\x1f\x7f]|[`$(){}[\];&#|<>]')
+
+# [Performance] 摘要提取模式 (非贪心量词)
 SUMMARY_PATTERN = re.compile(
     r'##\s*📊\s*执行摘要\s*\n\n(.+?)(?=\n##|\n---|\Z)',
     re.DOTALL
@@ -232,7 +303,14 @@ def sanitize_task_id(raw_id: str) -> str:
     """
     清洗并验证 task_id，防止路径遍历
 
-    Protocol v4.4 Pillar III: 防御性编程
+    Protocol v4.4 Pillar III: 防御性编程 + ReDoS防护强化版
+
+    [Security] 多层验证:
+      1. 移除前缀
+      2. 基础格式验证 (只允许数字和点号)
+      3. 严格格式验证 (长度和结构限制)
+      4. 路径遍历检测
+      5. 危险字符检测
 
     Args:
         raw_id: 原始任务ID
@@ -243,19 +321,70 @@ def sanitize_task_id(raw_id: str) -> str:
     Raises:
         ValueError: 如果格式无效或检测到路径遍历
     """
-    # 移除常见的前缀
+    # [Security] 第一层：移除常见的前缀
     cleaned = raw_id.replace('TASK_', '').replace('TASK#', '').strip()
 
-    # [Security] 只允许数字和点号 (使用预编译的正则)
+    # [Security] 第二层：基础格式验证 (使用预编译的正则)
     if not TASK_ID_PATTERN.match(cleaned):
-        raise ValueError(f"Invalid task_id format: {raw_id}")
+        raise TaskMetadataError(f"Invalid task_id format: {raw_id}")
 
-    # [Security] 防止路径遍历
+    # [Security] 第三层：严格格式验证 (防止 ReDoS)
+    if not TASK_ID_STRICT_PATTERN.match(cleaned):
+        raise TaskMetadataError(f"Task ID format too strict or invalid: {raw_id}")
+
+    # [Security] 第四层：路径遍历检测
     if '..' in cleaned or '/' in raw_id or '\\' in raw_id:
-        raise ValueError(f"Path traversal attempt detected: {raw_id}")
+        raise PathTraversalError(f"Path traversal attempt detected: {raw_id}")
 
-    logger.info(f"[SECURITY] Task ID sanitized: {raw_id} -> {cleaned}")
+    # [Security] 第五层：危险字符检测
+    if DANGEROUS_CHARS_PATTERN.search(raw_id):
+        raise SecurityException(f"Dangerous characters detected in task_id: {raw_id}")
+
+    logger.info(f"[SECURITY] Task ID sanitized (5-layer validation): {raw_id} -> {cleaned}")
     return cleaned
+
+
+# ============================================================================
+# [Security] ReDoS 防护强化：正则表达式超时检测
+# ============================================================================
+
+
+def validate_regex_safety(pattern, sample_input: str, timeout: float = 0.5) -> bool:
+    """
+    验证正则表达式的 ReDoS 安全性 (Protocol v4.4 强化版)
+
+    使用超时机制检测潜在的灾难性回溯。
+
+    Args:
+        pattern: 待测试的正则表达式对象
+        sample_input: 样本输入文本
+        timeout: 超时时间（秒，默认 0.5 秒）
+
+    Returns:
+        True 如果正则表达式执行快速，False 如果超时或异常
+    """
+    import signal
+
+    def timeout_handler(signum, frame):
+        raise TimeoutError("Regex execution timeout - possible ReDoS detected")
+
+    try:
+        # 仅在支持 SIGALRM 的系统中使用信号超时 (Unix/Linux)
+        if hasattr(signal, 'SIGALRM'):
+            signal.signal(signal.SIGALRM, timeout_handler)
+            signal.alarm(max(1, int(timeout)))  # 最小 1 秒
+            pattern.search(sample_input)
+            signal.alarm(0)  # 取消告警
+        else:
+            # Windows 或不支持 SIGALRM 的系统，仅执行正则
+            pattern.search(sample_input)
+        return True
+    except TimeoutError:
+        logger.error("[SECURITY] Regex ReDoS detected - timeout")
+        return False
+    except Exception as e:
+        logger.error(f"[SECURITY] Regex validation error: {type(e).__name__}")
+        return False
 
 
 # ============================================================================
@@ -285,7 +414,7 @@ def find_completion_report(task_id: str) -> Optional[Path]:
     # [Security] 验证 task_id 防止路径遍历
     if '..' in task_id or '/' in task_id or '\\' in task_id:
         logger.error(f"[SECURITY] Path traversal attempt detected: {task_id}")
-        raise ValueError(f"Path traversal attempt detected: {task_id}")
+        raise PathTraversalError(f"Path traversal attempt detected: {task_id}")
 
     # 尝试精确匹配
     task_dir = ARCHIVE_BASE / f"TASK_{task_id}"
@@ -299,10 +428,12 @@ def find_completion_report(task_id: str) -> Optional[Path]:
             logger.error(
                 f"[SECURITY] Path escape detected: {resolved_path} not under {archive_resolved}"
             )
-            raise ValueError(f"Path escape detected for task_id: {task_id}")
+            raise PathTraversalError(f"Path escape detected for task_id: {task_id}")
+    except PathTraversalError:
+        raise
     except (RuntimeError, OSError) as e:
         logger.error(f"[SECURITY] Path resolution error: {type(e).__name__}")
-        raise ValueError(f"Invalid path for task_id: {task_id}")
+        raise FileException(f"Invalid path for task_id: {task_id}") from e
 
     report_path = task_dir / "COMPLETION_REPORT.md"
 
@@ -327,12 +458,14 @@ def find_completion_report(task_id: str) -> Optional[Path]:
 
 def extract_report_summary(report_path: Path, max_length: int = 2000) -> str:
     """
-    从 COMPLETION_REPORT.md 提取核心摘要 (Protocol v4.4 ReDoS防护)
+    从 COMPLETION_REPORT.md 提取核心摘要 (Protocol v4.4 ReDoS防护强化版)
 
-    提取策略:
-      1. 提取 "## 📊 执行摘要" 章节
-      2. 如果没有，提取前 max_length 字符
-      3. [Security] 截断大内容以防止 ReDoS 攻击
+    [Security] 多层 ReDoS 防护:
+      1. 文件大小预检查 (10MB 限制)
+      2. 内容长度截断 (100KB 限制)
+      3. 正则表达式超时检测 (0.5 秒)
+      4. 非贪心量词使用（已在正则中采用）
+      5. Fallback 机制（超时时使用内容截断）
 
     Args:
         report_path: 报告文件路径
@@ -342,18 +475,18 @@ def extract_report_summary(report_path: Path, max_length: int = 2000) -> str:
         摘要文本
     """
     try:
-        # [Security] 文件大小检查
+        # [Security] 第一层：文件大小检查
         file_size = report_path.stat().st_size
         if file_size > MAX_FILE_SIZE:
             logger.error(
                 f"[SECURITY] File exceeds maximum size: {file_size} > {MAX_FILE_SIZE}"
             )
-            raise ValueError(f"Report file too large: {file_size} bytes")
+            raise FileTooLargeError(f"Report file too large: {file_size} bytes")
 
         with open(report_path, 'r', encoding='utf-8') as f:
             content = f.read()
 
-        # [Security] ReDoS 防护：限制内容长度
+        # [Security] 第二层：内容长度截断
         if len(content) > MAX_CONTENT_LENGTH:
             logger.warning(
                 f"[SECURITY] Content exceeds {MAX_CONTENT_LENGTH} bytes, "
@@ -361,16 +494,22 @@ def extract_report_summary(report_path: Path, max_length: int = 2000) -> str:
             )
             content = content[:MAX_CONTENT_LENGTH]
 
-        # 尝试提取执行摘要章节 (使用预编译的正则)
-        summary_match = SUMMARY_PATTERN.search(content)
-
-        if summary_match:
-            summary = summary_match.group(1).strip()
-        else:
-            # Fallback: 取前 N 个字符
+        # [Security] 第三层：正则表达式超时检测
+        if not validate_regex_safety(SUMMARY_PATTERN, content, timeout=0.5):
+            logger.warning("[SECURITY] Regex pattern execution timed out, using fallback")
+            # Fallback: 直接截断，不使用正则
             summary = content[:max_length]
+        else:
+            # [Security] 第四层：使用预编译的非贪心量词正则
+            summary_match = SUMMARY_PATTERN.search(content)
 
-        # 截断到限制长度
+            if summary_match:
+                summary = summary_match.group(1).strip()
+            else:
+                # Fallback: 取前 N 个字符
+                summary = content[:max_length]
+
+        # 最终截断到限制长度
         if len(summary) > max_length:
             summary = summary[:max_length - 20] + "\n\n...(truncated)"
 
@@ -378,15 +517,21 @@ def extract_report_summary(report_path: Path, max_length: int = 2000) -> str:
 
     except FileNotFoundError as e:
         logger.error(f"❌ Report file not found: {report_path}")
-        raise
+        raise FileException(f"Report not found: {report_path}") from e
     except UnicodeDecodeError as e:
-        logger.error(f"❌ Encoding error in report: {e}")
+        logger.error(f"❌ Encoding error in report")
+        raise EncodingError(f"Cannot decode file: {report_path}") from e
+    except FileTooLargeError:
+        # 重新抛出文件过大异常
+        raise
+    except NotionBridgeException:
+        # 重新抛出已定义的异常
         raise
     except Exception as e:
         # [Zero-Trust] 只记录异常类型，不记录完整消息
         logger.error(f"❌ Unexpected error reading report: {type(e).__name__}")
         logger.debug(f"[DEBUG] Detail: {str(e)[:100]}")
-        raise
+        raise NotionBridgeException(f"Unexpected error: {type(e).__name__}") from e
 
 
 # ============================================================================
