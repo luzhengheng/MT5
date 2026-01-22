@@ -7,11 +7,13 @@ on:
       - 'scripts/ops/notion_bridge.py'
       - 'tests/test_notion_bridge*.py'
       - '.github/workflows/test-notion-bridge.yml'
+      - 'requirements.txt'
   pull_request:
     branches: [ main ]
     paths:
       - 'scripts/ops/notion_bridge.py'
       - 'tests/test_notion_bridge*.py'
+      - 'requirements.txt'
 
 jobs:
   test:
