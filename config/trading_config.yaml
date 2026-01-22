@@ -16,17 +16,34 @@ common:
 # 交易配置 (Trading Configuration)
 # 支持多品种并发交易 (Multi-Symbol Concurrent Trading)
 symbols:
+  - symbol: "EURUSD.s"
+    magic_number: 202600
+    lot_size: 0.01
+    active: true
+    slippage_tolerance: 5
+    risk_profile: "conservative_fx"
+    risk_profile_details:
+      stop_loss_pips: 200
+      take_profit_pips: 400
+      max_dd_percent: 1.0
+      lot_size: 0.01
+
   - symbol: "BTCUSD.s"
     magic_number: 202601
-    lot_size: 0.01
+    lot_size: 0.001
+    active: true
     slippage_tolerance: 10
-    risk_profile:
+    risk_profile: "conservative_crypto"
+    risk_profile_details:
       stop_loss_pips: 5000
       take_profit_pips: 10000
+      max_dd_percent: 1.0
+      lot_size: 0.001
 
   - symbol: "ETHUSD.s"
     magic_number: 202602
     lot_size: 0.01
+    active: false
     slippage_tolerance: 10
     risk_profile:
       stop_loss_pips: 3000
@@ -35,6 +52,7 @@ symbols:
   - symbol: "XAUUSD.s"
     magic_number: 202603
     lot_size: 0.01
+    active: false
     slippage_tolerance: 10
     risk_profile:
       stop_loss_pips: 500
@@ -158,11 +176,15 @@ monitoring:
 
 # 元数据 (Metadata)
 metadata:
-  version: "2.0.0"
+  version: "3.0.0"
   created_date: "2026-01-18"
-  task_id: "TASK#121-123"
-  description: "配置中心统一管理所有交易参数 + 多品种并发支持 (Task #123)"
-  last_updated: "2026-01-18"
-  symbols_count: 3
+  updated_date: "2026-01-20"
+  task_id: "TASK#121-123-128"
+  description: "配置中心统一管理所有交易参数 + 多品种并发支持 (Task #123) + 双轨实盘激活 (Task #128)"
+  last_updated: "2026-01-20"
+  active_symbols_count: 2
+  total_symbols_count: 4
   concurrent_trading_enabled: true
-  symbol_list: ["BTCUSD.s", "ETHUSD.s", "XAUUSD.s"]
+  dual_track_active: true
+  active_symbol_list: ["EURUSD.s", "BTCUSD.s"]
+  trading_mode: "Phase7-DualTrack"
