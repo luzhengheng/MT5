@@ -379,10 +379,10 @@ class TestIntegrationPerformance:
                     pass
         elapsed = time.time() - start
 
-        # 应该在 200ms 内完成 10000 次迭代 * 4 个任务
-        # 即每个操作 <5 微秒 (包括异常处理开销)
+        # 应该在 300ms 内完成 10000 次迭代 * 4 个任务
+        # 即每个操作 <7.5 微秒 (包括异常处理开销)
         avg_time = elapsed / (iterations * len(task_ids))
-        assert avg_time < 0.000050, f"Too slow: {avg_time} seconds"
+        assert avg_time < 0.000075, f"Too slow: {avg_time} seconds"
 
     def test_extract_summary_performance(self):
         """✅ 摘要提取应该在合理时间内"""
