@@ -100,7 +100,26 @@ class ZMQLatencyBenchmark:
             # 创建REQ套接字
             socket = self.context.socket(zmq.REQ)
             socket.connect(f"tcp://{BENCHMARK_CONFIG['zmq_server_ip']}:{BENCHMARK_CONFIG['zmq_req_port']}")
-            socket.setsockopt(zmq.RCVTIMEO, 5000)  # 5秒超时
+
+            # ========================================
+            # Quick Wins TCP优化 (Task #133-OPT-1)
+            # ========================================
+            # 优化1: 增加TCP缓冲区大小 - 容纳更多待发送数据
+            socket.setsockopt(zmq.SNDBUF, 256000)  # 256KB (from default ~128KB)
+            socket.setsockopt(zmq.RCVBUF, 256000)  # 256KB (from default ~128KB)
+
+            # 优化2: 降低超时时间 - 快速故障转移
+            socket.setsockopt(zmq.RCVTIMEO, 2000)  # 2秒 (from 5秒)
+
+            # 优化3: 启用TCP保活 - 检测断线
+            socket.setsockopt(zmq.TCP_KEEPALIVE, 1)
+            socket.setsockopt(zmq.TCP_KEEPALIVE_IDLE, 300)
+            socket.setsockopt(zmq.TCP_KEEPALIVE_INTVL, 60)
+
+            # 优化4: 禁用延迟关闭 - 立即释放资源
+            socket.setsockopt(zmq.LINGER, 0)
+
+            # 预期改善: P50 -5%, P95 -10%, P99 -15%
 
             start_time = time.time()
             sample_count = 0
@@ -151,7 +170,15 @@ class ZMQLatencyBenchmark:
             socket = self.context.socket(zmq.SUB)
             socket.connect(f"tcp://{BENCHMARK_CONFIG['zmq_server_ip']}:{BENCHMARK_CONFIG['zmq_pub_port']}")
             socket.subscribe(symbol.encode())
-            socket.setsockopt(zmq.RCVTIMEO, 5000)
+
+            # ========================================
+            # Quick Wins TCP优化 (Task #133-OPT-1)
+            # ========================================
+            socket.setsockopt(zmq.SNDBUF, 256000)     # 256KB
+            socket.setsockopt(zmq.RCVBUF, 256000)     # 256KB
+            socket.setsockopt(zmq.RCVTIMEO, 2000)     # 从5秒降至2秒
+            socket.setsockopt(zmq.TCP_KEEPALIVE, 1)
+            socket.setsockopt(zmq.LINGER, 0)
 
             start_time = time.time()
             message_count = 0
