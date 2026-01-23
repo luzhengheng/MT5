@@ -62,7 +62,7 @@ class ServerAssets:
         "role": "手脚 (Windows 网关)",
         "hostname": "sg-mt5-gateway-01",
         "public_ip": "47.237.79.129",
-        "private_ip": "172.19.141.251",
+        "private_ip": "172.19.141.255",
         "fqdn": "gtw.crestive.net",
         "port": 22,
         "user": "Administrator",
@@ -267,7 +267,7 @@ class ZeroMQConnectionManager:
             完整的 ZMQ 连接地址 (含协议和端口)
 
         逻辑:
-            - 生产环境 (172.19.0.0/16): 使用内网 IP (172.19.141.251)
+            - 生产环境 (172.19.0.0/16): 使用内网 IP (172.19.141.255)
             - 开发环境: 使用本地 127.0.0.1 (需配合 SSH 隧道)
         """
         port = ZeroMQConfig.ZMQ_REQ_PORT if service == "req" else ZeroMQConfig.ZMQ_PUB_PORT
@@ -277,7 +277,7 @@ class ZeroMQConnectionManager:
             return f"{ZeroMQConfig.ZMQ_SERVER_ADDR_INTERNAL}:{port}"
         else:
             # 开发环境：使用本地 IP（需配合 SSH 隧道）
-            # 使用方法: ssh -L 5555:172.19.141.251:5555 inf
+            # 使用方法: ssh -L 5555:172.19.141.255:5555 inf
             return f"{ZeroMQConfig.ZMQ_SERVER_ADDR_LOCAL}:{port}"
 
     @staticmethod
@@ -405,7 +405,7 @@ def print_network_status():
     else:
         print("环境: 🔵 本地开发")
         print("注意: 需要配置 SSH 隧道来访问 ZMQ 服务器")
-        print(f"  命令: ssh -L 5555:172.19.141.251:5555 inf")
+        print(f"  命令: ssh -L 5555:172.19.141.255:5555 inf")
         print(f"ZMQ 服务器地址: {get_zmq_req_address()}")
 
     print("\n" + "="*60)

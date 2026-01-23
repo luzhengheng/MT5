@@ -6,7 +6,7 @@ Task #119.8: 标准交易周期验证 (Golden Loop)
 验证基础设施已准备好启动 Task #120 (Live Strategy)。
 
 验证内容:
-  1. ZMQ 连接到 GTW (172.19.141.255:5555)
+  1. ZMQ 连接到 GTW (172.19.141.251:5555)
   2. 订单执行循环验证
   3. 订单 Ticket ID 正确返回
   4. 账户信息同步
@@ -30,7 +30,7 @@ from pathlib import Path
 # ============================================================================
 
 LOG_FILE = "VERIFY_LOG.log"
-GTW_IP = os.getenv("GTW_HOST", "172.19.141.255")
+GTW_IP = os.getenv("GTW_HOST", "172.19.141.251")
 GTW_PORT = int(os.getenv("GTW_PORT", 5555))
 REQUEST_TIMEOUT = 5000  # ms
 
