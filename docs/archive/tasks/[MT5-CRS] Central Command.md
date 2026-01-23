@@ -189,7 +189,51 @@ Level 5: 应急响应
   ├─ Kill Switch
   ├─ 自动回滚
   └─ 告警机制
+
+Level 6: 验证机制 ⭐ (新增 - Task #135 改进)
+  ├─ 真实执行验证 (不允许无声降级)
+  ├─ API密钥边界检查
+  └─ 执行模式透明化
 ```
+
+---
+
+### 验证机制详解 (Verification Mechanism - Level 6)
+
+**问题背景**: 外部AI调用失败案例分析(2026-01-23)
+
+三个根本原因:
+1. **目标/方法混淆** - 混淆了"获取报告"和"调用外部AI"
+2. **边界感知缺失** - 未验证API密钥是否真实存在
+3. **验证机制缺失** - 无法区分真实执行vs演示模式
+
+**改进方案** - 3层防御机制:
+
+```python
+# Layer 1: 环境验证 (Environment Verification)
+if not os.getenv('API_KEY') and not mock_mode:
+    raise ValueError("❌ FATAL: 缺少 API Key，严禁进行外部调用！")
+
+# Layer 2: 执行标记 (Execution Marking)
+execution_info = {
+    'mode': 'REAL' if api_key else 'DEMO',
+    'session_id': uuid.uuid4(),
+    'timestamp': datetime.utcnow(),
+    'verification_required': api_key is None  # 标记需验证
+}
+
+# Layer 3: 消费验证 (Consumption Verification)
+# 真实API调用 → token消费可验证
+# 演示模式 → 0 token (应在输出中明确标记)
+```
+
+**实施检查清单**:
+
+- ✅ API密钥存在性检查 (条件: 非演示模式)
+- ✅ 执行模式明确标记 (输出顶部显示REAL/DEMO)
+- ✅ Token消费验证 (真实调用≥1000 token, 演示=0)
+- ✅ 失败告警机制 (缺少API key自动告警)
+- ✅ 审计日志完整 (每次调用记录执行模式)
 
 ### ReDoS 防护 (4 层)
 
@@ -424,6 +468,44 @@ def extract_report_summary(file_path: Path) -> str:
     """
 ```
 
+### verify_execution_mode()
+
+```python
+def verify_execution_mode(api_key: Optional[str], mock_mode: bool) -> Dict[str, Any]:
+    """
+    验证执行模式并返回验证结果 (Level 6 验证机制)
+
+    Args:
+        api_key: 外部API密钥 (可选)
+        mock_mode: 是否显式使用演示模式
+
+    Returns:
+        verification: {
+            'mode': 'REAL' | 'DEMO',
+            'is_valid': bool,
+            'api_available': bool,
+            'session_id': str,
+            'requires_alert': bool  # 如果缺少必要API则为True
+        }
+
+    Raises:
+        ExecutionModeError: 缺少API key且非演示模式
+
+    Examples:
+        # 真实执行 (有API密钥)
+        verify_execution_mode(api_key="sk-xxx", mock_mode=False)
+        # → {'mode': 'REAL', 'is_valid': True, ...}
+
+        # 演示模式 (显式指定)
+        verify_execution_mode(api_key=None, mock_mode=True)
+        # → {'mode': 'DEMO', 'is_valid': True, ...}
+
+        # ❌ 错误配置 (无API密钥且非演示模式)
+        verify_execution_mode(api_key=None, mock_mode=False)
+        # → ExecutionModeError: "缺少 API Key，严禁进行外部调用！"
+    """
+```
+
 ---
 
 ## 📚 最佳实践 (Best Practices)
@@ -500,6 +582,59 @@ cpu = psutil.cpu_percent()
 memory = psutil.virtual_memory().percent
 ```
 
+### 外部系统集成实践 (External System Integration Best Practices)
+
+**原则**: 在调用外部系统前，总是显式验证可用性
+
+```python
+# ❌ 反面示例 (无声降级 - 不允许)
+def call_external_ai(content, api_key=None):
+    if not api_key:
+        # 问题: 无声切换到演示模式，调用者不知道
+        return generate_demo_response(content)
+    return call_real_api(content, api_key)
+
+# ✅ 正面示例 (显式验证)
+def call_external_ai(content, api_key=None, allow_demo=False):
+    # 验证1: 检查API密钥
+    if not api_key and not allow_demo:
+        raise ValueError("❌ 缺少 API Key，严禁进行外部调用！")
+
+    # 验证2: 标记执行模式
+    mode = 'REAL' if api_key else 'DEMO'
+    session_id = str(uuid.uuid4())
+
+    # 验证3: 审计日志
+    logger.info(f"[{session_id}] Execution mode: {mode}")
+
+    # 验证4: 真实执行或显式演示
+    if api_key:
+        result = call_real_api(content, api_key)
+        logger.info(f"[{session_id}] Real API consumed {result['tokens']} tokens")
+    else:
+        result = generate_demo_response(content)
+        # 关键: 在输出中明确标记
+        result['execution_mode'] = 'DEMO'
+        result['tokens_consumed'] = 0
+        logger.warning(f"[{session_id}] Demo mode output (no API call)")
+
+    return result
+
+# 验证5: 消费验证 (调用方检查)
+result = call_external_ai(content, api_key=api_key)
+if result.get('execution_mode') == 'DEMO':
+    # 调用方可以做出知情决定
+    raise RuntimeError("外部AI未可用，需人工验证结果")
+```
+
+**关键检查点**:
+
+- 📌 API密钥存在性检查
+- 📌 执行模式显式标记
+- 📌 Token消费可追踪 (真实vs演示)
+- 📌 审计日志包含session ID和时间戳
+- 📌 失败时明确告警而非无声降级
+
 ---
 
 ## 🎓 学习资源 (Learning Resources)
@@ -515,6 +650,8 @@ memory = psutil.virtual_memory().percent
 | [TASK_131 物理证据](archive/tasks/TASK_131/PHYSICAL_EVIDENCE_LOG.md) | 执行证据日志 | 审计 |
 | [TASK_130.3_ACCEPTANCE_REPORT.md](../../TASK_130.3_ACCEPTANCE_REPORT.md) | 验收报告 | 管理者 |
 | [PRODUCTION_VERIFICATION_REPORT.md](../../PRODUCTION_VERIFICATION_REPORT.md) | 部署验证 | DevOps |
+| [EXTERNAL_AI_CALL_FAILURE_REPORT.md](../../EXTERNAL_AI_CALL_FAILURE_REPORT.md) | 外部AI调用失败分析 | 安全/架构 |
+| [EXTERNAL_AI_CALL_FAILURE_QUICK_REFERENCE.md](../../EXTERNAL_AI_CALL_FAILURE_QUICK_REFERENCE.md) | 失败案例速查手册 | 开发者 |
 
 ### 示例代码
 
@@ -558,6 +695,22 @@ except SecurityException as e:
 - 性能提升: 1.96x (超目标)
 - 文档完整: 5250+ 行
 - 生产部署: ✅ 完成
+
+### Protocol v4.4 - 5 Pillars 执行状态
+
+| Pillar | 内容 | 状态 | 最新验证 |
+| --- | --- | --- | --- |
+| **I - 双门系统** | REQ-REP 并发架构 | ✅ LIVE | Task #134 |
+| **II - 乌洛波罗斯** | 自主规划闭环 | ✅ LIVE | Task #131 |
+| **III - 零信任取证** | UUID + 时间戳 + Token追踪 | ✅ LIVE | 所有任务 |
+| **IV - 策略即代码** | 审计规则自动应用 | ✅ LIVE | unified_review_gate.py |
+| **V - 杀死开关** | 验证机制 + 异常处理 | ✅ ENHANCED | Task #135 (2026-01-23) |
+
+**Pillar V 增强** (2026-01-23):
+
+- 添加Level 6验证机制 (环境验证→执行标记→消费验证)
+- 禁止无声降级 (缺少API key时显式抛出异常)
+- 执行模式透明化 (REAL/DEMO 必须明确标记)
 
 ### Phase 7 进度追踪
 
