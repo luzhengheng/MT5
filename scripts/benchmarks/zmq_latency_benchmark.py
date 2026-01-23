@@ -12,24 +12,48 @@ import time
 import json
 import statistics
 import uuid
+import ipaddress
+import os
 from datetime import datetime
 from pathlib import Path
-from typing import Dict, List, Tuple
-import threading
-import sys
+from typing import Dict, List, Optional
+
+# ========================================
+# Zero-Trust 配置验证函数
+# ========================================
+
+def validate_config(config: dict) -> None:
+    """验证配置参数 (Protocol v4.4 Pillar III)"""
+    try:
+        ipaddress.ip_address(config["zmq_server_ip"])
+    except ValueError as e:
+        raise ValueError(f"无效的IP地址: {config['zmq_server_ip']}") from e
+
+    assert 1024 <= config["zmq_req_port"] <= 65535, \
+        f"REQ端口超出有效范围: {config['zmq_req_port']}"
+    assert 1024 <= config["zmq_pub_port"] <= 65535, \
+        f"PUB端口超出有效范围: {config['zmq_pub_port']}"
+    assert config["test_duration_seconds"] > 0, \
+        f"测试时长必须为正数，当前值: {config['test_duration_seconds']}"
+    assert config["min_samples"] > 0, \
+        f"最小样本数必须为正数，当前值: {config['min_samples']}"
+
 
 # ========================================
 # 常量定义
 # ========================================
 
-# 基准测试配置
+# 基准测试配置 (现支持环境变量覆盖)
 BENCHMARK_CONFIG = {
-    "zmq_server_ip": "172.19.141.251",
-    "zmq_req_port": 5555,
-    "zmq_pub_port": 5556,
+    "zmq_server_ip": os.environ.get("ZMQ_SERVER_IP", "172.19.141.251"),
+    "zmq_req_port": int(os.environ.get("ZMQ_REQ_PORT", "5555")),
+    "zmq_pub_port": int(os.environ.get("ZMQ_PUB_PORT", "5556")),
     "test_duration_seconds": 60,  # 缩短测试时间为演示目的
     "min_samples": 100,  # 最少100条样本用于演示
 }
+
+# Zero-Trust 验证配置
+validate_config(BENCHMARK_CONFIG)
 
 # 交易品种
 SYMBOLS = ["EURUSD.s", "BTCUSD.s"]
@@ -77,7 +101,7 @@ class BenchmarkLogger:
 # ========================================
 
 class ZMQLatencyBenchmark:
-    """ZMQ延迟基准测试器"""
+    """ZMQ延迟基准测试器 (支持 Context Manager)"""
 
     def __init__(self, logger: BenchmarkLogger):
         """初始化"""
@@ -89,6 +113,22 @@ class ZMQLatencyBenchmark:
             "symbols": {},
             "summary": {}
         }
+
+    def __enter__(self):
+        """进入 context manager"""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """退出 context manager，确保资源清理"""
+        self.close()
+        return False
+
+    def close(self):
+        """清理 ZMQ 资源"""
+        if self.context:
+            self.logger.log("正在关闭 ZMQ Context...")
+            self.context.term()
+            self.logger.log("✅ ZMQ Context 已关闭")
 
     def test_req_rep_latency(self, symbol: str) -> List[float]:
         """测试REQ-REP延迟"""
@@ -136,6 +176,11 @@ class ZMQLatencyBenchmark:
 
                     t2 = time.perf_counter()
 
+                    # 验证响应格式 (Zero-Trust)
+                    if not response or not response.startswith("PONG:"):
+                        self.logger.log(f"  无效响应: {response[:50] if response else 'None'}", "WARNING")
+                        continue
+
                     # 计算往返延迟(毫秒)
                     latency_ms = (t2 - t1) * 1000
                     latencies.append(latency_ms)
@@ -145,10 +190,18 @@ class ZMQLatencyBenchmark:
                         self.logger.log(f"  已收集 {sample_count} 条 {symbol} REQ-REP样本")
 
                 except zmq.Again:
-                    self.logger.log(f"  超时: {symbol} REQ-REP", "WARNING")
+                    self.logger.log(f"  超时: {symbol} REQ-REP (ZMQ RCVTIMEO)", "WARNING")
+                    break
+                except zmq.ZMQError as e:
+                    self.logger.log(f"  ZMQ错误: {symbol} REQ-REP - error_code={e.errno} msg={str(e)}", "ERROR")
+                    break
+                except (OSError, IOError) as e:
+                    self.logger.log(f"  IO错误: {symbol} REQ-REP - {e}", "ERROR")
                     break
                 except Exception as e:
-                    self.logger.log(f"  错误: {symbol} REQ-REP - {e}", "ERROR")
+                    self.logger.log(f"  未预期错误: {symbol} REQ-REP - {type(e).__name__}: {e}", "CRITICAL")
+                    import traceback
+                    self.logger.log(traceback.format_exc(), "CRITICAL")
                     break
 
             socket.close()
@@ -221,6 +274,15 @@ class ZMQLatencyBenchmark:
                 "avg_message_size": 0
             }
 
+    @staticmethod
+    def _percentile(sorted_data: List[float], p: float) -> float:
+        """安全计算百分位数 (防止越界)"""
+        if not sorted_data:
+            return 0.0
+        idx = int(len(sorted_data) * p)
+        idx = min(idx, len(sorted_data) - 1)  # 防止越界
+        return sorted_data[idx]
+
     def calculate_statistics(self, latencies: List[float]) -> Dict:
         """计算延迟统计"""
         if not latencies:
@@ -245,9 +307,9 @@ class ZMQLatencyBenchmark:
             "mean": statistics.mean(sorted_latencies),
             "median": statistics.median(sorted_latencies),
             "stdev": statistics.stdev(sorted_latencies) if sample_count > 1 else 0,
-            "p50": sorted_latencies[int(sample_count * 0.50)],
-            "p95": sorted_latencies[int(sample_count * 0.95)],
-            "p99": sorted_latencies[int(sample_count * 0.99)],
+            "p50": self._percentile(sorted_latencies, 0.50),
+            "p95": self._percentile(sorted_latencies, 0.95),
+            "p99": self._percentile(sorted_latencies, 0.99),
             "sample_count": sample_count
         }
 
