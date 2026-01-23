@@ -55,14 +55,20 @@ symbols:
     lot_size: 0.001
     risk_profile: conservative_crypto
 
+  - symbol: "GBPUSD.s"
+    active: true
+    magic_number: 202602
+    lot_size: 0.01
+    risk_profile: conservative_fx
+
   - symbol: "ETHUSD.s"
     active: false
-    magic_number: 202602
+    magic_number: 202603
     lot_size: 0.01
 
   - symbol: "XAUUSD.s"
     active: false
-    magic_number: 202603
+    magic_number: 202604
     lot_size: 0.01
 
 trading_hours:

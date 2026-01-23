@@ -2,12 +2,12 @@
   "name": "MT5-CRS Full Context Pack",
   "version": "3.0",
   "protocol": "v4.4",
-  "generated": "2026-01-23T11:43:28Z",
-  "execution_timestamp": 1769168608,
-  "session_uuid": "22508d02-2bc9-4bb7-ae40-6520e14facec",
+  "generated": "2026-01-23T13:20:39Z",
+  "execution_timestamp": 1769174438,
+  "session_uuid": "4552b299-101e-4aad-8032-94112852b23e",
   "output_file": "full_context_pack.txt",
-  "file_size_bytes": 290871,
-  "file_sha256": "f50c6e8dc9383616876a41043274ae17f30ae45ce969dfa2d15a12872cfc29ee",
+  "file_size_bytes": 290811,
+  "file_sha256": "23d30dad33b027f77bf8b0138af6dca72ac223ec93ab13943d50e012a0bcefcb",
   "project_root": "/opt/mt5-crs",
   "script_version": "3.0",
   "compliance": {
@@ -26,8 +26,8 @@
     "part_6_audit": "Mission log (recent 500 lines)"
   },
   "physical_evidence": {
-    "timestamp_utc": "2026-01-23 11:43:28 UTC",
-    "uuid": "22508d02-2bc9-4bb7-ae40-6520e14facec",
-    "sha256": "f50c6e8dc9383616876a41043274ae17f30ae45ce969dfa2d15a12872cfc29ee"
+    "timestamp_utc": "2026-01-23 13:20:39 UTC",
+    "uuid": "4552b299-101e-4aad-8032-94112852b23e",
+    "sha256": "23d30dad33b027f77bf8b0138af6dca72ac223ec93ab13943d50e012a0bcefcb"
   }
 }
