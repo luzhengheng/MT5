@@ -57,10 +57,12 @@ TCP Window Size:       默认值 (可能不优化)
 
 **优化目标**:
 ```
-TCP Window Size:       增加至 4MB (from default ~65KB)
-SO_SNDBUF:             256KB
-SO_RCVBUF:             256KB
+TCP Window Size:       增加至 1MB (from default ~65KB)
+SO_SNDBUF:             256KB (实际代码中: 256000 bytes)
+SO_RCVBUF:             256KB (实际代码中: 256000 bytes)
 TCP_NODELAY:           启用 (禁用Nagle算法)
+
+注: 1MB窗口大小适合低频交易场景，避免过度占用系统资源
 ```
 
 ### 问题2: ZMQ套接字超时与重试机制
@@ -238,13 +240,26 @@ class CachedZMQClient:
     def __init__(self, ttl_seconds=1):
         self.cache = {}
         self.ttl = ttl_seconds
-    
+
     def query_with_cache(self, query_id, symbol):
         """
         缓存频繁查询，减少网络往返
-        预期收益: 
+
+        ⚠️ 警告: 仅适用于合约规格等静态数据，严禁缓存实时价格或账户状态
+
+        预期收益:
         - 如果缓存命中率50%: 延迟减少50%
         - 如果缓存命中率80%: 延迟减少80%
+
+        允许的缓存数据类型:
+        - ✅ 合约规格 (Symbol Specs, Lot Size)
+        - ✅ 交易时间表 (Trading Hours)
+        - ✅ 杠杆限制 (Leverage Limits)
+
+        禁止缓存的数据类型:
+        - ❌ 实时报价 (Bid/Ask Prices)
+        - ❌ 账户余额 (Account Balance)
+        - ❌ 订单状态 (Order Status)
         """
         cache_key = f"{query_id}_{symbol}"
         
