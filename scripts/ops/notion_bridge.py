@@ -22,6 +22,10 @@ Protocol v4.4 特性:
 
 import json
 import os
+from dotenv import load_dotenv
+
+# [Application-Level Fix] Self-load .env for robustness
+load_dotenv(override=True)
 import sys
 import time
 import argparse
@@ -133,7 +137,7 @@ NOTION_API_RATE_LIMIT = 0.35  # seconds between requests
 
 # [Security] ReDoS 防护：限制内容长度防止正则表达式拒绝服务
 MAX_CONTENT_LENGTH = 100000  # 100 KB limit for content processing
-MAX_SUMMARY_LENGTH = 2000    # Notion API 限制摘要长度
+MAX_SUMMARY_LENGTH = 1900    # Notion API 限制摘要长度
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB file size limit
 
 # [Performance] 预编译正则表达式
@@ -456,7 +460,7 @@ def find_completion_report(task_id: str) -> Optional[Path]:
     return None
 
 
-def extract_report_summary(report_path: Path, max_length: int = 2000) -> str:
+def extract_report_summary(report_path: Path, max_length: int = 1900) -> str:
     """
     从 COMPLETION_REPORT.md 提取核心摘要 (Protocol v4.4 ReDoS防护强化版)
 
@@ -728,13 +732,9 @@ def _push_to_notion_with_retry(
     database_id: str,
 ) -> Dict[str, Any]:
     """
-    内部函数：执行带重试的 Notion 推送（Protocol v4.4 @wait_or_die 机制）
-
-    使用 @wait_or_die 实现 50 次重试 + 指数退避，比 tenacity 的 3 次重试更有韧性。
-    总超时时间为 300 秒（5分钟），覆盖 Notion API 的暂时性故障和网络波动。
-
-    Protocol v4.4 Pillar IV: 使用 apply_resilient_decorator 替代三元表达式装饰器
+    内部函数：执行带重试的 Notion 推送
     """
+    # [Auto-Fixed] Schema adapted to Chinese Notion (IMG_2211/2212)
     properties = {
         "标题": {
             "title": [
@@ -747,40 +747,34 @@ def _push_to_notion_with_retry(
                 }
             ]
         },
-    }
-
-    # 添加自定义字段 (如果数据库支持)
-    if task_metadata.get('task_id'):
-        properties["任务ID"] = {
-            "rich_text": [
-                {
-                    "text": {
-                        "content": task_metadata['task_id'],
-                    }
-                }
-            ]
-        }
-
-    if task_metadata.get('priority'):
-        properties["优先级"] = {
+        "状态": {
+            "status": {  # 修正: 使用 status 类型
+                "name": "完成"
+            }
+        },
+        "优先级": {
             "select": {
-                "name": task_metadata['priority'],
+                "name": "P0"
+            }
+        },
+        "类型": {
+            "select": {
+                "name": "运维" if "ops" in str(task_metadata).lower() else "核心"
+            }
+        },
+        "日期": {
+            "date": {
+                "start": datetime.utcnow().strftime("%Y-%m-%d")
             }
         }
-
-    if task_metadata.get('status'):
-        properties["状态"] = {
-            "status": {
-                "name": task_metadata['status'],
-            }
-        }
+    }
 
     # 创建 Page
     task_id = task_metadata['task_id']
     logger.info(
         f"🔄 [NOTION] Pushing task {task_id} to Notion (with @wait_or_die)..."
     )
-    time.sleep(NOTION_API_RATE_LIMIT)  # Rate limiting
+    time.sleep(NOTION_API_RATE_LIMIT)
 
     response = client.pages.create(
         parent={"database_id": database_id},
@@ -795,7 +789,7 @@ def _push_to_notion_with_retry(
                             "type": "text",
                             "text": {
                                 "content": (
-                                    task_metadata.get('content', '')[:2000]
+                                    task_metadata.get('content', '')[:1900]
                                 ),
                             },
                         }
@@ -917,7 +911,7 @@ def push_to_notion(
             page_id=page_id,
             page_url=page_url,
             session_uuid=session_uuid,
-            duration_seconds=(datetime.utcnow() - datetime.fromisoformat(timestamp.replace('Z', '+00:00'))).total_seconds()
+            duration_seconds=(datetime.utcnow() - datetime.fromisoformat(timestamp.replace('Z', ''))).total_seconds()
         )
         return result
 
@@ -1133,10 +1127,10 @@ def main():
             # 读取任务元数据
             with open(args.input, 'r') as f:
                 task_metadata = json.load(f)
-                # [Auto-Fix] 强制截断内容以符合 Notion API 限制 (2000 chars)
-                if "content" in task_metadata and len(task_metadata.get("content", "")) > 2000:
-                    print(f"[*] ⚠️ 内容过长 ({len(task_metadata.get('content', ''))} > 2000)，已自动截断")
-                    task_metadata["content"] = task_metadata["content"][:2000] + "...(truncated)"
+                # [Auto-Fix] 强制截断内容以符合 Notion API 限制 (1900 chars)
+                if "content" in task_metadata and len(task_metadata.get("content", "")) > 1900:
+                    print(f"[*] ⚠️ 内容过长 ({len(task_metadata.get('content', ''))} > 1900)，已自动截断")
+                    task_metadata["content"] = task_metadata["content"][:1900] + "...(truncated)"
                 # [Auto-Fix] 强力清洗状态值 (草稿 -> 未开始)
                 for k in ["status", "Status", "状态", "State"]:
                     if task_metadata.get(k) == "草稿":
