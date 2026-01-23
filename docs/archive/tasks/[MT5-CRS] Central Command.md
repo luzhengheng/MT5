@@ -198,7 +198,7 @@ Level 6: 验证机制 ⭐ (新增 - Task #135 改进)
 
 ---
 
-### 验证机制详解 (Verification Mechanism - Level 6)
+### 验证机制详解 (Verification Mechanism - Level 6) ⭐ 强制异常检查
 
 **问题背景**: 外部AI调用失败案例分析(2026-01-23)
 
@@ -207,33 +207,71 @@ Level 6: 验证机制 ⭐ (新增 - Task #135 改进)
 2. **边界感知缺失** - 未验证API密钥是否真实存在
 3. **验证机制缺失** - 无法区分真实执行vs演示模式
 
+**关键改进** (已在unified_review_gate.py:268实施):
+
+```python
+# 防线1: 强制异常检查 (MANDATORY - 不允许无声降级)
+if not self.api_key and not mock:
+    raise ValueError("❌ FATAL: 缺少 API Key，严禁进行外部调用！")
+```
+
 **改进方案** - 3层防御机制:
 
 ```python
 # Layer 1: 环境验证 (Environment Verification)
+# 作用: 前置条件检查，禁止API密钥缺失时的隐式降级
 if not os.getenv('API_KEY') and not mock_mode:
     raise ValueError("❌ FATAL: 缺少 API Key，严禁进行外部调用！")
+    # 不允许继续执行 - 必须显式失败
 
 # Layer 2: 执行标记 (Execution Marking)
+# 作用: 明确标记执行模式，使调用者能够区分真实vs演示
 execution_info = {
     'mode': 'REAL' if api_key else 'DEMO',
     'session_id': uuid.uuid4(),
     'timestamp': datetime.utcnow(),
-    'verification_required': api_key is None  # 标记需验证
+    'verification_required': api_key is None,  # 标记需验证
+    # 关键: DEMO模式输出中必须包含这个标记
+    'marker': '【⚠️ DEMO_MODE: 演示输出，非真实API调用 ⚠️】' if not api_key else ''
 }
 
 # Layer 3: 消费验证 (Consumption Verification)
-# 真实API调用 → token消费可验证
-# 演示模式 → 0 token (应在输出中明确标记)
+# 作用: 验证API调用的真实性，建立可追踪的证据链
+if api_key:
+    result = call_real_api(content, api_key)
+    # 真实调用必须有token消费统计
+    assert result.get('tokens_consumed', 0) >= 1000, "Token消费异常"
+    logger.info(f"Real API: {result['tokens_consumed']} tokens consumed")
+else:
+    result = generate_demo_response(content)
+    # 演示模式必须明确标记 - 不能冒充真实输出
+    result['execution_mode'] = 'DEMO'
+    result['tokens_consumed'] = 0
+    logger.warning(f"Demo mode: {result.get('marker', '')}")
 ```
 
-**实施检查清单**:
+**实施检查清单** (Protocol v4.4 Pillar V增强):
 
-- ✅ API密钥存在性检查 (条件: 非演示模式)
-- ✅ 执行模式明确标记 (输出顶部显示REAL/DEMO)
-- ✅ Token消费验证 (真实调用≥1000 token, 演示=0)
-- ✅ 失败告警机制 (缺少API key自动告警)
-- ✅ 审计日志完整 (每次调用记录执行模式)
+- ✅ API密钥存在性检查 - **强制异常，不允许继续**
+- ✅ 执行模式明确标记 - **REAL/DEMO必须在输出中可见**
+- ✅ Token消费验证 - **真实调用≥1000 token, 演示=0**
+- ✅ 失败告警机制 - **缺少API key立即抛异常**
+- ✅ 审计日志完整 - **每次调用记录执行模式和来源**
+- ✅ 无声降级禁止 - **缺少API key时强制失败而非继续执行**
+
+**与脚本设计缺陷的关系**:
+
+```python
+# ❌ 旧设计（缺陷）- 无声降级
+if not self.api_key:
+    self._log("⚠️ 使用演示模式")  # 只记日志
+    return self._generate_demo_response(...)  # 继续执行！
+
+# ✅ 新设计（改进）- 强制异常
+if not self.api_key and not mock:
+    raise ValueError("❌ FATAL: 缺少 API Key，严禁进行外部调用！")
+    # 必须显式失败，调用者必须知道
+```
 
 ### ReDoS 防护 (4 层)
 
@@ -246,7 +284,7 @@ Layer 4: Fallback 机制 (Windows 兼容)
 
 ---
 
-## 🚀 部署指南 (Deployment Guide)
+## 🚀 部署指南 (Deployment Guide) - 完整流程
 
 ### 前置要求
 
@@ -262,33 +300,221 @@ python3.9 -m venv venv
 source venv/bin/activate
 ```
 
-### 本地验证
+### 📋 部署前检查清单 (Pre-Deployment Checklist)
+
+#### Phase 1: 本地验证 (5分钟)
+
+- [ ] 所有测试通过 (96/96 必须100%通过)
 
 ```bash
-# 运行所有测试
 pytest tests/test_notion_bridge_*.py -v
+```
 
-# 生成覆盖率报告
+- [ ] 代码覆盖率达标 (≥88%)
+
+```bash
 pytest --cov=scripts.ops.notion_bridge --cov-report=html
+```
 
-# 验证模块导入
+- [ ] 模块导入验证 (无import错误)
+
+```bash
 python -c "from scripts.ops.notion_bridge import sanitize_task_id; print('✅ OK')"
 ```
 
-### 生产部署
+- [ ] 文档已更新 (检查CHANGELOG)
+- [ ] 代码质量检查 (black, flake8, mypy)
 
 ```bash
-# 1. 推送到 GitHub
-git push origin main
+black scripts/ --check
+flake8 scripts/
+mypy scripts/ --ignore-missing-imports
+```
 
-# 2. 检查 GitHub Actions
-# 位置: GitHub Repo → Actions → 最近的工作流
+#### Phase 2: 环境差异检查 (5分钟)
 
-# 3. 验证覆盖率报告
-# 位置: Codecov.io → Repository
+- [ ] 本地→测试→生产配置版本检查
+- [ ] API密钥配置验证 (Prod vs Test)
+  ```bash
+  # 验证关键环境变量
+  echo $VENDOR_API_KEY    # 不应为空
+  echo $CLAUDE_API_KEY    # 不应为空
+  echo $ZMQ_SERVER_IP     # 应为正确的IP
+  ```
+- [ ] ZMQ端口配置检查 (5555, 5556 可访问)
+  ```bash
+  netstat -tuln | grep 555[56]
+  ```
+- [ ] Redis连接验证
+  ```bash
+  redis-cli ping
+  ```
+- [ ] 磁盘空间检查 (>20GB 可用)
+  ```bash
+  df -h / | tail -1
+  ```
 
-# 4. 监控生产性能
-# 预期: 1.96x 性能提升维持
+#### Phase 3: 数据安全检查 (5分钟)
+
+- [ ] 数据库备份完成
+  ```bash
+  pg_dump -U trader mt5_crs > backup_$(date +%Y%m%d_%H%M%S).sql
+  ```
+- [ ] 配置文件备份完成
+  ```bash
+  cp config/trading_config.yaml config/trading_config.yaml.bak.$(date +%Y%m%d_%H%M%S)
+  ```
+- [ ] 关键日志备份完成
+  ```bash
+  cp -r var/logs var/logs.bak.$(date +%Y%m%d_%H%M%S)
+  ```
+- [ ] 回滚脚本已验证 (可快速恢复)
+
+### 🚀 蓝绿部署流程 (Blue-Green Deployment)
+
+#### Blue环境（当前生产）
+- 保持运行，接收所有流量
+- 生成基线性能指标
+- 维持完整日志、监控数据
+
+#### Green环境（新版本）
+
+1. **部署新代码**
+   ```bash
+   git checkout main
+   git pull origin main
+   pip install -r requirements.txt
+   ```
+
+2. **运行冒烟测试**
+   ```bash
+   pytest tests/test_notion_bridge_smoke.py -v
+   ```
+
+3. **验证关键功能**
+   ```bash
+   # 验证task清洗
+   python -c "from scripts.ops.notion_bridge import sanitize_task_id; \
+              assert sanitize_task_id('TASK_130.3') == 'TASK_130_3'"
+
+   # 验证ZMQ连接
+   python scripts/ops/verify_zmq_connectivity.py
+
+   # 验证API连接
+   python scripts/ops/verify_api_connectivity.py
+   ```
+
+4. **等待流量切换信号**
+
+#### 流量切换 (Traffic Switch)
+
+- ✅ 健康检查通过 → 切换流量到Green
+- ❌ 任何问题出现 → 立即回滚到Blue
+
+### 📊 灰度发布方案 (Canary Release)
+
+#### Stage 1: 金丝雀 (5% 流量, 1小时)
+```bash
+# 5% 流量到新版本
+load_balancer.set_canary_ratio(0.05)
+
+# 监控关键指标
+for i in {1..60}; do
+  python scripts/monitor/check_metrics.py
+  sleep 60
+done
+```
+
+**检查清单**:
+- [ ] 错误率 < 0.1%
+- [ ] P99延迟 < 500ms
+- [ ] 关键功能正常
+
+#### Stage 2: 部分 (25% 流量, 2小时)
+```bash
+load_balancer.set_canary_ratio(0.25)
+# 继续监控...
+```
+
+#### Stage 3: 全量 (100% 流量)
+```bash
+load_balancer.set_canary_ratio(1.0)
+# 继续监控 24 小时
+```
+
+### 回滚条件 (Automatic Rollback)
+
+触发立即回滚的条件:
+- ❌ 错误率 > 1%
+- ❌ P99延迟 > 500ms
+- ❌ 任何关键业务功能失败
+- ❌ 数据不一致或丢失风险
+
+```bash
+# 快速回滚脚本
+./scripts/deploy/rollback.sh --to-previous-stable
+```
+
+### ✅ 部署后验证 (Post-Deployment Verification)
+
+#### 健康检查
+```bash
+# 运行完整验证套件
+pytest tests/test_notion_bridge_*.py -v
+
+# 验证外部API连接
+python scripts/ops/verify_api_connectivity.py
+
+# 验证ZMQ并发
+python scripts/ops/verify_zmq_concurrent.py
+
+# 验证配置热更新
+python scripts/ops/activate_dual_track.py --verify
+```
+
+#### 性能基线检查
+```bash
+# 任务ID清洗速度 (应>1000 ops/sec)
+time python -c "from scripts.ops.notion_bridge import sanitize_task_id; \
+               [sanitize_task_id(f'TASK_{i}') for i in range(1000)]"
+
+# P50延迟 (应<1ms)
+# P99延迟 (应<5ms)
+# 报告处理 (应<100ms)
+pytest tests/test_notion_bridge_performance.py -v
+```
+
+#### 监控告警配置
+```bash
+# 配置告警规则
+configure_alert("error_rate > 1%", action="page_on_call")
+configure_alert("p99_latency > 500ms", action="page_on_call")
+configure_alert("availability < 99.9%", action="page_on_call")
+```
+
+### 回滚流程 (Rollback Procedure)
+
+#### 快速回滚
+```bash
+# 回滚到上个稳定版本
+git checkout <previous_commit>
+python scripts/deploy/rollback.py --commit=<hash>
+
+# 验证回滚
+pytest tests/ -v
+python scripts/ops/verify_api_connectivity.py
+
+# 确认所有指标恢复正常
+python scripts/monitor/verify_baseline.py
+```
+
+#### 数据恢复
+```bash
+# 如果需要恢复数据库
+psql -U trader mt5_crs < backup_<timestamp>.sql
+
+# 如果需要恢复配置
+cp config/trading_config.yaml.bak.<timestamp> config/trading_config.yaml
 ```
 
 ---
