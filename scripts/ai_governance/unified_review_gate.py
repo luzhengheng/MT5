@@ -265,6 +265,7 @@ class ArchitectAdvisor:
             user_content: 用户内容
             model: 指定使用的模型（如果为None，则使用默认的gemini-3-pro-preview）
         """
+        if not self.api_key and not mock: raise ValueError("❌ FATAL: 缺少 API Key，严禁进行外部调用！")
         if not self.api_key:
             self._log("⚠️ 环境变量 AI_API_KEY 未设置，使用演示模式")
             return self._generate_demo_response(user_content)
