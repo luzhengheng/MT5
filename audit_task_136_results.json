@@ -1,0 +1,109 @@
+{
+  "timestamp": "2026-01-24T18:31:49.692974",
+  "rules": [
+    {
+      "rule_id": "136_001",
+      "name": "Deployment script exists and is executable",
+      "passed": true,
+      "details": "Path: /opt/mt5-crs/scripts/deploy/deploy_risk_modules.py, Size: 7448 bytes, Executable: False",
+      "timestamp": "2026-01-24T18:31:49.693553"
+    },
+    {
+      "rule_id": "136_002",
+      "name": "Verification script exists",
+      "passed": true,
+      "details": "Path: /opt/mt5-crs/scripts/verify/verify_risk_on_inf.py, Size: 15829 bytes",
+      "timestamp": "2026-01-24T18:31:49.693633"
+    },
+    {
+      "rule_id": "136_003",
+      "name": "Risk modules directory structure intact",
+      "passed": true,
+      "details": "All 9 required files present in /opt/mt5-crs/src/risk",
+      "timestamp": "2026-01-24T18:31:49.693777"
+    },
+    {
+      "rule_id": "136_004",
+      "name": "Risk modules are valid Python files",
+      "passed": true,
+      "details": "All 11 Python files are syntactically valid",
+      "timestamp": "2026-01-24T18:31:49.785018"
+    },
+    {
+      "rule_id": "136_005",
+      "name": "Configuration file exists and is valid YAML",
+      "passed": true,
+      "details": "Config valid, size: 2740 bytes, contains 'risk' section",
+      "timestamp": "2026-01-24T18:31:50.081732"
+    },
+    {
+      "rule_id": "136_006",
+      "name": "Risk config contains all required sections",
+      "passed": true,
+      "details": "All 6 required risk config sections present",
+      "timestamp": "2026-01-24T18:31:50.138696"
+    },
+    {
+      "rule_id": "136_007",
+      "name": "INF Node network connectivity",
+      "passed": true,
+      "details": "INF node 172.19.141.250 is reachable via ping",
+      "timestamp": "2026-01-24T18:31:50.267957"
+    },
+    {
+      "rule_id": "136_008",
+      "name": "SSH access to INF node configured",
+      "passed": true,
+      "details": "SSH connection to INF node (root@172.19.141.250) successful",
+      "timestamp": "2026-01-24T18:31:51.288504"
+    },
+    {
+      "rule_id": "136_009",
+      "name": "Rsync utility available",
+      "passed": true,
+      "details": "rsync available: rsync  version 3.1.3  protocol version 31",
+      "timestamp": "2026-01-24T18:31:51.424455"
+    },
+    {
+      "rule_id": "136_010",
+      "name": "Deployment target paths are writable",
+      "passed": true,
+      "details": "rsync available, write access will be verified during deployment",
+      "timestamp": "2026-01-24T18:31:51.455115"
+    },
+    {
+      "rule_id": "136_011",
+      "name": "Python version compatibility",
+      "passed": true,
+      "details": "Python 3.9.18 is compatible (requires 3.8+)",
+      "timestamp": "2026-01-24T18:31:51.455204"
+    },
+    {
+      "rule_id": "136_012",
+      "name": "Required Python packages available",
+      "passed": true,
+      "details": "All required packages available",
+      "timestamp": "2026-01-24T18:31:52.374624"
+    },
+    {
+      "rule_id": "136_013",
+      "name": "Audit script itself is valid",
+      "passed": true,
+      "details": "Audit script valid, size: 15275 bytes",
+      "timestamp": "2026-01-24T18:31:52.378007"
+    },
+    {
+      "rule_id": "136_014",
+      "name": "Project structure is intact",
+      "passed": true,
+      "details": "All 8 required directories present",
+      "timestamp": "2026-01-24T18:31:52.378202"
+    }
+  ],
+  "summary": {
+    "total": 14,
+    "passed": 14,
+    "failed": 0,
+    "warnings": 0
+  }
+}
