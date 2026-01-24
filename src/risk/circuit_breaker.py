@@ -1,202 +1,253 @@
-#!/usr/bin/env python3
 """
-Circuit Breaker (Kill Switch) Implementation
-Task #104 - Critical Safety Component
+Circuit Breaker - L1 Risk Protection
+RFC-135: Dynamic Risk Management System
 
-Protocol v4.3 (Zero-Trust Edition) compliant kill switch mechanism
+实现单品种熔断机制，防止单个品种造成过度亏损
+Protocol v4.4 compliant
 """
 
-import os
-import json
-from datetime import datetime
-from typing import Dict, Any, Optional
-from pathlib import Path
+import threading
+from datetime import datetime, timedelta
+from decimal import Decimal
+from typing import Optional, Dict, Any
+import logging
+
+from .enums import RiskLevel, CircuitState, RiskAction
+from .models import RiskContext, RiskDecision, SymbolRiskState, RiskEvent
+from .config import CircuitBreakerConfig
+
+logger = logging.getLogger(__name__)
 
 
 class CircuitBreaker:
     """
-    Production-grade Circuit Breaker (Kill Switch)
+    单品种熔断器
 
-    Implements hardware-like circuit break behavior:
-    - SAFE (Green): System operates normally
-    - ENGAGED (Red): System stops all trading operations
-    - (Future) TRIPPED (Orange): System enters safe mode but allows monitoring
-
-    Thread-safe implementation using file-based locking for distributed systems
+    使用标准熔断器模式（CLOSED → OPEN → HALF_OPEN → CLOSED）
+    防止单个品种的过度亏损
     """
 
-    # Sentinel file location
-    DEFAULT_KILL_SWITCH_FILE = "/tmp/mt5_crs_kill_switch.lock"
-
-    def __init__(self, switch_file: Optional[str] = None, enable_file_lock: bool = True):
+    def __init__(self, symbol: str, config: CircuitBreakerConfig):
         """
-        Initialize circuit breaker
+        初始化熔断器
 
         Args:
-            switch_file: Path to kill switch sentinel file
-            enable_file_lock: Whether to use file-based locking (for distributed systems)
+            symbol: 品种代码
+            config: 熔断器配置
         """
-        self.switch_file = switch_file or self.DEFAULT_KILL_SWITCH_FILE
-        self.enable_file_lock = enable_file_lock
-        self._is_engaged = False
-        self._engagement_metadata: Dict[str, Any] = {}
+        self.symbol = symbol
+        self.config = config
+        self.state = SymbolRiskState(symbol=symbol)
+        self._lock = threading.RLock()
 
-    def engage(self, reason: str = "Manual activation", metadata: Optional[Dict[str, Any]] = None) -> bool:
+    def check(self, context: RiskContext) -> RiskDecision:
         """
-        Engage the kill switch (emergency stop)
+        检查是否触发熔断
 
         Args:
-            reason: Human-readable reason for engagement
-            metadata: Additional metadata (tick_id, error_code, etc.)
+            context: 风险检查上下文
 
         Returns:
-            True if successfully engaged, False if already engaged
+            RiskDecision: 风险决策
         """
-        if self._is_engaged:
-            return False
+        with self._lock:
+            # 如果是半开状态且需要恢复检查
+            if self.state.circuit_state == CircuitState.HALF_OPEN:
+                return self._check_half_open(context)
 
-        self._is_engaged = True
-        self._engagement_metadata = {
-            "timestamp": datetime.utcnow().isoformat(),
-            "reason": reason,
-            "metadata": metadata or {}
-        }
+            # 如果是断开状态
+            if self.state.circuit_state == CircuitState.OPEN:
+                # 检查冷却时间是否已过
+                if self._is_cooldown_expired():
+                    self._transition_to_half_open()
+                    logger.info(f"[CircuitBreaker] {self.symbol}: Transitioning to HALF_OPEN")
+                else:
+                    remaining = self._get_remaining_cooldown()
+                    return RiskDecision(
+                        action=RiskAction.REJECT,
+                        level=RiskLevel.HALT,
+                        reason=f"Circuit breaker OPEN for {self.symbol}. Cooldown expires in {remaining}s",
+                        details={
+                            "symbol": self.symbol,
+                            "state": self.state.circuit_state.name,
+                            "remaining_cooldown_seconds": remaining,
+                            "trip_count": self.state.trip_count
+                        }
+                    )
 
-        # Write to file for distributed systems
-        if self.enable_file_lock:
-            self._write_lock_file()
+            # 状态为CLOSED，执行正常检查
+            return self._check_closed(context)
 
-        return True
-
-    def disengage(self) -> bool:
+    def _check_closed(self, context: RiskContext) -> RiskDecision:
         """
-        Disengage the kill switch (resume operations)
-
-        WARNING: Only call this after investigation and explicit authorization
-
-        Returns:
-            True if successfully disengaged, False if not engaged
+        在CLOSED状态下执行检查
         """
-        if not self._is_engaged:
-            return False
+        # 这里可以添加检查逻辑，如连续亏损次数、累计亏损等
+        # 当前实现为基础版本，返回允许
+        return RiskDecision(
+            action=RiskAction.ALLOW,
+            level=RiskLevel.NORMAL,
+            reason=f"Circuit breaker OK for {self.symbol}",
+            details={
+                "symbol": self.symbol,
+                "state": CircuitState.CLOSED.name
+            }
+        )
 
-        self._is_engaged = False
-        self._engagement_metadata = {}
-
-        # Remove lock file
-        if self.enable_file_lock:
-            self._remove_lock_file()
-
-        return True
-
-    def is_safe(self) -> bool:
+    def _check_half_open(self, context: RiskContext) -> RiskDecision:
         """
-        Check if system is safe to proceed with trading operations
-
-        Returns:
-            True if system is in SAFE state, False if ENGAGED
+        在HALF_OPEN状态下执行检查
         """
-        # Check both in-memory state and file-based state
-        if self._is_engaged:
-            return False
+        # 半开状态下限制交易次数
+        if self.state.half_open_trades >= self.config.half_open_max_trades:
+            return RiskDecision(
+                action=RiskAction.REJECT,
+                level=RiskLevel.CRITICAL,
+                reason=f"Half-open trades limit exceeded for {self.symbol}",
+                details={
+                    "symbol": self.symbol,
+                    "state": CircuitState.HALF_OPEN.name,
+                    "half_open_trades": self.state.half_open_trades,
+                    "max_half_open_trades": self.config.half_open_max_trades
+                }
+            )
 
-        # Check if lock file exists (for distributed scenarios)
-        if self.enable_file_lock and os.path.exists(self.switch_file):
-            self._is_engaged = True
-            return False
+        return RiskDecision(
+            action=RiskAction.ALLOW,
+            level=RiskLevel.WARNING,
+            reason=f"Exploratory trade allowed in HALF_OPEN for {self.symbol}",
+            details={
+                "symbol": self.symbol,
+                "state": CircuitState.HALF_OPEN.name,
+                "half_open_trades": self.state.half_open_trades
+            }
+        )
 
-        return True
+    def record_trade_result(self, pnl: Decimal, is_success: bool) -> None:
+        """
+        记录交易结果
+
+        Args:
+            pnl: 损益
+            is_success: 是否盈利
+        """
+        with self._lock:
+            # 更新最后交易时间
+            self.state.last_trade_time = datetime.now()
+
+            # 更新损失统计
+            if not is_success:
+                self.state.consecutive_losses += 1
+                self.state.loss_amount += abs(pnl)
+            else:
+                self.state.consecutive_losses = 0
+
+            # 在半开状态下，记录交易
+            if self.state.circuit_state == CircuitState.HALF_OPEN:
+                self.state.half_open_trades += 1
+
+                # 如果半开状态的交易都成功，则恢复到CLOSED
+                if self.state.half_open_trades >= self.config.half_open_success_threshold and is_success:
+                    self._transition_to_closed()
+                    logger.info(f"[CircuitBreaker] {self.symbol}: Recovery successful, back to CLOSED")
+
+            # 检查是否需要触发熔断
+            if self._should_trip():
+                self._trip()
+                logger.warning(f"[CircuitBreaker] {self.symbol}: TRIPPED")
+
+    def _should_trip(self) -> bool:
+        """
+        判断是否应该触发熔断
+        """
+        # 检查连续亏损次数
+        if self.state.consecutive_losses >= self.config.max_consecutive_losses:
+            return True
+
+        # 检查累计亏损金额
+        if self.state.loss_amount >= self.config.max_loss_amount:
+            return True
+
+        # 检查每日熔断次数上限
+        if self.state.trip_count >= self.config.max_trips_per_day:
+            return True
+
+        return False
+
+    def _trip(self) -> None:
+        """
+        触发熔断
+        """
+        self.state.circuit_state = CircuitState.OPEN
+        self.state.open_time = datetime.now()
+        self.state.trip_count += 1
+        self.state.half_open_trades = 0
+
+    def _transition_to_half_open(self) -> None:
+        """
+        转换到HALF_OPEN状态
+        """
+        self.state.circuit_state = CircuitState.HALF_OPEN
+        self.state.half_open_trades = 0
+
+    def _transition_to_closed(self) -> None:
+        """
+        转换到CLOSED状态
+        """
+        self.state.circuit_state = CircuitState.CLOSED
+        self.state.open_time = None
+        self.state.consecutive_losses = 0
+        self.state.loss_amount = Decimal("0")
+        self.state.half_open_trades = 0
+
+    def _is_cooldown_expired(self) -> bool:
+        """
+        检查冷却时间是否已过期
+        """
+        if self.state.open_time is None:
+            return True
+
+        # 计算冷却时间（考虑升级）
+        cooldown = self.config.cooldown_seconds * (
+            self.config.escalation_multiplier ** (self.state.trip_count - 1)
+        )
+        elapsed = (datetime.now() - self.state.open_time).total_seconds()
+
+        return elapsed >= cooldown
+
+    def _get_remaining_cooldown(self) -> int:
+        """
+        获取剩余冷却时间（秒）
+        """
+        if self.state.open_time is None:
+            return 0
+
+        cooldown = self.config.cooldown_seconds * (
+            self.config.escalation_multiplier ** (self.state.trip_count - 1)
+        )
+        elapsed = (datetime.now() - self.state.open_time).total_seconds()
+
+        return max(0, int(cooldown - elapsed))
 
     def get_status(self) -> Dict[str, Any]:
         """
-        Get current circuit breaker status
-
-        Returns:
-            Dictionary with status information
+        获取熔断器状态
         """
-        return {
-            "is_engaged": self._is_engaged,
-            "is_safe": self.is_safe(),
-            "state": "ENGAGED" if self._is_engaged else "SAFE",
-            "engagement_timestamp": self._engagement_metadata.get("timestamp"),
-            "engagement_reason": self._engagement_metadata.get("reason"),
-            "engagement_metadata": self._engagement_metadata.get("metadata", {}),
-            "switch_file": self.switch_file if self.enable_file_lock else None
-        }
+        with self._lock:
+            return {
+                "symbol": self.symbol,
+                "state": self.state.circuit_state.name,
+                "consecutive_losses": self.state.consecutive_losses,
+                "loss_amount": str(self.state.loss_amount),
+                "trip_count": self.state.trip_count,
+                "remaining_cooldown_seconds": self._get_remaining_cooldown() if self.state.circuit_state == CircuitState.OPEN else 0,
+                "last_trade_time": self.state.last_trade_time.isoformat() if self.state.last_trade_time else None
+            }
 
-    def _write_lock_file(self) -> None:
-        """Write lock file to filesystem"""
-        try:
-            with open(self.switch_file, 'w') as f:
-                json.dump(self._engagement_metadata, f, indent=2)
-        except IOError as e:
-            # Log but don't fail - we already have in-memory state
-            print(f"[WARNING] Failed to write kill switch lock file: {e}")
-
-    def _remove_lock_file(self) -> None:
-        """Remove lock file from filesystem"""
-        try:
-            if os.path.exists(self.switch_file):
-                os.remove(self.switch_file)
-        except IOError as e:
-            # Log but don't fail
-            print(f"[WARNING] Failed to remove kill switch lock file: {e}")
-
-    def __repr__(self) -> str:
-        """String representation"""
-        return f"CircuitBreaker(state={'ENGAGED' if self._is_engaged else 'SAFE'})"
-
-    def __bool__(self) -> bool:
-        """Boolean representation (True = SAFE, False = ENGAGED)"""
-        return self.is_safe()
-
-
-class CircuitBreakerMonitor:
-    """Monitor circuit breaker health and state changes"""
-
-    def __init__(self, circuit_breaker: CircuitBreaker):
-        """Initialize monitor"""
-        self.circuit_breaker = circuit_breaker
-        self.state_history = []
-        self._last_known_state = None
-
-    def check_state_change(self) -> Optional[str]:
+    def reset(self) -> None:
         """
-        Check if circuit breaker state has changed
-
-        Returns:
-            'SAFE' if transitioned to safe
-            'ENGAGED' if transitioned to engaged
-            None if no state change
+        重置熔断器状态
         """
-        current_state = "ENGAGED" if not self.circuit_breaker.is_safe() else "SAFE"
-
-        if self._last_known_state != current_state:
-            self._last_known_state = current_state
-            self.state_history.append({
-                "timestamp": datetime.utcnow().isoformat(),
-                "state": current_state
-            })
-            return current_state
-
-        return None
-
-    def get_state_history(self) -> list:
-        """Get state change history"""
-        return self.state_history.copy()
-
-
-if __name__ == "__main__":
-    # Quick test
-    print("🧪 Testing Circuit Breaker...")
-
-    cb = CircuitBreaker()
-    print(f"Initial state: {cb.get_status()}")
-
-    cb.engage(reason="Test engagement", metadata={"test_id": 123})
-    print(f"After engagement: {cb.get_status()}")
-
-    cb.disengage()
-    print(f"After disengagement: {cb.get_status()}")
-
-    print("\n✅ Circuit Breaker tests passed")
+        with self._lock:
+            self.state = SymbolRiskState(symbol=self.symbol)
+            logger.info(f"[CircuitBreaker] {self.symbol}: Reset to initial state")

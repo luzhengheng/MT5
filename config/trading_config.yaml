@@ -35,12 +35,66 @@ market_data:
     - 1D
 
 risk:
+  # Legacy risk parameters (kept for backward compatibility)
   max_leverage: 3000
   max_per_symbol: 1.0
   max_per_symbol_risk: 20.0
   max_slippage_usd: 50
   max_total_exposure: 2.0
   risk_percentage: 0.5
+
+  # RFC-135: Dynamic Risk Management System
+  enabled: true
+  fail_safe_mode: true
+
+  # L1: Circuit Breaker Configuration
+  circuit_breaker:
+    max_consecutive_losses: 3
+    max_loss_amount: 1000
+    max_loss_percentage: 2
+    cooldown_seconds: 300
+    half_open_max_trades: 2
+    half_open_success_threshold: 2
+    max_trips_per_day: 3
+    escalation_multiplier: 2.0
+
+  # L2: Drawdown Monitoring
+  drawdown:
+    warning_threshold: 3
+    critical_threshold: 5
+    halt_threshold: 7
+    max_daily_loss: 5000
+    recovery_threshold: 2
+    reduce_only_on_critical: true
+    halt_on_threshold: true
+
+  # L3: Exposure Monitoring
+  exposure:
+    max_total_exposure: 100
+    max_single_position: 20
+    max_correlated_exposure: 40
+    max_positions: 20
+    max_positions_per_symbol: 1
+    max_sector_exposure: 30
+    warning_threshold: 80
+
+  # Track-specific limits (3-Track System)
+  track_limits:
+    EUR:
+      max_exposure_pct: 30
+      max_positions: 5
+      max_single_position_pct: 10
+      max_daily_loss_pct: 2
+    BTC:
+      max_exposure_pct: 40
+      max_positions: 7
+      max_single_position_pct: 15
+      max_daily_loss_pct: 3
+    GBP:
+      max_exposure_pct: 30
+      max_positions: 5
+      max_single_position_pct: 10
+      max_daily_loss_pct: 2
 
 symbols:
   - symbol: "EURUSD.s"
