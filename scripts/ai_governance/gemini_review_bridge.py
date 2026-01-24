@@ -58,7 +58,7 @@ load_dotenv()  # 从 .env 文件加载环境变量
 # --- 🆕 v3.6: 智能配置加载 (多优先级策略) ---
 GEMINI_API_KEY = None
 GEMINI_BASE_URL = "https://api.yyds168.net/v1"
-GEMINI_MODEL = "gemini-3-pro-preview"
+GEMINI_MODEL = "gemini-3-pro-high"
 
 # 优先级 1: 尝试从 src.config 导入 (项目标准配置模块)
 try:
