@@ -1,0 +1,2089 @@
+{
+  "timestamp": "2026-01-24T21:22:41.469460",
+  "dry_run": true,
+  "project_root": "/opt/mt5-crs",
+  "modules": [
+    {
+      "module_name": "Cleaner",
+      "start_time": "2026-01-24T21:22:24.852832",
+      "end_time": "2026-01-24T21:22:25.199025",
+      "duration_seconds": 0.346193,
+      "success": true,
+      "error_message": null,
+      "summary": {
+        "total_files": 171,
+        "total_bytes": 344321354,
+        "successful": 171,
+        "failed": 0
+      },
+      "operations": [
+        {
+          "source": "/opt/mt5-crs/.mypy_cache",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 340844226,
+          "timestamp": "2026-01-24T21:22:25.189111",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/.pytest_cache",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 52457,
+          "timestamp": "2026-01-24T21:22:25.189556",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/mt5_crs.egg-info",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 10734,
+          "timestamp": "2026-01-24T21:22:25.189727",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/scripts/ai_governance/__pycache__",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 52891,
+          "timestamp": "2026-01-24T21:22:25.189857",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/scripts/benchmarks/__pycache__",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 11968,
+          "timestamp": "2026-01-24T21:22:25.189920",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/scripts/core/__pycache__",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 10569,
+          "timestamp": "2026-01-24T21:22:25.191774",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/scripts/housekeeping/__pycache__",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 39702,
+          "timestamp": "2026-01-24T21:22:25.192099",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/scripts/ops/__pycache__",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 27308,
+          "timestamp": "2026-01-24T21:22:25.192259",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/analytics/__pycache__",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 15161,
+          "timestamp": "2026-01-24T21:22:25.192357",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/config/__pycache__",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 11304,
+          "timestamp": "2026-01-24T21:22:25.192465",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/connection/__pycache__",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 34571,
+          "timestamp": "2026-01-24T21:22:25.192569",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/data/__pycache__",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 9612,
+          "timestamp": "2026-01-24T21:22:25.192647",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/feature_engineering/__pycache__",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 860606,
+          "timestamp": "2026-01-24T21:22:25.193322",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/features/__pycache__",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 7199,
+          "timestamp": "2026-01-24T21:22:25.193456",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/gateway/__pycache__",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 24284,
+          "timestamp": "2026-01-24T21:22:25.193533",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/labeling/__pycache__",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 86177,
+          "timestamp": "2026-01-24T21:22:25.193640",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/models/__pycache__",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 18363,
+          "timestamp": "2026-01-24T21:22:25.193718",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/monitoring/__pycache__",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 10494,
+          "timestamp": "2026-01-24T21:22:25.193796",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/mt5_bridge/__pycache__",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 58231,
+          "timestamp": "2026-01-24T21:22:25.193935",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/nexus/__pycache__",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 16498,
+          "timestamp": "2026-01-24T21:22:25.193997",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/reporting/__pycache__",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 16055,
+          "timestamp": "2026-01-24T21:22:25.194080",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/risk/__pycache__",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 49930,
+          "timestamp": "2026-01-24T21:22:25.194221",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/serving/__pycache__",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 9410,
+          "timestamp": "2026-01-24T21:22:25.194287",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/strategy/__pycache__",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 52958,
+          "timestamp": "2026-01-24T21:22:25.194437",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/trading/__pycache__",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 811,
+          "timestamp": "2026-01-24T21:22:25.194500",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/trading/core/__pycache__",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 14257,
+          "timestamp": "2026-01-24T21:22:25.194591",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/trading/models/__pycache__",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 11319,
+          "timestamp": "2026-01-24T21:22:25.194675",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/trading/utils/__pycache__",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 9586,
+          "timestamp": "2026-01-24T21:22:25.194764",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/utils/__pycache__",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 8828,
+          "timestamp": "2026-01-24T21:22:25.194833",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 536261,
+          "timestamp": "2026-01-24T21:22:25.195450",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/gateway/__pycache__",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 16791,
+          "timestamp": "2026-01-24T21:22:25.195543",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/integration/__pycache__",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 18877,
+          "timestamp": "2026-01-24T21:22:25.195598",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/models/__pycache__",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 15716,
+          "timestamp": "2026-01-24T21:22:25.195650",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/regression/__pycache__",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 8405,
+          "timestamp": "2026-01-24T21:22:25.195753",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/unit/__pycache__",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 75672,
+          "timestamp": "2026-01-24T21:22:25.195847",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/.env.tmp",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 2162,
+          "timestamp": "2026-01-24T21:22:25.195900",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/scripts/ai_governance/__pycache__/data_validator.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 11507,
+          "timestamp": "2026-01-24T21:22:25.195928",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/scripts/ai_governance/__pycache__/exception_handler.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 9393,
+          "timestamp": "2026-01-24T21:22:25.195952",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/scripts/ai_governance/__pycache__/path_validator.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 10716,
+          "timestamp": "2026-01-24T21:22:25.195975",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/scripts/ai_governance/__pycache__/safe_data_loader.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 13727,
+          "timestamp": "2026-01-24T21:22:25.195998",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/scripts/ai_governance/__pycache__/unified_review_gate.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 7548,
+          "timestamp": "2026-01-24T21:22:25.196020",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/scripts/benchmarks/__pycache__/zmq_latency_benchmark.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 11968,
+          "timestamp": "2026-01-24T21:22:25.196053",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/scripts/core/__pycache__/simple_planner.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 10569,
+          "timestamp": "2026-01-24T21:22:25.196080",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/scripts/housekeeping/__pycache__/__init__.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 822,
+          "timestamp": "2026-01-24T21:22:25.196104",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/scripts/housekeeping/__pycache__/archiver.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 4685,
+          "timestamp": "2026-01-24T21:22:25.196127",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/scripts/housekeeping/__pycache__/base_module.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 9639,
+          "timestamp": "2026-01-24T21:22:25.196151",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/scripts/housekeeping/__pycache__/cleaner.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 5990,
+          "timestamp": "2026-01-24T21:22:25.196174",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/scripts/housekeeping/__pycache__/config.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 5602,
+          "timestamp": "2026-01-24T21:22:25.196197",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/scripts/housekeeping/__pycache__/orchestrator.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 7655,
+          "timestamp": "2026-01-24T21:22:25.196219",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/scripts/housekeeping/__pycache__/script_consolidator.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 5309,
+          "timestamp": "2026-01-24T21:22:25.196241",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/scripts/ops/__pycache__/notion_bridge.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 27308,
+          "timestamp": "2026-01-24T21:22:25.196263",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/analytics/__pycache__/shadow_autopsy.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 15161,
+          "timestamp": "2026-01-24T21:22:25.196286",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/config/__pycache__/__init__.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 876,
+          "timestamp": "2026-01-24T21:22:25.196308",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/config/__pycache__/config_loader.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 7237,
+          "timestamp": "2026-01-24T21:22:25.196330",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/config/__pycache__/paths.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 3191,
+          "timestamp": "2026-01-24T21:22:25.196352",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/connection/__pycache__/__init__.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 586,
+          "timestamp": "2026-01-24T21:22:25.196375",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/connection/__pycache__/circuit_breaker.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 13495,
+          "timestamp": "2026-01-24T21:22:25.196396",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/connection/__pycache__/mt5_bridge.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 20490,
+          "timestamp": "2026-01-24T21:22:25.196418",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/data/__pycache__/__init__.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 310,
+          "timestamp": "2026-01-24T21:22:25.196440",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/data/__pycache__/multi_timeframe.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 9302,
+          "timestamp": "2026-01-24T21:22:25.196461",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/feature_engineering/__pycache__/__init__.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 257,
+          "timestamp": "2026-01-24T21:22:25.196484",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/feature_engineering/__pycache__/advanced_features.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 16642,
+          "timestamp": "2026-01-24T21:22:25.196506",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/feature_engineering/__pycache__/basic_features.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 7658,
+          "timestamp": "2026-01-24T21:22:25.196528",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/feature_engineering/__pycache__/feature_engineer.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 10122,
+          "timestamp": "2026-01-24T21:22:25.196549",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/feature_engineering/__pycache__/incremental_features.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 16863,
+          "timestamp": "2026-01-24T21:22:25.196575",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/feature_engineering/__pycache__/jit_operators.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 9711,
+          "timestamp": "2026-01-24T21:22:25.196596",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/feature_engineering/__pycache__/labeling.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 8389,
+          "timestamp": "2026-01-24T21:22:25.196618",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/features/__pycache__/__init__.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 415,
+          "timestamp": "2026-01-24T21:22:25.196640",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/features/__pycache__/engineering.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 6784,
+          "timestamp": "2026-01-24T21:22:25.196661",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/gateway/__pycache__/__init__.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 380,
+          "timestamp": "2026-01-24T21:22:25.196684",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/gateway/__pycache__/mt5_client.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 10641,
+          "timestamp": "2026-01-24T21:22:25.196706",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/gateway/__pycache__/mt5_service.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 13263,
+          "timestamp": "2026-01-24T21:22:25.196728",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/labeling/__pycache__/__init__.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 376,
+          "timestamp": "2026-01-24T21:22:25.196761",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/labeling/__pycache__/triple_barrier_factory.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 8912,
+          "timestamp": "2026-01-24T21:22:25.196787",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/models/__pycache__/__init__.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 786,
+          "timestamp": "2026-01-24T21:22:25.196810",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/models/__pycache__/feature_selection.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 9284,
+          "timestamp": "2026-01-24T21:22:25.196833",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/models/__pycache__/validation.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 8293,
+          "timestamp": "2026-01-24T21:22:25.196854",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/monitoring/__pycache__/__init__.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 236,
+          "timestamp": "2026-01-24T21:22:25.196878",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/monitoring/__pycache__/dq_score.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 10258,
+          "timestamp": "2026-01-24T21:22:25.196901",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/mt5_bridge/__pycache__/__init__.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 1151,
+          "timestamp": "2026-01-24T21:22:25.196923",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/mt5_bridge/__pycache__/config.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 9864,
+          "timestamp": "2026-01-24T21:22:25.196944",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/mt5_bridge/__pycache__/connection.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 6365,
+          "timestamp": "2026-01-24T21:22:25.196966",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/mt5_bridge/__pycache__/exceptions.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 2642,
+          "timestamp": "2026-01-24T21:22:25.196988",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/mt5_bridge/__pycache__/executor.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 2322,
+          "timestamp": "2026-01-24T21:22:25.197009",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/mt5_bridge/__pycache__/mt5_heartbeat.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 12132,
+          "timestamp": "2026-01-24T21:22:25.197031",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/mt5_bridge/__pycache__/protocol.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 4625,
+          "timestamp": "2026-01-24T21:22:25.197066",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/mt5_bridge/__pycache__/volume_adapter.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 9897,
+          "timestamp": "2026-01-24T21:22:25.197092",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/mt5_bridge/__pycache__/zmq_client.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 9233,
+          "timestamp": "2026-01-24T21:22:25.197115",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/nexus/__pycache__/__init__.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 930,
+          "timestamp": "2026-01-24T21:22:25.197139",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/nexus/__pycache__/async_nexus.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 15568,
+          "timestamp": "2026-01-24T21:22:25.197161",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/reporting/__pycache__/__init__.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 449,
+          "timestamp": "2026-01-24T21:22:25.197183",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/reporting/__pycache__/log_parser.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 8171,
+          "timestamp": "2026-01-24T21:22:25.197206",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/reporting/__pycache__/trial_recorder.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 7435,
+          "timestamp": "2026-01-24T21:22:25.197228",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/risk/__pycache__/__init__.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 1343,
+          "timestamp": "2026-01-24T21:22:25.197251",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/risk/__pycache__/circuit_breaker.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 6849,
+          "timestamp": "2026-01-24T21:22:25.197272",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/risk/__pycache__/config.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 5048,
+          "timestamp": "2026-01-24T21:22:25.197294",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/risk/__pycache__/drawdown_monitor.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 4551,
+          "timestamp": "2026-01-24T21:22:25.197315",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/risk/__pycache__/enums.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 1950,
+          "timestamp": "2026-01-24T21:22:25.197337",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/risk/__pycache__/events.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 10788,
+          "timestamp": "2026-01-24T21:22:25.197359",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/risk/__pycache__/exposure_monitor.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 3478,
+          "timestamp": "2026-01-24T21:22:25.197380",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/risk/__pycache__/models.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 6675,
+          "timestamp": "2026-01-24T21:22:25.197402",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/risk/__pycache__/risk_manager.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 9248,
+          "timestamp": "2026-01-24T21:22:25.197424",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/serving/__pycache__/__init__.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 587,
+          "timestamp": "2026-01-24T21:22:25.197446",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/serving/__pycache__/models.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 8823,
+          "timestamp": "2026-01-24T21:22:25.197468",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/strategy/__pycache__/__init__.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 712,
+          "timestamp": "2026-01-24T21:22:25.197491",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/strategy/__pycache__/hierarchical_signals.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 9226,
+          "timestamp": "2026-01-24T21:22:25.197512",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/strategy/__pycache__/indicators.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 8629,
+          "timestamp": "2026-01-24T21:22:25.197533",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/strategy/__pycache__/live_adapter.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 14742,
+          "timestamp": "2026-01-24T21:22:25.197555",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/strategy/__pycache__/risk_manager.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 3597,
+          "timestamp": "2026-01-24T21:22:25.197576",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/strategy/__pycache__/session_risk_manager.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 9776,
+          "timestamp": "2026-01-24T21:22:25.197598",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/strategy/__pycache__/signal_engine.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 6276,
+          "timestamp": "2026-01-24T21:22:25.197619",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/trading/__pycache__/__init__.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 811,
+          "timestamp": "2026-01-24T21:22:25.197641",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/trading/core/__pycache__/__init__.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 434,
+          "timestamp": "2026-01-24T21:22:25.197663",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/trading/core/__pycache__/dispatcher.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 4514,
+          "timestamp": "2026-01-24T21:22:25.197686",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/trading/core/__pycache__/limiter.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 4616,
+          "timestamp": "2026-01-24T21:22:25.197707",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/trading/core/__pycache__/track.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 4693,
+          "timestamp": "2026-01-24T21:22:25.197729",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/trading/models/__pycache__/__init__.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 554,
+          "timestamp": "2026-01-24T21:22:25.197765",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/trading/models/__pycache__/config.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 3993,
+          "timestamp": "2026-01-24T21:22:25.197791",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/trading/models/__pycache__/enums.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 3031,
+          "timestamp": "2026-01-24T21:22:25.197813",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/trading/models/__pycache__/order.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 3741,
+          "timestamp": "2026-01-24T21:22:25.197835",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/trading/utils/__pycache__/__init__.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 375,
+          "timestamp": "2026-01-24T21:22:25.197858",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/trading/utils/__pycache__/atomic.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 4465,
+          "timestamp": "2026-01-24T21:22:25.197879",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/trading/utils/__pycache__/metrics.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 4746,
+          "timestamp": "2026-01-24T21:22:25.197902",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/utils/__pycache__/__init__.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 125,
+          "timestamp": "2026-01-24T21:22:25.197925",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/src/utils/__pycache__/resilience.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 8703,
+          "timestamp": "2026-01-24T21:22:25.197946",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/__init__.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 184,
+          "timestamp": "2026-01-24T21:22:25.197969",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/conftest.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 5888,
+          "timestamp": "2026-01-24T21:22:25.197991",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_012_1_conn.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 1180,
+          "timestamp": "2026-01-24T21:22:25.198013",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_012_2_executor.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 11191,
+          "timestamp": "2026-01-24T21:22:25.198036",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_async_nexus.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 12043,
+          "timestamp": "2026-01-24T21:22:25.198073",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_async_nexus_basic.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 9415,
+          "timestamp": "2026-01-24T21:22:25.198097",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_data_leakage_fix.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 10743,
+          "timestamp": "2026-01-24T21:22:25.198120",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_data_validator_fix.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 24602,
+          "timestamp": "2026-01-24T21:22:25.198143",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_exception_handling_fix.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 18792,
+          "timestamp": "2026-01-24T21:22:25.198164",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_feature_consistency.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 13786,
+          "timestamp": "2026-01-24T21:22:25.198186",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_feature_engineering.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 7813,
+          "timestamp": "2026-01-24T21:22:25.198208",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_hierarchical_signals.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 28201,
+          "timestamp": "2026-01-24T21:22:25.198229",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_incremental_features.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 11577,
+          "timestamp": "2026-01-24T21:22:25.198251",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_jit_performance.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 10416,
+          "timestamp": "2026-01-24T21:22:25.198273",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_kelly_fix.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 4631,
+          "timestamp": "2026-01-24T21:22:25.198294",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_kellysizer_p203_improvement.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 18402,
+          "timestamp": "2026-01-24T21:22:25.198316",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_label_integrity.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 8927,
+          "timestamp": "2026-01-24T21:22:25.198339",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_live_loop_ingestion.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 1919,
+          "timestamp": "2026-01-24T21:22:25.198361",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_mt5_heartbeat.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 17156,
+          "timestamp": "2026-01-24T21:22:25.198384",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_mt5_volume_adapter_p204.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 28843,
+          "timestamp": "2026-01-24T21:22:25.198406",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_multi_timeframe.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 23498,
+          "timestamp": "2026-01-24T21:22:25.198428",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_normalize_volume.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 10344,
+          "timestamp": "2026-01-24T21:22:25.198450",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_notion_bridge_exceptions.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 24933,
+          "timestamp": "2026-01-24T21:22:25.198473",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_notion_bridge_exceptions.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 14412,
+          "timestamp": "2026-01-24T21:22:25.198495",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_notion_bridge_integration.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 22279,
+          "timestamp": "2026-01-24T21:22:25.198518",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_notion_bridge_integration.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 14175,
+          "timestamp": "2026-01-24T21:22:25.198540",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_notion_bridge_performance.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 13319,
+          "timestamp": "2026-01-24T21:22:25.198562",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_notion_bridge_redos.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 29900,
+          "timestamp": "2026-01-24T21:22:25.198584",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_notion_bridge_redos.cpython-39.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 17699,
+          "timestamp": "2026-01-24T21:22:25.198606",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_p2_integration_complete.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 21943,
+          "timestamp": "2026-01-24T21:22:25.198627",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_parallel_performance.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 4085,
+          "timestamp": "2026-01-24T21:22:25.198649",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_path_traversal_fix.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 16068,
+          "timestamp": "2026-01-24T21:22:25.198670",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_safe_deserialization_fix.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 18796,
+          "timestamp": "2026-01-24T21:22:25.198691",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_session_risk_integration.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 12252,
+          "timestamp": "2026-01-24T21:22:25.198713",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_session_risk_manager.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 17805,
+          "timestamp": "2026-01-24T21:22:25.198735",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_shadow_autopsy.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 17780,
+          "timestamp": "2026-01-24T21:22:25.198783",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_state_reconciler.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 6361,
+          "timestamp": "2026-01-24T21:22:25.198807",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/__pycache__/test_trial_recorder.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 4903,
+          "timestamp": "2026-01-24T21:22:25.198830",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/gateway/__pycache__/test_resilience_integration.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 16791,
+          "timestamp": "2026-01-24T21:22:25.198853",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/integration/__pycache__/test_pipeline_integration.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 18877,
+          "timestamp": "2026-01-24T21:22:25.198875",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/models/__pycache__/test_models.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 15716,
+          "timestamp": "2026-01-24T21:22:25.198898",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/regression/__pycache__/test_live_order_cycle.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 8405,
+          "timestamp": "2026-01-24T21:22:25.198920",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/unit/__pycache__/test_advanced_features.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 19982,
+          "timestamp": "2026-01-24T21:22:25.198942",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/unit/__pycache__/test_basic_features.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 18530,
+          "timestamp": "2026-01-24T21:22:25.198964",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/unit/__pycache__/test_dq_score.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 20411,
+          "timestamp": "2026-01-24T21:22:25.198986",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/unit/__pycache__/test_labeling.cpython-39-pytest-8.4.2.pyc",
+          "operation": "delete",
+          "destination": null,
+          "size_bytes": 16749,
+          "timestamp": "2026-01-24T21:22:25.199008",
+          "success": true,
+          "error": null
+        }
+      ]
+    },
+    {
+      "module_name": "Archiver",
+      "start_time": "2026-01-24T21:22:41.441582",
+      "end_time": "2026-01-24T21:22:41.443858",
+      "duration_seconds": 0.002276,
+      "success": true,
+      "error_message": null,
+      "summary": {
+        "total_files": 47,
+        "total_bytes": 490566,
+        "successful": 47,
+        "failed": 0
+      },
+      "operations": [
+        {
+          "source": "/opt/mt5-crs/.env.bak",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/backup/.env.bak",
+          "size_bytes": 5615,
+          "timestamp": "2026-01-24T21:22:41.441696",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/AUDIT_TASK_111.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/AUDIT_TASK_111.log",
+          "size_bytes": 1896,
+          "timestamp": "2026-01-24T21:22:41.441771",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/AUDIT_TASK_113.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/AUDIT_TASK_113.log",
+          "size_bytes": 4348,
+          "timestamp": "2026-01-24T21:22:41.441822",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/CENTRAL_COMMAND_REVIEW.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/CENTRAL_COMMAND_REVIEW.log",
+          "size_bytes": 34060,
+          "timestamp": "2026-01-24T21:22:41.441870",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/CONTEXT_PACK_GATE2_REVIEW_EXECUTION.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/CONTEXT_PACK_GATE2_REVIEW_EXECUTION.log",
+          "size_bytes": 6075,
+          "timestamp": "2026-01-24T21:22:41.441918",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/EXTERNAL_AI_REVIEW.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/EXTERNAL_AI_REVIEW.log",
+          "size_bytes": 34796,
+          "timestamp": "2026-01-24T21:22:41.441966",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/GATE2_REFACTORED.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/GATE2_REFACTORED.log",
+          "size_bytes": 4107,
+          "timestamp": "2026-01-24T21:22:41.442012",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/GATE2_RETRY.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/GATE2_RETRY.log",
+          "size_bytes": 2823,
+          "timestamp": "2026-01-24T21:22:41.442071",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/GATE2_RETRY_180s.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/GATE2_RETRY_180s.log",
+          "size_bytes": 4495,
+          "timestamp": "2026-01-24T21:22:41.442122",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/LIVE_RECONCILIATION.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/LIVE_RECONCILIATION.log",
+          "size_bytes": 1190,
+          "timestamp": "2026-01-24T21:22:41.442179",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/TASK_104_AI_REVIEW.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/TASK_104_AI_REVIEW.log",
+          "size_bytes": 23434,
+          "timestamp": "2026-01-24T21:22:41.442228",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/TASK_105_CHAOS_TEST_LOG.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/TASK_105_CHAOS_TEST_LOG.log",
+          "size_bytes": 9326,
+          "timestamp": "2026-01-24T21:22:41.442271",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/TASK_105_EXTERNAL_REVIEW.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/TASK_105_EXTERNAL_REVIEW.log",
+          "size_bytes": 51899,
+          "timestamp": "2026-01-24T21:22:41.442314",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/TASK_105_QA_REVIEW.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/TASK_105_QA_REVIEW.log",
+          "size_bytes": 2469,
+          "timestamp": "2026-01-24T21:22:41.442356",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/TASK_105_RECHECK_REVIEW.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/TASK_105_RECHECK_REVIEW.log",
+          "size_bytes": 48062,
+          "timestamp": "2026-01-24T21:22:41.442400",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/TASK_105_UNIFIED_REVIEW_OUTPUT.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/TASK_105_UNIFIED_REVIEW_OUTPUT.log",
+          "size_bytes": 25412,
+          "timestamp": "2026-01-24T21:22:41.442446",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/TASK_125_AI_REVIEW.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/TASK_125_AI_REVIEW.log",
+          "size_bytes": 1112,
+          "timestamp": "2026-01-24T21:22:41.442490",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/TASK_130.3_FOURTH_REVIEW.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/TASK_130.3_FOURTH_REVIEW.log",
+          "size_bytes": 10259,
+          "timestamp": "2026-01-24T21:22:41.442534",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/TASK_134_EXTERNAL_REVIEW.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/TASK_134_EXTERNAL_REVIEW.log",
+          "size_bytes": 7390,
+          "timestamp": "2026-01-24T21:22:41.442577",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/TASK_134_VERIFY.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/TASK_134_VERIFY.log",
+          "size_bytes": 6998,
+          "timestamp": "2026-01-24T21:22:41.442620",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/TASK_135_VERIFY.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/TASK_135_VERIFY.log",
+          "size_bytes": 8462,
+          "timestamp": "2026-01-24T21:22:41.442665",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/TASK_136_DEPLOYMENT_REPORT.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/TASK_136_DEPLOYMENT_REPORT.log",
+          "size_bytes": 1108,
+          "timestamp": "2026-01-24T21:22:41.442710",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/VERIFY_LOG.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/VERIFY_LOG.log",
+          "size_bytes": 29519,
+          "timestamp": "2026-01-24T21:22:41.442754",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/VERIFY_URG_TASK_MD.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/VERIFY_URG_TASK_MD.log",
+          "size_bytes": 4887,
+          "timestamp": "2026-01-24T21:22:41.442796",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/VERIFY_URG_TASK_MD_DEEP.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/VERIFY_URG_TASK_MD_DEEP.log",
+          "size_bytes": 4955,
+          "timestamp": "2026-01-24T21:22:41.442840",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/VERIFY_URG_V2.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/VERIFY_URG_V2.log",
+          "size_bytes": 332,
+          "timestamp": "2026-01-24T21:22:41.442886",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/audit_task_134_results.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/audit_task_134_results.log",
+          "size_bytes": 3777,
+          "timestamp": "2026-01-24T21:22:41.442929",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/audit_task_135_results.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/audit_task_135_results.log",
+          "size_bytes": 2340,
+          "timestamp": "2026-01-24T21:22:41.442970",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/central_command_review.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/central_command_review.log",
+          "size_bytes": 3537,
+          "timestamp": "2026-01-24T21:22:41.443013",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/config/live_strategies.yaml.bak",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/backup/config/live_strategies.yaml.bak",
+          "size_bytes": 5023,
+          "timestamp": "2026-01-24T21:22:41.443075",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/dev_loop_127_execution.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/dev_loop_127_execution.log",
+          "size_bytes": 48840,
+          "timestamp": "2026-01-24T21:22:41.443125",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/docs/CALIBRATION_ANALYSIS.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/docs/CALIBRATION_ANALYSIS.log",
+          "size_bytes": 1399,
+          "timestamp": "2026-01-24T21:22:41.443181",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/docs/export_context_output.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/docs/export_context_output.log",
+          "size_bytes": 110,
+          "timestamp": "2026-01-24T21:22:41.443230",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/gemini_review_optimizer.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/gemini_review_optimizer.log",
+          "size_bytes": 380,
+          "timestamp": "2026-01-24T21:22:41.443274",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/logs/launch_live_v2.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/logs/launch_live_v2.log",
+          "size_bytes": 7419,
+          "timestamp": "2026-01-24T21:22:41.443318",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/logs/sentinel_daemon.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/logs/sentinel_daemon.log",
+          "size_bytes": 0,
+          "timestamp": "2026-01-24T21:22:41.443361",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/logs/shadow_trading.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/logs/shadow_trading.log",
+          "size_bytes": 498,
+          "timestamp": "2026-01-24T21:22:41.443402",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/logs/trading.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/logs/trading.log",
+          "size_bytes": 0,
+          "timestamp": "2026-01-24T21:22:41.443445",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/monitoring_alerts.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/monitoring_alerts.log",
+          "size_bytes": 277,
+          "timestamp": "2026-01-24T21:22:41.443486",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/review_output_code.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/review_output_code.log",
+          "size_bytes": 36037,
+          "timestamp": "2026-01-24T21:22:41.443528",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/review_output_doc.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/review_output_doc.log",
+          "size_bytes": 10809,
+          "timestamp": "2026-01-24T21:22:41.443569",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/scripts/dev_loop.sh.bak",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/backup/scripts/dev_loop.sh.bak",
+          "size_bytes": 2436,
+          "timestamp": "2026-01-24T21:22:41.443615",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/scripts/gateway/mt5_zmq_server.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/scripts/gateway/mt5_zmq_server.log",
+          "size_bytes": 0,
+          "timestamp": "2026-01-24T21:22:41.443662",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/scripts/maintenance/organize_root_20260111_190501.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/scripts/maintenance/organize_root_20260111_190501.log",
+          "size_bytes": 2587,
+          "timestamp": "2026-01-24T21:22:41.443708",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/tests/last_run.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/tests/last_run.log",
+          "size_bytes": 20422,
+          "timestamp": "2026-01-24T21:22:41.443753",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/unified_review_optimizer.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/unified_review_optimizer.log",
+          "size_bytes": 9537,
+          "timestamp": "2026-01-24T21:22:41.443794",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/unified_review_task132_133.log",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/archive/logs/unified_review_task132_133.log",
+          "size_bytes": 109,
+          "timestamp": "2026-01-24T21:22:41.443836",
+          "success": true,
+          "error": null
+        }
+      ]
+    },
+    {
+      "module_name": "ScriptConsolidator",
+      "start_time": "2026-01-24T21:22:41.450269",
+      "end_time": "2026-01-24T21:22:41.450839",
+      "duration_seconds": 0.00057,
+      "success": true,
+      "error_message": null,
+      "summary": {
+        "total_files": 7,
+        "total_bytes": 55726,
+        "successful": 7,
+        "failed": 0
+      },
+      "operations": [
+        {
+          "source": "/opt/mt5-crs/scripts/audit/audit_template.py",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/legacy_archive/scripts/audit/audit_template.py",
+          "size_bytes": 2710,
+          "timestamp": "2026-01-24T21:22:41.450351",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/scripts/maintenance/organize_root_v2.py",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/legacy_archive/scripts/maintenance/organize_root_v2.py",
+          "size_bytes": 9722,
+          "timestamp": "2026-01-24T21:22:41.450417",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/scripts/maintenance/reset_env_v2.py",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/legacy_archive/scripts/maintenance/reset_env_v2.py",
+          "size_bytes": 5171,
+          "timestamp": "2026-01-24T21:22:41.450473",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/scripts/ops/launch_live_v2.py",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/legacy_archive/scripts/ops/launch_live_v2.py",
+          "size_bytes": 13289,
+          "timestamp": "2026-01-24T21:22:41.450526",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/scripts/ops/ops_force_fix_030_v2.py",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/legacy_archive/scripts/ops/ops_force_fix_030_v2.py",
+          "size_bytes": 10911,
+          "timestamp": "2026-01-24T21:22:41.450606",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/scripts/utils/smart_restore_v2.py",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/legacy_archive/scripts/utils/smart_restore_v2.py",
+          "size_bytes": 7633,
+          "timestamp": "2026-01-24T21:22:41.450675",
+          "success": true,
+          "error": null
+        },
+        {
+          "source": "/opt/mt5-crs/scripts/verify/verify_fix_v23.py",
+          "operation": "move",
+          "destination": "/opt/mt5-crs/legacy_archive/scripts/verify/verify_fix_v23.py",
+          "size_bytes": 6290,
+          "timestamp": "2026-01-24T21:22:41.450778",
+          "success": true,
+          "error": null
+        }
+      ]
+    }
+  ],
+  "summary": {
+    "total_modules": 3,
+    "total_files_processed": 225,
+    "total_bytes_processed": 344867646,
+    "total_successful_operations": 225,
+    "total_failed_operations": 0,
+    "total_duration_seconds": 0.349039,
+    "all_successful": true
+  }
+}
